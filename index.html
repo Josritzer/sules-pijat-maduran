@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PIJAT SULES MADURAN</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+// ===== bookingService: satu-satunya boundary UI <-> Supabase. =====
+// Sumber kebenaran booking sekarang Supabase (bukan localStorage lagi).
+// localStorage hanya dipakai sebagai "kunci" access_token milik pelanggan sendiri
+// (untuk fitur Lihat Pesanan Saya), bukan sebagai penyimpan data booking.
+(function () {
+  const SUPABASE_URL = "https://tzupkourtcmqemymszgt.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_-0r7zhfsw4-3UPh8ReG6Ag_dwOQQ2K9";
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  async function createBooking({ nama, wa, serviceId, jumlahOrang, tanggal, jamMulai, tipeLokasi, alamat, lat, lng, jarakMeter }) {
+    const { data, error } = await supabaseClient.rpc("create_booking", {
+      p_nama: nama, p_wa: wa, p_service_id: serviceId, p_jumlah_orang: jumlahOrang,
+      p_tanggal: tanggal, p_jam_mulai: jamMulai, p_tipe_lokasi: tipeLokasi,
+      p_alamat: alamat ?? null, p_lat: lat ?? null, p_lng: lng ?? null, p_jarak_meter: jarakMeter ?? null
+    });
+    if (error) throw error;
+    return data;
+  }
+  async function getMyBooking(accessToken) {
+    const { data, error } = await supabaseClient.rpc("get_booking_by_token", { p_access_token: accessToken });
+    if (error) throw error;
+    return data && data[0] ? data[0] : null;
+  }
+  async function getBookings(status = null) {
+    const { data, error } = await supabaseClient.rpc("list_bookings_admin", { p_status: status });
+    if (error) throw error;
+    return data;
+  }
+  async function getDashboardSummary(startDate, endDate) {
+    const { data, error } = await supabaseClient.rpc("get_dashboard_summary", {
+      p_start_date: startDate, p_end_date: endDate
+    });
+    if (error) throw error;
+    return data;
+  }
+  async function getBookingsPeriod(startDate, endDate, status = null) {
+    const { data, error } = await supabaseClient.rpc("list_bookings_admin_period", {
+      p_start_date: startDate, p_end_date: endDate, p_status: status
+    });
+    if (error) throw error;
+    return data;
+  }
+  async function acceptBooking(bookingId) {
+    const { data, error } = await supabaseClient.rpc("accept_booking", { p_booking_id: bookingId });
+    if (error) throw error;
+    return data;
+  }
+  async function rejectBooking(bookingId, catatan = null) {
+    const { data, error } = await supabaseClient.rpc("reject_booking", { p_booking_id: bookingId, p_catatan: catatan });
+    if (error) throw error;
+    return data;
+  }
+  async function completeBooking(bookingId) {
+    const { data, error } = await supabaseClient.rpc("complete_booking", { p_booking_id: bookingId });
+    if (error) throw error;
+    return data;
+  }
+  async function adminLogin(email, password) {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    return data.session;
+  }
+  async function adminLogout() { await supabaseClient.auth.signOut(); }
+  async function getAdminSession() {
+    const { data } = await supabaseClient.auth.getSession();
+    return data.session;
+  }
+
+  // Customer auth: Email OTP (kode 6 digit), pakai SMTP bawaan Supabase, tanpa provider pihak ketiga.
+  async function customerSendOtp(email) {
+    const { error } = await supabaseClient.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+    if (error) throw error;
+  }
+  async function customerVerifyOtp(email, token) {
+    const { data, error } = await supabaseClient.auth.verifyOtp({ email, token, type: "email" });
+    if (error) throw error;
+    return data.session;
+  }
+  async function customerLogout() { await supabaseClient.auth.signOut(); }
+  async function getCustomerSession() {
+    const { data } = await supabaseClient.auth.getSession();
+    return data.session;
+  }
+
+  window.bookingService = { createBooking, getMyBooking, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession };
+})();
+</script>
+<style>
+  body { background:#FFF8E7; color:#2B1B0E; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  * { box-sizing: border-box; }
+  input[type="date"] { font-family: inherit; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+/* ================= KONSTANTA ================= */
+const BASE_LAT = -7.0000833;
+const BASE_LNG = 112.2810000;
+const GOOGLE_ROUTES_API_KEY = (typeof VITE_GOOGLE_ROUTES_API_KEY !== "undefined" && VITE_GOOGLE_ROUTES_API_KEY) || (window.SULES_CONFIG && window.SULES_CONFIG.googleRoutesApiKey) || "";
+const GRATIS_METER = 1000;
+const TARIF_PER_METER = 3.5;
+const HARGA = { "90m": 60000, "120m": 80000 };
+const DURASI = { "90m": 90, "120m": 120 };
+const LAST_TOKEN_KEY = "sules_last_booking_token"; // hanya pointer, bukan source of truth
+
+const MORNING_SLOTS = ["08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30","15:00","15:30"];
+const EVENING_SLOTS = ["19:00","19:30","20:00","20:30","21:00","21:30","22:00","22:30"];
+
+/* ================= HELPER ================= */
+function jamToMenit(jamStr) {
+  const [h, m] = jamStr.split(":").map(Number);
+  return h * 60 + m;
+}
+function menitToJam(menit) {
+  const h = Math.floor(menit / 60);
+  const m = menit % 60;
+  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+}
+function formatRupiah(n) {
+  return "Rp" + Math.round(n).toLocaleString("id-ID");
+}
+function toRad(deg) { return deg * Math.PI / 180; }
+function haversineMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+function hitungTransport(jarakMeter) {
+  if (jarakMeter <= GRATIS_METER) return 0;
+  return (jarakMeter - GRATIS_METER) * TARIF_PER_METER;
+}
+function getStatusMeta(status) {
+  switch (status) {
+    case "MENUNGGU": return { emoji: "🟡", label: "MENUNGGU", bg: "#FFFBEB", text: "#92400E", border: "#D4AF37" };
+    case "DITERIMA": return { emoji: "🟢", label: "DITERIMA", bg: "#ECFDF5", text: "#065F46", border: "#10B981" };
+    case "SELESAI": return { emoji: "✅", label: "SELESAI", bg: "#F0FDF4", text: "#166534", border: "#22C55E" };
+    case "DITOLAK": return { emoji: "🚫", label: "DITOLAK", bg: "#FEF2F2", text: "#991B1B", border: "#EF4444" };
+    case "DIBATALKAN": return { emoji: "🔴", label: "DIBATALKAN", bg: "#FEF2F2", text: "#7F1D1D", border: "#DC2626" };
+    default: return { emoji: "🟡", label: "MENUNGGU", bg: "#FFFBEB", text: "#92400E", border: "#D4AF37" };
+  }
+}
+function mapsLinkForBooking(b) {
+  if (b.lat !== null && b.lat !== undefined && b.lng !== null && b.lng !== undefined) {
+    return `https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lng}`;
+  }
+  if (b.alamat) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.alamat)}`;
+  }
+  return null;
+}
+function generateSlotsForDurasi(durasiMenit) {
+  const closeMorning = 16 * 60;
+  const closeEvening = 24 * 60;
+  const pagi = MORNING_SLOTS.filter(s => jamToMenit(s) + durasiMenit <= closeMorning);
+  const malam = EVENING_SLOTS.filter(s => jamToMenit(s) + durasiMenit <= closeEvening);
+  return { pagi, malam };
+}
+function parseAlamatText(raw) {
+  const text = raw.replace(/\s+/g, " ").trim();
+  let m = text.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
+  if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+  m = text.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+  m = text.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+  if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+  m = text.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+  if (/maps\.app\.goo\.gl|goo\.gl\/maps/.test(text)) {
+    return { shortLink: text };
+  }
+  return null;
+}
+async function computeRoadDistance(destLat, destLng) {
+  try {
+    const res = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": GOOGLE_ROUTES_API_KEY,
+        "X-Goog-FieldMask": "routes.distanceMeters"
+      },
+      body: JSON.stringify({
+        origin: { location: { latLng: { latitude: BASE_LAT, longitude: BASE_LNG } } },
+        destination: { location: { latLng: { latitude: destLat, longitude: destLng } } },
+        travelMode: "TWO_WHEELER"
+      })
+    });
+    const data = await res.json();
+    if (data && data.routes && data.routes[0] && data.routes[0].distanceMeters) {
+      return { meters: data.routes[0].distanceMeters, sumber: "road" };
+    }
+    throw new Error("no route");
+  } catch (e) {
+    const meters = haversineMeters(BASE_LAT, BASE_LNG, destLat, destLng);
+    return { meters: Math.round(meters), sumber: "haversine" };
+  }
+}
+function maskEmail(email) {
+  const [local, domain] = email.split("@");
+  const shown = local.slice(0, 8);
+  return `${shown}****@${domain}`;
+}
+/* ================= KOMPONEN TOMBOL PILIHAN ================= */
+function StatusBadge({ status }) {
+  const meta = getStatusMeta(status);
+  return (
+    <span style={{ backgroundColor: meta.bg, color: meta.text, border: `1px solid ${meta.border}`, fontWeight:"bold" }}
+      className="text-xs rounded-full px-3 py-1 inline-block">
+      {meta.emoji} {meta.label}
+    </span>
+  );
+}
+
+function PilihanButton({ selected, onClick, label, variant }) {
+  let style;
+  if (variant === "jam") {
+    style = selected
+      ? { backgroundColor:"#D4AF37", color:"#2B1B0E", fontWeight:"bold", border:"2px solid #2B1B0E", borderRadius:"12px", padding:"10px 4px" }
+      : { backgroundColor:"white", color:"#2B1B0E", border:"1px solid #E5E7EB", borderRadius:"12px", padding:"10px 4px" };
+  } else {
+    style = selected
+      ? { backgroundColor:"#2B1B0E", color:"white", border:"2px solid #D4AF37", borderRadius:"12px", padding:"12px", fontWeight:"bold" }
+      : { backgroundColor:"white", color:"#2B1B0E", border:"1px solid #E5E7EB", borderRadius:"12px", padding:"12px", fontWeight:"normal" };
+  }
+  return (
+    <button onClick={onClick} style={style} className="w-full text-sm transition-colors">
+      {selected ? "✓ " : ""}{label}
+    </button>
+  );
+}
+
+/* ================= TAB BOOKING (PELANGGAN) ================= */
+function BookingTab() {
+  const [nama, setNama] = useState("");
+  const [wa, setWa] = useState("");
+  const [layanan, setLayanan] = useState("90m");
+  const [orang, setOrang] = useState(1);
+  const [tanggal, setTanggal] = useState("");
+  const [jam, setJam] = useState("");
+  const [tipeLokasi, setTipeLokasi] = useState("DI_TEMPAT");
+  const [alamatText, setAlamatText] = useState("");
+  const [lat, setLat] = useState(null);
+  const [lng, setLng] = useState(null);
+  const latRef = useRef(null);
+  const lngRef = useRef(null);
+  const [jarak, setJarak] = useState(null);
+  const [sumberJarak, setSumberJarak] = useState(null);
+  const [loadingGPS, setLoadingGPS] = useState(false);
+  const [gpsMsg, setGpsMsg] = useState("");
+  const [parseMsg, setParseMsg] = useState("");
+  const [loadingJarak, setLoadingJarak] = useState(false);
+  const [screen, setScreen] = useState("form");
+  const [currentBooking, setCurrentBooking] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [jarakError, setJarakError] = useState("");
+
+  // ===== Customer Auth (Email OTP) - gerbang wajib sebelum booking baru =====
+  const [customerSession, setCustomerSession] = useState(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [custEmail, setCustEmail] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authMsg, setAuthMsg] = useState("");
+
+  useEffect(() => {
+    window.bookingService.getCustomerSession().then(session => {
+      setCustomerSession(session);
+      setCheckingSession(false);
+    });
+  }, []);
+
+  const kirimKodeOtp = async () => {
+    setAuthMsg("");
+    if (!custEmail.trim()) { setAuthMsg("Isi email dulu."); return; }
+    setAuthLoading(true);
+    try {
+      await window.bookingService.customerSendOtp(custEmail.trim());
+      setOtpSent(true);
+    } catch (e) {
+      setAuthMsg(e.message || "Gagal mengirim kode. Coba lagi.");
+    }
+    setAuthLoading(false);
+  };
+
+  const verifikasiOtp = async () => {
+    setAuthMsg("");
+    if (!otpCode.trim()) { setAuthMsg("Masukkan kode dari email dulu."); return; }
+    setAuthLoading(true);
+    try {
+      const session = await window.bookingService.customerVerifyOtp(custEmail.trim(), otpCode.trim());
+      setCustomerSession(session);
+    } catch (e) {
+      setAuthMsg(e.message || "Kode salah atau kedaluwarsa.");
+    }
+    setAuthLoading(false);
+  };
+
+  const customerDoLogout = async () => {
+    try { await window.bookingService.customerLogout(); }
+    finally { localStorage.removeItem(LAST_TOKEN_KEY); } // jangan bawa token booking customer sebelumnya, walau signOut gagal
+    setCurrentBooking(null);
+    setCustomerSession(null);
+    setOtpSent(false);
+    setOtpCode("");
+    setCustEmail("");
+  };
+
+  // Pulihkan "Lihat Pesanan Saya" dari token tersimpan (kalau reload halaman)
+  useEffect(() => {
+    const token = localStorage.getItem(LAST_TOKEN_KEY);
+    if (!token) return;
+    window.bookingService.getMyBooking(token).then(b => {
+      if (b) {
+        setCurrentBooking({
+          access_token: token, layanan: b.service_id, orang: b.jumlah_orang,
+          tanggal: b.tanggal, jam: b.jam_mulai, tipeLokasi: b.tipe_lokasi, alamat: b.alamat,
+          service_price: b.service_price, travel_fee: b.travel_fee,
+          grand_total: b.grand_total, status: b.status
+        });
+        setScreen("status");
+      }
+    }).catch(() => {});
+  }, []);
+
+  const durasiMenit = DURASI[layanan];
+  const { pagi, malam } = generateSlotsForDurasi(durasiMenit);
+
+  const isSlotLewat = (slot) => {
+    if (!tanggal) return false;
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+    if (tanggal !== todayStr) return false;
+    const nowMenit = today.getHours()*60 + today.getMinutes();
+    return jamToMenit(slot) <= nowMenit;
+  };
+
+  useEffect(() => { setJam(""); }, [layanan]);
+
+  const setLatLng = (la, ln) => {
+    setLat(la); setLng(ln);
+    latRef.current = la; lngRef.current = ln;
+  };
+
+  const ambilLokasiGPS = () => {
+    if (!navigator.geolocation) {
+      setGpsMsg("Perangkat tidak mendukung GPS.");
+      return;
+    }
+    setLoadingGPS(true);
+    setGpsMsg("");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const la = pos.coords.latitude;
+        const ln = pos.coords.longitude;
+        setLatLng(la, ln);
+        setAlamatText(`GPS: ${la.toFixed(6)},${ln.toFixed(6)}`);
+        setLoadingGPS(false);
+        setGpsMsg("");
+        hitungJarakSekarang(la, ln);
+      },
+      (err) => {
+        setLoadingGPS(false);
+        if (err.code === 1) {
+          setGpsMsg("Izin Ditolak - Tap icon gembok 🔒 di address bar > Izin Lokasi > Izinkan > Refresh. Di iPhone: Settings > Privacy > Location Services > Safari > Allow");
+        } else {
+          setGpsMsg("Gagal mengambil lokasi. Coba lagi atau tempel alamat/link manual.");
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  };
+
+  const parseAlamat = () => {
+    setParseMsg("");
+    const hasil = parseAlamatText(alamatText);
+    if (!hasil) {
+      setParseMsg("Gagal membaca alamat. Pastikan format koordinat atau link Google Maps benar.");
+      return;
+    }
+    if (hasil.shortLink) {
+      window.open(hasil.shortLink, "_blank");
+      setParseMsg("Link pendek tidak bisa dibaca langsung. Buka Maps, tap Share / Bagikan, salin koordinat -7.xxx,112.xxx lalu tempel di sini. Atau pakai GPS di atas.");
+      return;
+    }
+    setLatLng(hasil.lat, hasil.lng);
+    hitungJarakSekarang(hasil.lat, hasil.lng);
+  };
+
+  const hitungJarakSekarang = async (laArg, lnArg) => {
+    setJarakError("");
+    const la = laArg !== undefined ? laArg : latRef.current;
+    const ln = lnArg !== undefined ? lnArg : lngRef.current;
+    if (la === null || la === undefined || ln === null || ln === undefined) {
+      setJarakError("Bagikan lokasi dulu via GPS atau tempel koordinat");
+      return;
+    }
+    setLoadingJarak(true);
+    try {
+      const { meters, sumber } = await computeRoadDistance(la, ln);
+      setJarak(meters);
+      setSumberJarak(sumber);
+    } catch (e) {
+      setJarakError("Gagal menghitung jarak, coba lagi.");
+    }
+    setLoadingJarak(false);
+  };
+
+  const resetLokasi = () => {
+    setLatLng(null, null);
+    setAlamatText("");
+    setJarak(null);
+    setSumberJarak(null);
+    setGpsMsg("");
+    setParseMsg("");
+    setJarakError("");
+    setLoadingGPS(false);
+    setLoadingJarak(false);
+  };
+
+  const transport = tipeLokasi === "HOME_SERVICE" && jarak !== null ? hitungTransport(jarak) : 0;
+  const biayaLayanan = HARGA[layanan] * orang;
+  const total = biayaLayanan + transport;
+
+  const konfirmasiBooking = async () => {
+    setFormError("");
+    if (!nama.trim()) { setFormError("Isi nama lengkap dulu."); return; }
+    if (!wa.trim()) { setFormError("Isi nomor WA dulu."); return; }
+    if (!tanggal) { setFormError("Pilih tanggal dulu."); return; }
+    if (!jam) { setFormError("Pilih jam dulu."); return; }
+    if (tipeLokasi === "HOME_SERVICE" && (lat === null || lng === null)) {
+      setFormError("Untuk Home Service, lokasi wajib diisi (GPS atau alamat/link).");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const result = await window.bookingService.createBooking({
+        nama, wa, serviceId: layanan, jumlahOrang: orang, tanggal, jamMulai: jam,
+        tipeLokasi, alamat: alamatText || null, lat, lng, jarakMeter: jarak
+      });
+      localStorage.setItem(LAST_TOKEN_KEY, result.access_token);
+      setCurrentBooking({
+        access_token: result.access_token,
+        layanan, orang, tanggal, jam, tipeLokasi, alamat: alamatText,
+        service_price: result.service_price, travel_fee: result.travel_fee,
+        grand_total: result.grand_total, status: result.status
+      });
+      setScreen("status");
+      setNama(""); setWa(""); setTanggal(""); setJam("");
+      resetLokasi();
+    } catch (e) {
+      setFormError(e.message || "Terjadi kesalahan saat menyimpan booking, coba lagi.");
+    }
+    setSubmitting(false);
+  };
+
+  const refreshStatus = async () => {
+    if (!currentBooking) return;
+    setLoadingStatus(true);
+    try {
+      const b = await window.bookingService.getMyBooking(currentBooking.access_token);
+      if (b) setCurrentBooking(prev => ({ ...prev, status: b.status, grand_total: b.grand_total }));
+    } catch (e) { /* biarkan status lama tampil kalau gagal refresh */ }
+    setLoadingStatus(false);
+  };
+
+  const renderSlotGrup = (judul, slots) => (
+    <div className="mb-3">
+      <div className="text-sm font-semibold mb-2">{judul}</div>
+      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+        {slots.map(s => {
+          const lewat = isSlotLewat(s);
+          if (lewat) {
+            return (
+              <button key={s} disabled
+                style={{ backgroundColor:"#F3F4F6", color:"#9CA3AF", borderRadius:"12px", padding:"10px 4px", textDecoration:"line-through", border:"1px solid #E5E7EB" }}
+                className="text-sm">
+                {s}
+              </button>
+            );
+          }
+          return (
+            <PilihanButton key={s} selected={jam===s} onClick={()=>setJam(s)} label={s} variant="jam" />
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  if (checkingSession) {
+    return <div className="text-center text-gray-400 text-sm py-16">Memuat...</div>;
+  }
+
+  if (!customerSession && screen === "form") {
+    return (
+      <div className="max-w-sm mx-auto px-4 py-16">
+        <div className="text-center py-4">
+          <h1 className="text-xl font-bold" style={{color:"#2B1B0E"}}>PIJAT SULES MADURAN</h1>
+        </div>
+        <div className="bg-white rounded-2xl p-6 border border-gray-200">
+          <div className="text-center text-lg font-bold mb-1">📧 Masuk untuk Booking</div>
+          <div className="text-center text-xs text-gray-500 mb-4">Verifikasi email diperlukan supaya pesanan Anda aman &amp; bisa dicek kembali.</div>
+
+          {!otpSent ? (
+            <React.Fragment>
+              <label className="text-sm font-semibold block mb-1">Email</label>
+              <input type="email" value={custEmail} onChange={e=>setCustEmail(e.target.value)}
+                placeholder="nama@email.com"
+                className="w-full border border-gray-300 rounded-xl p-3 mb-3"
+                onKeyDown={e=>{ if(e.key==="Enter") kirimKodeOtp(); }} />
+              {authMsg && <div className="text-xs text-red-600 mb-3">{authMsg}</div>}
+              <button onClick={kirimKodeOtp} disabled={authLoading}
+                style={{ backgroundColor:"#2B1B0E", border:"2px solid #D4AF37", color:"white", borderRadius:"12px", padding:"12px", width:"100%", fontWeight:"bold", opacity: authLoading?0.7:1 }}>
+                {authLoading ? "Mengirim..." : "Kirim Kode ke Email"}
+              </button>
+            </React.Fragment>
+          ) : (
+            <React.Fragment>
+              <div className="text-xs text-gray-500 mb-3">Kode dikirim ke <b>{custEmail}</b>. Cek juga folder spam.</div>
+              <label className="text-sm font-semibold block mb-1">Kode dari Email</label>
+              <input value={otpCode} onChange={e=>setOtpCode(e.target.value)}
+                placeholder="123456"
+                className="w-full border border-gray-300 rounded-xl p-3 mb-3 text-center tracking-widest text-lg"
+                onKeyDown={e=>{ if(e.key==="Enter") verifikasiOtp(); }} />
+              {authMsg && <div className="text-xs text-red-600 mb-3">{authMsg}</div>}
+              <button onClick={verifikasiOtp} disabled={authLoading}
+                style={{ backgroundColor:"#10B981", color:"white", borderRadius:"12px", padding:"12px", width:"100%", fontWeight:"bold", opacity: authLoading?0.7:1 }}
+                className="mb-2">
+                {authLoading ? "Memeriksa..." : "Verifikasi & Masuk"}
+              </button>
+              <button onClick={()=>{ setOtpSent(false); setOtpCode(""); setAuthMsg(""); }}
+                style={{ backgroundColor:"white", border:"1px solid #2B1B0E", color:"#2B1B0E", borderRadius:"12px", padding:"10px", width:"100%" }}>
+                Ganti Email
+              </button>
+            </React.Fragment>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (screen === "status" && currentBooking) {
+    const b = currentBooking;
+    return (
+      <div className="max-w-md mx-auto px-4 py-8 pb-24">
+        <div className="text-center mb-4">
+          <div className="text-3xl mb-2">✅</div>
+          <h1 className="text-xl font-bold">Pesanan Berhasil Dikirim</h1>
+        </div>
+
+        <div className="text-center mb-4">
+          <StatusBadge status={b.status} />
+        </div>
+
+        {b.status === "MENUNGGU" && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-sm text-yellow-800 mb-4">
+            <div className="font-semibold mb-1">Belum dikonfirmasi</div>
+            Jam yang Anda pilih masih menunggu pengecekan jadwal oleh Bos. Pesanan baru dianggap diterima setelah Bos menekan TERIMA.
+          </div>
+        )}
+        {b.status === "DITERIMA" && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-800 mb-4">
+            Pesanan Anda sudah diterima Bos.
+          </div>
+        )}
+        {b.status === "SELESAI" && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-800 mb-4">
+            Layanan sudah selesai. Terima kasih!
+          </div>
+        )}
+        {b.status === "DITOLAK" && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-800 mb-4">
+            Mohon maaf, jam yang dipilih tidak bisa dipenuhi. Silakan buat pesanan baru dengan jam lain.
+          </div>
+        )}
+        {b.status === "DIBATALKAN" && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-800 mb-4">
+            Mohon maaf, pesanan ini dibatalkan. Silakan hubungi Bos atau buat pesanan baru.
+          </div>
+        )}
+
+        <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
+          <div className="font-semibold mb-2">{b.layanan==="90m"?"Pijat 90 Menit":"Pijat 2 Jam"} × {b.orang} orang</div>
+          <div className="text-sm text-gray-600 mb-1">📅 {b.tanggal}</div>
+          <div className="text-sm text-gray-600 mb-1">🕐 {b.jam}</div>
+          <div className="text-sm text-gray-600 mb-1">📍 {b.tipeLokasi === "HOME_SERVICE" ? "Home Service" : "Di Tempat"}</div>
+          {b.tipeLokasi === "HOME_SERVICE" && b.alamat && <div className="text-sm text-gray-600">📍 {b.alamat}</div>}
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
+          <div className="text-sm font-semibold mb-2">Rincian Biaya</div>
+          <div className="flex justify-between text-sm mb-1"><span>Harga Layanan</span><span>{formatRupiah(b.service_price)}</span></div>
+          <div className="flex justify-between text-sm mb-1"><span>Travel Fee</span><span>{formatRupiah(b.travel_fee)}</span></div>
+          <div className="flex justify-between font-bold text-base mt-2 pt-2 border-t border-gray-200"><span>Total</span><span>{formatRupiah(b.grand_total)}</span></div>
+        </div>
+
+        <button onClick={refreshStatus} disabled={loadingStatus}
+          style={{ backgroundColor:"#2B1B0E", color:"white", fontWeight:"bold", padding:"14px", borderRadius:"14px", width:"100%" }}
+          className="mb-2">{loadingStatus ? "Memuat..." : "🔄 Cek Status Terbaru"}</button>
+        <button onClick={()=>{ localStorage.removeItem(LAST_TOKEN_KEY); setCurrentBooking(null); setScreen("form"); }}
+          style={{ backgroundColor:"white", border:"1px solid #2B1B0E", color:"#2B1B0E", padding:"14px", borderRadius:"14px", width:"100%" }}>
+          Kembali ke Beranda
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-md mx-auto px-4 pb-24">
+      <div className="text-center py-6">
+        <h1 className="text-2xl font-bold" style={{color:"#2B1B0E"}}>PIJAT SULES MADURAN</h1>
+        {customerSession && (
+          <div className="text-xs text-gray-400 mt-2">
+            {customerSession.user.email} · <button onClick={customerDoLogout} className="text-red-600 underline">Logout</button>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
+        <label className="text-sm font-semibold block mb-1">Nama Lengkap</label>
+        <input value={nama} onChange={e=>setNama(e.target.value)} className="w-full border border-gray-300 rounded-xl p-3 mb-3" placeholder="Nama Anda" />
+        <label className="text-sm font-semibold block mb-1">No WA</label>
+        <input value={wa} onChange={e=>setWa(e.target.value)} className="w-full border border-gray-300 rounded-xl p-3" placeholder="08xxxxxxxxxx" />
+      </div>
+
+      <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
+        <div className="text-sm font-semibold mb-2">Layanan</div>
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <PilihanButton selected={layanan==="90m"} onClick={()=>setLayanan("90m")} label="90 Menit - Rp60.000" />
+          <PilihanButton selected={layanan==="120m"} onClick={()=>setLayanan("120m")} label="2 Jam - Rp80.000" />
+        </div>
+        <div className="text-sm font-semibold mb-2">Jumlah Orang</div>
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <PilihanButton selected={orang===1} onClick={()=>setOrang(1)} label="1 Orang" />
+          <PilihanButton selected={orang===2} onClick={()=>setOrang(2)} label="2 Orang" />
+        </div>
+        <div className="text-sm font-semibold mb-1">Tanggal</div>
+        <input type="date" value={tanggal} onChange={e=>setTanggal(e.target.value)} className="w-full border border-gray-300 rounded-xl p-3 mb-4" />
+        <div className="text-sm font-semibold mb-2">Jam</div>
+        {renderSlotGrup("☀️ Pagi-Sore (08:00-16:00)", pagi)}
+        {renderSlotGrup("🌙 Malam (19:00-00:00)", malam)}
+      </div>
+
+      <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
+        <div className="text-sm font-semibold mb-2">Lokasi</div>
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <PilihanButton selected={tipeLokasi==="DI_TEMPAT"} onClick={()=>setTipeLokasi("DI_TEMPAT")} label="DI TEMPAT" />
+          <PilihanButton selected={tipeLokasi==="HOME_SERVICE"} onClick={()=>setTipeLokasi("HOME_SERVICE")} label="HOME SERVICE" />
+        </div>
+
+        {tipeLokasi === "HOME_SERVICE" && (
+          <div>
+            <div className="text-xs text-gray-500 mb-3">Gratis 1km pertama, selebihnya Rp3,5/meter</div>
+            <button onClick={ambilLokasiGPS} disabled={loadingGPS}
+              style={{ backgroundColor:"#3B82F6", color:"white", borderRadius:"999px", padding:"14px", width:"100%", fontWeight:"bold" }}
+              className="mb-2">
+              {loadingGPS ? "📡 Mencari Lokasi..." : "📍 Bagikan Lokasi Saya (1 Klik Otomatis)"}
+            </button>
+            {gpsMsg && <div className="text-xs text-red-600 mb-3">{gpsMsg}</div>}
+
+            <div className="text-center text-xs text-gray-400 my-2">atau</div>
+
+            <textarea value={alamatText} onChange={e=>setAlamatText(e.target.value)}
+              placeholder="Tempel link Google Maps atau ketik alamat. Contoh link pendek: https://maps.app.goo.gl/xxx atau tempel langsung koordinat -7.xxx,112.xxx"
+              className="w-full border border-gray-300 rounded-xl p-3 mb-2 text-sm" rows="3"></textarea>
+            <button onClick={parseAlamat}
+              style={{ backgroundColor:"white", border:"1px solid #2B1B0E", color:"#2B1B0E", borderRadius:"12px", padding:"12px", width:"100%" }}
+              className="mb-2">📋 Parse Alamat / Link</button>
+            {parseMsg && <div className="text-xs text-red-600 mb-3">{parseMsg}</div>}
+
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div style={{ border: lat!==null ? "1px solid #10B981" : "1px solid #D1D5DB", backgroundColor: lat!==null ? "#ECFDF5" : "#F9FAFB", color: lat!==null ? "#065F46" : "#6B7280" }} className="rounded-xl p-2 text-xs">
+                <div className="font-semibold">LAT</div>
+                <div>{lat !== null ? lat.toFixed(6) : "-"}</div>
+              </div>
+              <div style={{ border: lng!==null ? "1px solid #10B981" : "1px solid #D1D5DB", backgroundColor: lng!==null ? "#ECFDF5" : "#F9FAFB", color: lng!==null ? "#065F46" : "#6B7280" }} className="rounded-xl p-2 text-xs">
+                <div className="font-semibold">LNG</div>
+                <div>{lng !== null ? lng.toFixed(6) : "-"}</div>
+              </div>
+            </div>
+
+            {jarakError && <div className="text-xs text-red-600 mb-2">{jarakError}</div>}
+            {jarak !== null && sumberJarak && (
+              <div className="mb-2">
+                {sumberJarak === "road" ? (
+                  <span style={{ backgroundColor:"#ECFDF5", color:"#065F46", border:"1px solid #10B981" }} className="text-xs rounded-full px-3 py-1 inline-block">
+                    📍 Jarak Jalan (Google) • {jarak}m
+                  </span>
+                ) : (
+                  <span style={{ backgroundColor:"#FFFBEB", color:"#92400E", border:"1px solid #D4AF37" }} className="text-xs rounded-full px-3 py-1 inline-block">
+                    📐 Estimasi Garis Lurus • {jarak}m
+                  </span>
+                )}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={()=>hitungJarakSekarang()} disabled={loadingJarak}
+                style={{ backgroundColor:"#D4AF37", color:"#2B1B0E", fontWeight:"bold", borderRadius:"12px", padding:"12px" }}>
+                {loadingJarak ? "Menghitung..." : "🛣️ Hitung Jarak Jalan"}
+              </button>
+              <button onClick={resetLokasi} disabled={loadingJarak}
+                style={{ backgroundColor:"white", border:"2px solid #2B1B0E", color:"#2B1B0E", borderRadius:"12px", padding:"12px" }}>
+                🗑️ Reset
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
+        <div className="text-sm font-semibold mb-2">Rincian Biaya</div>
+        <div className="flex justify-between text-sm mb-1">
+          <span>Layanan: {layanan==="90m"?"90 Menit":"2 Jam"} x {orang}</span>
+          <span>{formatRupiah(biayaLayanan)}</span>
+        </div>
+        {tipeLokasi === "HOME_SERVICE" && jarak !== null && (
+          <div className="text-xs text-gray-500 mb-1">
+            Jarak Jalan {jarak}m {sumberJarak === "haversine" ? "(estimasi garis lurus)" : "(Google Routes)"} {jarak > GRATIS_METER ? `- Gratis ${GRATIS_METER}m = ${jarak-GRATIS_METER}m x Rp3,5 = ${formatRupiah(transport)}` : "(dalam radius gratis)"}
+          </div>
+        )}
+        {tipeLokasi === "HOME_SERVICE" && (
+          <div className="flex justify-between text-sm mb-1">
+            <span>Transport</span>
+            <span>{formatRupiah(transport)}</span>
+          </div>
+        )}
+        <div className="flex justify-between font-bold text-base mt-2 pt-2 border-t border-gray-200">
+          <span>TOTAL</span>
+          <span>{formatRupiah(total)}</span>
+        </div>
+      </div>
+
+      {formError && (
+        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3">
+          ⚠️ {formError}
+        </div>
+      )}
+      <button onClick={konfirmasiBooking} disabled={submitting}
+        style={{ backgroundColor:"#10B981", color:"white", fontWeight:"bold", padding:"16px", borderRadius:"16px", width:"100%", boxShadow:"0 4px 12px rgba(0,0,0,0.15)", opacity: submitting?0.7:1 }}>
+        {submitting ? "Mengirim..." : "✅ KONFIRMASI BOOKING"}
+      </button>
+    </div>
+  );
+}
+
+/* ================= TAB BOS (ADMIN) ================= */
+const SERVICE_LABEL = { "90m": "90 Menit", "120m": "2 Jam" };
+
+function localDateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+}
+
+function getDashboardDateRange(period, customStart, customEnd) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let start;
+  let end;
+
+  if (period === "custom") {
+    if (!customStart || !customEnd || customStart > customEnd) return null;
+    return { startDate: customStart, endDate: customEnd };
+  }
+  if (period === "today") {
+    start = today;
+    end = today;
+  } else if (period === "7days") {
+    start = new Date(today);
+    start.setDate(start.getDate() - 6);
+    end = today;
+  } else if (period === "30days") {
+    start = new Date(today);
+    start.setDate(start.getDate() - 29);
+    end = today;
+  } else {
+    start = new Date(today.getFullYear(), today.getMonth(), 1);
+    end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  }
+
+  return { startDate: localDateKey(start), endDate: localDateKey(end) };
+}
+
+function chartDateLabel(dateKey) {
+  const value = String(dateKey || "");
+  return value.length >= 10 ? `${value.slice(8,10)}/${value.slice(5,7)}` : value;
+}
+
+function RevenueChart({ days = [] }) {
+  const safeDays = Array.isArray(days) ? days : [];
+  const values = safeDays.map(day => Math.max(0, Number(day.pemasukan) || 0));
+  const maxValue = Math.max(1, ...values);
+  const left = 22;
+  const right = 318;
+  const top = 14;
+  const bottom = 112;
+  const points = safeDays.map((day, index) => ({
+    day,
+    value: values[index],
+    x: safeDays.length === 1 ? (left + right) / 2 : left + index * (right - left) / (safeDays.length - 1),
+    y: bottom - (values[index] / maxValue) * (bottom - top)
+  }));
+  const labels = safeDays.length <= 7
+    ? safeDays.map((_, index) => index)
+    : Array.from(new Set([0, Math.floor((safeDays.length - 1) / 2), safeDays.length - 1]));
+
+  return (
+    <div className="bg-white rounded-xl p-3 border border-gray-200 mb-4">
+      <div className="font-semibold text-sm mb-1">Pemasukan per hari</div>
+      {safeDays.length === 0 ? (
+        <div className="text-xs text-gray-500 py-6 text-center">Data grafik belum tersedia.</div>
+      ) : (
+        <svg viewBox="0 0 340 146" className="w-full" role="img" aria-label="Grafik pemasukan per hari">
+          <line x1={left} y1={bottom} x2={right} y2={bottom} stroke="#D1D5DB" strokeWidth="1" />
+          {points.length > 1 && (
+            <polyline points={points.map(point => `${point.x},${point.y}`).join(" ")} fill="none" stroke="#10B981" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+          )}
+          {points.map(point => (
+            <g key={point.day.tanggal}>
+              <title>{point.day.tanggal}: {formatRupiah(point.value)}</title>
+              <circle cx={point.x} cy={point.y} r="3" fill="#2B1B0E" stroke="white" strokeWidth="1" />
+            </g>
+          ))}
+          {labels.map(index => (
+            <text key={safeDays[index].tanggal} x={points[index].x} y="136" textAnchor="middle" fontSize="10" fill="#6B7280">
+              {chartDateLabel(safeDays[index].tanggal)}
+            </text>
+          ))}
+        </svg>
+      )}
+    </div>
+  );
+}
+
+function BosTab() {
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [password, setPassword] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [loggingIn, setLoggingIn] = useState(false);
+
+  const [bookings, setBookings] = useState([]);
+  const [dashboardSummary, setDashboardSummary] = useState(null);
+  const [revenueDays, setRevenueDays] = useState([]);
+  const [loadingList, setLoadingList] = useState(false);
+  const [listError, setListError] = useState("");
+  const todayKey = localDateKey(new Date());
+  const [dashboardPeriod, setDashboardPeriod] = useState("today");
+  const [customStart, setCustomStart] = useState(todayKey);
+  const [customEnd, setCustomEnd] = useState(todayKey);
+  const [lastUpdated, setLastUpdated] = useState("");
+  const [filterStatus, setFilterStatus] = useState(null); // null = semua
+  const [acceptWarning, setAcceptWarning] = useState({});
+  const [actionLoading, setActionLoading] = useState({});
+  const fetchRequestId = useRef(0);
+
+  useEffect(() => {
+    window.bookingService.getAdminSession().then(session => {
+      setLoggedIn(!!session);
+      setCheckingSession(false);
+    });
+  }, []);
+
+  async function fetchDashboard() {
+    const requestId = ++fetchRequestId.current;
+    const range = getDashboardDateRange(dashboardPeriod, customStart, customEnd);
+    if (!range) {
+      setListError("");
+      setLoadingList(false);
+      return false;
+    }
+    setLoadingList(true);
+    setListError("");
+    try {
+      const [summaryData, bookingData] = await Promise.all([
+        window.bookingService.getDashboardSummary(range.startDate, range.endDate),
+        window.bookingService.getBookingsPeriod(range.startDate, range.endDate, filterStatus)
+      ]);
+      if (requestId !== fetchRequestId.current) return false;
+      setDashboardSummary(summaryData || {});
+      setRevenueDays(Array.isArray(summaryData && summaryData.per_hari) ? summaryData.per_hari : []);
+      setBookings(bookingData || []);
+      const refreshedAt = new Date();
+      setLastUpdated(`${String(refreshedAt.getHours()).padStart(2,"0")}:${String(refreshedAt.getMinutes()).padStart(2,"0")}`);
+      return true;
+    } catch (e) {
+      if (requestId === fetchRequestId.current) {
+        setListError((e && e.message) || "Gagal memuat dashboard. Coba lagi.");
+      }
+      return false;
+    } finally {
+      if (requestId === fetchRequestId.current) setLoadingList(false);
+    }
+  }
+
+  useEffect(() => {
+    if (loggedIn) fetchDashboard();
+  }, [loggedIn, dashboardPeriod, customStart, customEnd, filterStatus]);
+
+  const doLogin = async () => {
+    setLoginError("");
+    setLoggingIn(true);
+    try {
+      if (!adminEmail.trim()) {
+        setLoginError("Masukkan email admin.");
+        setLoggingIn(false);
+        return;
+      }
+      await window.bookingService.adminLogin(adminEmail.trim(), password);
+      setLoggedIn(true);
+      setPassword("");
+    } catch (e) {
+      const msg = (e && e.message) || "";
+      if (/invalid login credentials/i.test(msg)) {
+        setLoginError("Sandi Salah");
+      } else if (msg) {
+        setLoginError(`Gagal login: ${msg}`);
+      } else {
+        setLoginError("Gagal login, coba lagi.");
+      }
+    }
+    setLoggingIn(false);
+  };
+
+  const doLogout = async () => {
+    await window.bookingService.adminLogout();
+    fetchRequestId.current += 1;
+    setLoggedIn(false);
+    setBookings([]);
+    setDashboardSummary(null);
+    setRevenueDays([]);
+    setListError("");
+    setLoadingList(false);
+    setLastUpdated("");
+  };
+
+  if (checkingSession) {
+    return <div className="text-center text-gray-400 text-sm py-16">Memuat...</div>;
+  }
+
+  if (!loggedIn) {
+    return (
+      <div className="max-w-sm mx-auto px-4 py-16">
+        <div className="bg-white rounded-2xl p-6 border border-gray-200">
+          <div className="text-center text-lg font-bold mb-4">🔐 Login Bos</div>
+          <label htmlFor="admin-email" className="text-sm font-semibold block mb-1">Email Admin:</label>
+          <input
+            id="admin-email"
+            type="email"
+            autoComplete="username"
+            value={adminEmail}
+            onChange={e=>setAdminEmail(e.target.value)}
+            placeholder="Email admin"
+            className="w-full border border-gray-300 rounded-xl p-3 mb-4"
+            onKeyDown={e=>{ if(e.key==="Enter") doLogin(); }}
+          />
+          <label className="text-sm font-semibold block mb-1">Sandi Bos:</label>
+          <div className="relative mb-4">
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={e=>setPassword(e.target.value)}
+              placeholder="••••••••••••"
+              className="w-full border border-gray-300 rounded-xl p-3 pr-10"
+              onKeyDown={e=>{ if(e.key==="Enter") doLogin(); }}
+            />
+            <button onClick={()=>setShowPassword(!showPassword)} className="absolute right-3 top-3 text-lg">👁️</button>
+          </div>
+          {loginError && <div className="text-xs text-red-600 mb-3 text-center">{loginError}</div>}
+          <button onClick={doLogin} disabled={loggingIn}
+            style={{ backgroundColor:"#2B1B0E", border:"2px solid #D4AF37", color:"white", borderRadius:"12px", padding:"12px", width:"100%", fontWeight:"bold", opacity: loggingIn?0.7:1 }}>
+            {loggingIn ? "Memeriksa..." : "✅ Masuk Dashboard"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const list = bookings;
+  const summary = dashboardSummary || {};
+  const dashboardRange = getDashboardDateRange(dashboardPeriod, customStart, customEnd);
+  const customRangeInvalid = dashboardPeriod === "custom" && !dashboardRange;
+
+  const handleTerima = async (id) => {
+    setActionLoading(prev => ({ ...prev, [id]: true }));
+    try {
+      const result = await window.bookingService.acceptBooking(id);
+      if (!result.success) {
+        const pesan = result.reason === "BENTROK"
+          ? "Bentrok dengan booking lain yang sudah DITERIMA di jam yang sama."
+          : "Jam ini sudah di luar jam operasional.";
+        setAcceptWarning(prev => ({ ...prev, [id]: pesan }));
+      } else {
+        setAcceptWarning(prev => ({ ...prev, [id]: null }));
+      }
+      await fetchDashboard();
+    } catch (e) {
+      setAcceptWarning(prev => ({ ...prev, [id]: e.message || "Gagal memproses." }));
+    }
+    setActionLoading(prev => ({ ...prev, [id]: false }));
+  };
+
+  const handleTolak = async (id) => {
+    setActionLoading(prev => ({ ...prev, [id]: true }));
+    try {
+      await window.bookingService.rejectBooking(id);
+      await fetchDashboard();
+    } catch (e) {
+      setAcceptWarning(prev => ({ ...prev, [id]: e.message || "Gagal menolak." }));
+    }
+    setActionLoading(prev => ({ ...prev, [id]: false }));
+  };
+
+  const handleSelesai = async (id) => {
+    setActionLoading(prev => ({ ...prev, [id]: true }));
+    try {
+      await window.bookingService.completeBooking(id);
+      setAcceptWarning(prev => ({ ...prev, [id]: null }));
+      await fetchDashboard();
+    } catch (e) {
+      setAcceptWarning(prev => ({ ...prev, [id]: e.message || "Gagal menyelesaikan." }));
+    }
+    setActionLoading(prev => ({ ...prev, [id]: false }));
+  };
+
+  const exportCSV = () => {
+    const header = ["id","nama","wa","service_id","jumlah_orang","tanggal","jam_mulai","tipe_lokasi","alamat","lat","lng","jarak_meter","service_price","travel_fee","grand_total","status","created_at"];
+    const rows = bookings.map(b => header.map(h => `"${(b[h] ?? "").toString().replace(/"/g,'""')}"`).join(","));
+    const csv = [header.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "sules_bookings.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="max-w-md mx-auto px-4 pb-16">
+      <div className="flex justify-between items-center py-4">
+        <div className="font-bold">Halo Bos 👋</div>
+        <button onClick={doLogout} className="text-sm text-red-600 underline">Logout</button>
+      </div>
+      <div className="text-xs text-gray-500 mb-4">Dashboard Admin</div>
+
+      <div className="bg-white rounded-xl p-3 border border-gray-200 mb-3">
+        <label htmlFor="dashboard-period" className="text-sm font-semibold block mb-1">Periode Dashboard</label>
+        <select id="dashboard-period" value={dashboardPeriod} onChange={e=>setDashboardPeriod(e.target.value)}
+          className="w-full border border-gray-300 rounded-lg p-2 text-sm">
+          <option value="today">Hari Ini</option>
+          <option value="7days">7 Hari</option>
+          <option value="30days">30 Hari</option>
+          <option value="month">Bulan Ini</option>
+          <option value="custom">Custom</option>
+        </select>
+        {dashboardPeriod === "custom" && (
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <label className="text-xs font-semibold">Tanggal mulai
+              <input type="date" value={customStart} onChange={e=>setCustomStart(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg p-2 mt-1 text-sm" />
+            </label>
+            <label className="text-xs font-semibold">Tanggal akhir
+              <input type="date" value={customEnd} onChange={e=>setCustomEnd(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg p-2 mt-1 text-sm" />
+            </label>
+          </div>
+        )}
+        {customRangeInvalid && (
+          <div role="alert" className="text-xs text-red-700 mt-2">Isi tanggal mulai dan akhir yang valid; tanggal mulai tidak boleh setelah tanggal akhir.</div>
+        )}
+        {dashboardRange && (
+          <div className="text-xs text-gray-500 mt-2">{dashboardRange.startDate} s.d. {dashboardRange.endDate} (inklusif)</div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="bg-white rounded-xl p-3 border border-gray-200 text-center">
+          <div className="text-xs text-gray-500">Total Booking</div>
+          <div className="text-lg font-bold">{summary.total ?? "—"}</div>
+        </div>
+        <div className="bg-white rounded-xl p-3 border border-gray-200 text-center">
+          <div className="text-xs text-gray-500">MENUNGGU</div>
+          <div className="text-lg font-bold">{summary.menunggu ?? "—"}</div>
+        </div>
+        <div className="bg-white rounded-xl p-3 border border-gray-200 text-center">
+          <div className="text-xs text-gray-500">DITERIMA</div>
+          <div className="text-lg font-bold">{summary.diterima ?? "—"}</div>
+        </div>
+        <div className="bg-white rounded-xl p-3 border border-gray-200 text-center">
+          <div className="text-xs text-gray-500">SELESAI</div>
+          <div className="text-lg font-bold">{summary.selesai ?? "—"}</div>
+        </div>
+        <div className="bg-white rounded-xl p-3 border border-gray-200 text-center col-span-2">
+          <div className="text-xs text-gray-500">Pemasukan (DITERIMA + SELESAI)</div>
+          <div className="text-lg font-bold">{summary.pemasukan === undefined ? "—" : formatRupiah(summary.pemasukan)}</div>
+        </div>
+      </div>
+
+      <RevenueChart days={revenueDays} />
+
+      <div className="mb-3">
+        <div className="flex gap-2 flex-wrap">
+        <button onClick={()=>setFilterStatus(filterStatus === "MENUNGGU" ? null : "MENUNGGU")}
+          style={{ backgroundColor: filterStatus==="MENUNGGU" ? "#D4AF37" : "white", color:"#2B1B0E", border:"1px solid #D4AF37", borderRadius:"10px", padding:"8px 12px" }}
+          className="text-sm">🟡 Hanya MENUNGGU</button>
+        <button onClick={fetchDashboard} disabled={loadingList || customRangeInvalid}
+          className="text-sm border border-gray-300 rounded-lg px-3 py-2 disabled:opacity-50">🔄 Refresh</button>
+        <button onClick={exportCSV} className="text-sm border border-gray-300 rounded-lg px-3 py-2">Export CSV</button>
+      </div>
+
+        <div className="text-xs text-gray-500 mt-2">Terakhir diperbarui: {lastUpdated || "—"}</div>
+      </div>
+
+      {loadingList && <div role="status" className="text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">Memuat data...</div>}
+      {listError && (
+        <div role="alert" className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+          <div className="mb-2">Gagal memuat dashboard: {listError}</div>
+          <button onClick={fetchDashboard} disabled={loadingList || customRangeInvalid}
+            className="bg-white border border-red-300 rounded-lg px-3 py-2 font-semibold disabled:opacity-50">Coba Lagi</button>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {list.map(b => {
+          const maps = mapsLinkForBooking(b);
+          return (
+            <div key={b.id} className="bg-white rounded-xl p-3 border border-gray-200 text-sm">
+              <div className="flex justify-between items-start gap-2 mb-2">
+                <span className="font-semibold text-base break-words">{b.nama}</span>
+                <StatusBadge status={b.status} />
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                <div><div className="text-gray-500">Tanggal</div><div className="font-medium">{b.tanggal}</div></div>
+                <div><div className="text-gray-500">Jam</div><div className="font-medium">{b.jam_mulai}</div></div>
+              </div>
+              <div className="text-sm mb-1">{SERVICE_LABEL[b.service_id] || b.service_id} • {b.jumlah_orang} orang</div>
+              <div className="text-xs text-gray-700 mb-1">Lokasi: {b.tipe_lokasi === "HOME_SERVICE" ? "Home Service" : "Di Tempat"}</div>
+              <div className="text-sm font-bold mt-1">Total pembayaran: {formatRupiah(b.grand_total)}</div>
+
+              <div className="border-t border-gray-100 mt-2 pt-2 space-y-1">
+                <div className="text-xs text-gray-600">WA snapshot: {b.wa}</div>
+                {b.tipe_lokasi === "HOME_SERVICE" && b.alamat && <div className="text-xs text-gray-600">Alamat: {b.alamat}</div>}
+                {maps && (
+                  <a href={maps} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline inline-block">🗺️ Buka Google Maps</a>
+                )}
+                <div className="text-xs text-gray-600 pt-1">
+                  <div>Harga layanan: {formatRupiah(b.service_price)}</div>
+                  <div>Travel fee: {formatRupiah(b.travel_fee)}</div>
+                </div>
+              </div>
+
+              {acceptWarning[b.id] && (
+                <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2 mt-2">
+                  ⚠️ {acceptWarning[b.id]}
+                </div>
+              )}
+
+              {b.status === "MENUNGGU" && (
+                <div className="flex gap-2 mt-2">
+                  <button onClick={()=>handleTerima(b.id)} disabled={actionLoading[b.id]}
+                    style={{ flex:1, backgroundColor:"#10B981", color:"white", borderRadius:"10px", padding:"8px", fontWeight:"bold", opacity: actionLoading[b.id]?0.6:1 }}
+                    className="text-sm">✅ TERIMA</button>
+                  <button onClick={()=>handleTolak(b.id)} disabled={actionLoading[b.id]}
+                    style={{ flex:1, backgroundColor:"white", border:"1px solid #DC2626", color:"#DC2626", borderRadius:"10px", padding:"8px", opacity: actionLoading[b.id]?0.6:1 }}
+                    className="text-sm">❌ TOLAK</button>
+                </div>
+              )}
+
+              {b.status === "DITERIMA" && (
+                <div className="flex gap-2 mt-2">
+                  <button onClick={()=>handleSelesai(b.id)} disabled={actionLoading[b.id]}
+                    style={{ flex:1, backgroundColor:"#22C55E", color:"white", borderRadius:"10px", padding:"8px", fontWeight:"bold", opacity: actionLoading[b.id]?0.6:1 }}
+                    className="text-sm">✅ SELESAI</button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {!loadingList && !listError && list.length === 0 && <div className="text-center text-gray-500 text-sm py-8">Belum ada booking pada periode ini.</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ================= APP ================= */
+function App() {
+  return (
+    <div className="min-h-screen">
+      <AppTabs />
+    </div>
+  );
+}
+
+function AppTabs() {
+  const [tab, setTab] = useState("booking");
+  return (
+    <React.Fragment>
+      <div style={{ position:"sticky", top:0, zIndex:40 }} className="bg-white border-b border-gray-200 flex">
+        <button onClick={()=>setTab("booking")}
+          style={{ flex:1, padding:"12px", fontWeight: tab==="booking" ? "bold" : "normal", color: tab==="booking" ? "#2B1B0E" : "#9CA3AF", borderBottom: tab==="booking" ? "3px solid #D4AF37" : "3px solid transparent" }}>
+          Booking
+        </button>
+        <button onClick={()=>setTab("bos")}
+          style={{ flex:1, padding:"12px", fontWeight: tab==="bos" ? "bold" : "normal", color: tab==="bos" ? "#2B1B0E" : "#9CA3AF", borderBottom: tab==="bos" ? "3px solid #D4AF37" : "3px solid transparent" }}>
+          Tab Bos
+        </button>
+      </div>
+      {tab === "booking" ? <BookingTab /> : <BosTab />}
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
