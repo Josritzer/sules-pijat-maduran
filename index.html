@@ -94,7 +94,25 @@
     return data.session;
   }
 
-  window.bookingService = { createBooking, getMyBooking, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession };
+  let realtimeChannelSequence = 0;
+  function subscribeAdminBookingChanges(onChange) {
+    return supabaseClient.channel(`sules-admin-bookings-${++realtimeChannelSequence}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "bookings" }, onChange)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings" }, onChange)
+      .subscribe();
+  }
+  function subscribeCustomerBookingUpdates(bookingId, onChange) {
+    const id = String(bookingId || "");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+    return supabaseClient.channel(`sules-customer-booking-${++realtimeChannelSequence}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `id=eq.${id}` }, onChange)
+      .subscribe();
+  }
+  async function removeRealtimeChannel(channel) {
+    if (channel) await supabaseClient.removeChannel(channel);
+  }
+
+  window.bookingService = { createBooking, getMyBooking, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, removeRealtimeChannel };
 })();
 </script>
 <style>
@@ -333,7 +351,7 @@ function BookingTab() {
     window.bookingService.getMyBooking(token).then(b => {
       if (b) {
         setCurrentBooking({
-          access_token: token, layanan: b.service_id, orang: b.jumlah_orang,
+          booking_id: b.id, access_token: token, layanan: b.service_id, orang: b.jumlah_orang,
           tanggal: b.tanggal, jam: b.jam_mulai, tipeLokasi: b.tipe_lokasi, alamat: b.alamat,
           service_price: b.service_price, travel_fee: b.travel_fee,
           grand_total: b.grand_total, status: b.status
@@ -460,6 +478,7 @@ function BookingTab() {
       });
       localStorage.setItem(LAST_TOKEN_KEY, result.access_token);
       setCurrentBooking({
+        booking_id: result.booking_id,
         access_token: result.access_token,
         layanan, orang, tanggal, jam, tipeLokasi, alamat: alamatText,
         service_price: result.service_price, travel_fee: result.travel_fee,
@@ -483,6 +502,41 @@ function BookingTab() {
     } catch (e) { /* biarkan status lama tampil kalau gagal refresh */ }
     setLoadingStatus(false);
   };
+
+  useEffect(() => {
+    const bookingId = currentBooking && currentBooking.booking_id;
+    const accessToken = currentBooking && currentBooking.access_token;
+    const customerUserId = customerSession && customerSession.user && customerSession.user.id;
+    if (screen !== "status" || !bookingId || !accessToken || !customerUserId) return;
+
+    let active = true;
+    let refreshInFlight = false;
+    let refreshQueued = false;
+    const refreshFromSupabase = () => {
+      if (refreshInFlight) {
+        refreshQueued = true;
+        return;
+      }
+      refreshInFlight = true;
+      window.bookingService.getMyBooking(accessToken).then(b => {
+        if (!active || !b) return;
+        setCurrentBooking(prev => prev && prev.booking_id === bookingId
+          ? { ...prev, status: b.status, grand_total: b.grand_total }
+          : prev);
+      }).catch(() => {}).finally(() => {
+        refreshInFlight = false;
+        if (active && refreshQueued) {
+          refreshQueued = false;
+          refreshFromSupabase();
+        }
+      });
+    };
+    const channel = window.bookingService.subscribeCustomerBookingUpdates(bookingId, refreshFromSupabase);
+    return () => {
+      active = false;
+      void window.bookingService.removeRealtimeChannel(channel);
+    };
+  }, [screen, currentBooking && currentBooking.booking_id, currentBooking && currentBooking.access_token, customerSession && customerSession.user && customerSession.user.id]);
 
   const renderSlotGrup = (judul, slots) => (
     <div className="mb-3">
@@ -873,6 +927,7 @@ function BosTab() {
   const [acceptWarning, setAcceptWarning] = useState({});
   const [actionLoading, setActionLoading] = useState({});
   const fetchRequestId = useRef(0);
+  const fetchDashboardRef = useRef(null);
 
   useEffect(() => {
     window.bookingService.getAdminSession().then(session => {
@@ -912,10 +967,30 @@ function BosTab() {
       if (requestId === fetchRequestId.current) setLoadingList(false);
     }
   }
+  fetchDashboardRef.current = fetchDashboard;
 
   useEffect(() => {
     if (loggedIn) fetchDashboard();
   }, [loggedIn, dashboardPeriod, customStart, customEnd, filterStatus]);
+
+  useEffect(() => {
+    if (!loggedIn) return;
+    let active = true;
+    let refreshTimer = null;
+    const channel = window.bookingService.subscribeAdminBookingChanges(() => {
+      if (!active) return;
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => {
+        refreshTimer = null;
+        if (active && fetchDashboardRef.current) fetchDashboardRef.current();
+      }, 100);
+    });
+    return () => {
+      active = false;
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+      void window.bookingService.removeRealtimeChannel(channel);
+    };
+  }, [loggedIn]);
 
   const doLogin = async () => {
     setLoginError("");
