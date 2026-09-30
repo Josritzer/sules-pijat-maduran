@@ -98,6 +98,22 @@
     return data.session;
   }
 
+  async function requestGoogleRoadDistance(origin, destination) {
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+    const accessToken = sessionData && sessionData.session && sessionData.session.access_token;
+    if (!accessToken) throw new Error("Customer session required for Google Routes.");
+    const { data, error } = await supabaseClient.functions.invoke("google-routes", {
+      body: { origin, destination },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: SUPABASE_ANON_KEY
+      }
+    });
+    if (error) throw error;
+    return data;
+  }
+
   // CP-6: short event-only chimes; no audio starts until a real user gesture unlocks Web Audio.
   const playedRealtimeSoundEvents = new Set();
   const realtimeSoundProfiles = {
@@ -194,7 +210,7 @@
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { createBooking, getMyBooking, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+  window.bookingService = { createBooking, getMyBooking, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -211,7 +227,6 @@ const { useState, useEffect, useRef } = React;
 /* ================= KONSTANTA ================= */
 const BASE_LAT = -7.0000833;
 const BASE_LNG = 112.2810000;
-const GOOGLE_ROUTES_API_KEY = (typeof VITE_GOOGLE_ROUTES_API_KEY !== "undefined" && VITE_GOOGLE_ROUTES_API_KEY) || (window.SULES_CONFIG && window.SULES_CONFIG.googleRoutesApiKey) || "";
 const GRATIS_METER = 1000;
 const TARIF_PER_METER = 3.5;
 const HARGA = { "90m": 60000, "120m": 80000 };
@@ -290,24 +305,15 @@ function parseAlamatText(raw) {
 }
 async function computeRoadDistance(destLat, destLng) {
   try {
-    const res = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": GOOGLE_ROUTES_API_KEY,
-        "X-Goog-FieldMask": "routes.distanceMeters"
-      },
-      body: JSON.stringify({
-        origin: { location: { latLng: { latitude: BASE_LAT, longitude: BASE_LNG } } },
-        destination: { location: { latLng: { latitude: destLat, longitude: destLng } } },
-        travelMode: "TWO_WHEELER"
-      })
-    });
-    const data = await res.json();
-    if (data && data.routes && data.routes[0] && data.routes[0].distanceMeters) {
-      return { meters: data.routes[0].distanceMeters, sumber: "road" };
-    }
-    throw new Error("no route");
+    const data = await window.bookingService.requestGoogleRoadDistance(
+      { lat: BASE_LAT, lng: BASE_LNG },
+      { lat: destLat, lng: destLng }
+    );
+    if (
+      !data || data.source !== "google_routes" || data.travelMode !== "TWO_WHEELER" ||
+      typeof data.distanceMeters !== "number" || !Number.isFinite(data.distanceMeters) || data.distanceMeters < 0
+    ) throw new Error("Invalid Google Routes response");
+    return { meters: data.distanceMeters, sumber: "road" };
   } catch (e) {
     const meters = haversineMeters(BASE_LAT, BASE_LNG, destLat, destLng);
     return { meters: Math.round(meters), sumber: "haversine" };
