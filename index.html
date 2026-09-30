@@ -743,6 +743,11 @@ function BookingTab() {
             Layanan sudah selesai. Terima kasih!
           </div>
         )}
+        {shouldShowGoogleReview(b.status) && (
+          <a href="https://g.page/r/CWXCZycYzhXqEBE/review" target="_blank" rel="noopener noreferrer"
+            style={{ display:"block", textAlign:"center", backgroundColor:"white", border:"1px solid #D4AF37", color:"#2B1B0E", borderRadius:"12px", padding:"12px", fontWeight:"bold" }}
+            className="mb-4">⭐ Bagikan Pengalaman di Google</a>
+        )}
         {b.status === "DITOLAK" && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-800 mb-4">
             Mohon maaf, jam yang dipilih tidak bisa dipenuhi. Silakan buat pesanan baru dengan jam lain.
@@ -954,6 +959,32 @@ function getDashboardDateRange(period, customStart, customEnd) {
   return { startDate: localDateKey(start), endDate: localDateKey(end) };
 }
 
+function getActiveBookingDateRange(now = new Date()) {
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(start);
+  end.setFullYear(end.getFullYear() + 1);
+  return { startDate: localDateKey(start), endDate: localDateKey(end) };
+}
+
+function selectActiveBookings(rows, statusFilter = null) {
+  const byId = new Map();
+  for (const booking of Array.isArray(rows) ? rows : []) {
+    if (!booking || booking.id === null || booking.id === undefined) continue;
+    const id = String(booking.id);
+    if (!byId.has(id)) byId.set(id, booking);
+  }
+  return Array.from(byId.values())
+    .filter(booking => (booking.status === "MENUNGGU" || booking.status === "DITERIMA") && (!statusFilter || booking.status === statusFilter))
+    .sort((a, b) => {
+      const dateOrder = String(a.tanggal || "").localeCompare(String(b.tanggal || ""));
+      return dateOrder || String(a.jam_mulai || "").localeCompare(String(b.jam_mulai || ""));
+    });
+}
+
+function shouldShowGoogleReview(status) {
+  return status === "SELESAI";
+}
+
 function chartDateLabel(dateKey) {
   const value = String(dateKey || "");
   return value.length >= 10 ? `${value.slice(8,10)}/${value.slice(5,7)}` : value;
@@ -1015,11 +1046,15 @@ function BosTab() {
   const [loggingIn, setLoggingIn] = useState(false);
 
   const [bookings, setBookings] = useState([]);
+  const [activeBookings, setActiveBookings] = useState([]);
+  const [activeLoading, setActiveLoading] = useState(false);
+  const [activeError, setActiveError] = useState("");
   const [dashboardSummary, setDashboardSummary] = useState(null);
   const [revenueDays, setRevenueDays] = useState([]);
   const [loadingList, setLoadingList] = useState(false);
   const [listError, setListError] = useState("");
   const todayKey = localDateKey(new Date());
+  const activeBookingRange = getActiveBookingDateRange();
   const [dashboardPeriod, setDashboardPeriod] = useState("today");
   const [customStart, setCustomStart] = useState(todayKey);
   const [customEnd, setCustomEnd] = useState(todayKey);
@@ -1037,8 +1072,35 @@ function BosTab() {
     });
   }, []);
 
+  async function fetchActiveBookings(requestId, statusFilter) {
+    const range = getActiveBookingDateRange();
+    setActiveLoading(true);
+    setActiveError("");
+    try {
+      let rows = [];
+      if (statusFilter === null) {
+        const [waitingRows, acceptedRows] = await Promise.all([
+          window.bookingService.getBookingsPeriod(range.startDate, range.endDate, "MENUNGGU"),
+          window.bookingService.getBookingsPeriod(range.startDate, range.endDate, "DITERIMA")
+        ]);
+        rows = [...(waitingRows || []), ...(acceptedRows || [])];
+      } else if (statusFilter === "MENUNGGU" || statusFilter === "DITERIMA") {
+        rows = await window.bookingService.getBookingsPeriod(range.startDate, range.endDate, statusFilter);
+      }
+      if (requestId !== fetchRequestId.current) return;
+      setActiveBookings(selectActiveBookings(rows, statusFilter));
+    } catch (e) {
+      if (requestId === fetchRequestId.current) {
+        setActiveError((e && e.message) || "Gagal memuat booking aktif. Coba lagi.");
+      }
+    } finally {
+      if (requestId === fetchRequestId.current) setActiveLoading(false);
+    }
+  }
+
   async function fetchDashboard() {
     const requestId = ++fetchRequestId.current;
+    void fetchActiveBookings(requestId, filterStatus);
     const range = getDashboardDateRange(dashboardPeriod, customStart, customEnd);
     if (!range) {
       setListError("");
@@ -1126,6 +1188,9 @@ function BosTab() {
     fetchRequestId.current += 1;
     setLoggedIn(false);
     setBookings([]);
+    setActiveBookings([]);
+    setActiveError("");
+    setActiveLoading(false);
     setDashboardSummary(null);
     setRevenueDays([]);
     setListError("");
@@ -1235,6 +1300,56 @@ function BosTab() {
     URL.revokeObjectURL(url);
   };
 
+  const renderBookingCard = (b, showActions = false) => {
+    const maps = mapsLinkForBooking(b);
+    return (
+      <div key={b.id} className="bg-white rounded-xl p-3 border border-gray-200 text-sm">
+        <div className="flex justify-between items-start gap-2 mb-2">
+          <span className="font-semibold text-base break-words">{b.nama}</span>
+          <StatusBadge status={b.status} />
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+          <div><div className="text-gray-500">Tanggal</div><div className="font-medium">{b.tanggal}</div></div>
+          <div><div className="text-gray-500">Jam</div><div className="font-medium">{b.jam_mulai}</div></div>
+        </div>
+        <div className="text-sm mb-1">{SERVICE_LABEL[b.service_id] || b.service_id} • {b.jumlah_orang} orang</div>
+        <div className="text-xs text-gray-700 mb-1">Lokasi: {b.tipe_lokasi === "HOME_SERVICE" ? "Home Service" : "Di Tempat"}</div>
+        <div className="text-sm font-bold mt-1">Total pembayaran: {formatRupiah(b.grand_total)}</div>
+
+        <div className="border-t border-gray-100 mt-2 pt-2 space-y-1">
+          <div className="text-xs text-gray-600">WA snapshot: {b.wa}</div>
+          {b.tipe_lokasi === "HOME_SERVICE" && b.alamat && <div className="text-xs text-gray-600">Alamat: {b.alamat}</div>}
+          {maps && <a href={maps} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline inline-block">🗺️ Buka Google Maps</a>}
+          <div className="text-xs text-gray-600 pt-1">
+            <div>Harga layanan: {formatRupiah(b.service_price)}</div>
+            <div>Travel fee: {formatRupiah(b.travel_fee)}</div>
+          </div>
+        </div>
+
+        {showActions && acceptWarning[b.id] && (
+          <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2 mt-2">⚠️ {acceptWarning[b.id]}</div>
+        )}
+        {showActions && b.status === "MENUNGGU" && (
+          <div className="flex gap-2 mt-2">
+            <button onClick={()=>handleTerima(b.id)} disabled={actionLoading[b.id]}
+              style={{ flex:1, backgroundColor:"#10B981", color:"white", borderRadius:"10px", padding:"8px", fontWeight:"bold", opacity: actionLoading[b.id]?0.6:1 }}
+              className="text-sm">✅ TERIMA</button>
+            <button onClick={()=>handleTolak(b.id)} disabled={actionLoading[b.id]}
+              style={{ flex:1, backgroundColor:"white", border:"1px solid #DC2626", color:"#DC2626", borderRadius:"10px", padding:"8px", opacity: actionLoading[b.id]?0.6:1 }}
+              className="text-sm">❌ TOLAK</button>
+          </div>
+        )}
+        {showActions && b.status === "DITERIMA" && (
+          <div className="flex gap-2 mt-2">
+            <button onClick={()=>handleSelesai(b.id)} disabled={actionLoading[b.id]}
+              style={{ flex:1, backgroundColor:"#22C55E", color:"white", borderRadius:"10px", padding:"8px", fontWeight:"bold", opacity: actionLoading[b.id]?0.6:1 }}
+              className="text-sm">✅ SELESAI</button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-md mx-auto px-4 pb-16">
       <div className="flex justify-between items-center py-4">
@@ -1311,73 +1426,44 @@ function BosTab() {
         <div className="text-xs text-gray-500 mt-2">Terakhir diperbarui: {lastUpdated || "—"}</div>
       </div>
 
-      {loadingList && <div role="status" className="text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">Memuat data...</div>}
-      {listError && (
-        <div role="alert" className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
-          <div className="mb-2">Gagal memuat dashboard: {listError}</div>
-          <button onClick={fetchDashboard} disabled={loadingList || customRangeInvalid}
-            className="bg-white border border-red-300 rounded-lg px-3 py-2 font-semibold disabled:opacity-50">Coba Lagi</button>
+      <section className="bg-white rounded-xl p-3 border border-gray-200 mb-4" aria-labelledby="active-bookings-heading">
+        <div className="flex justify-between items-center gap-2 mb-1">
+          <h2 id="active-bookings-heading" className="font-bold text-base">BOOKING AKTIF</h2>
+          <span className="text-xs text-gray-500">{activeBookingRange.startDate} – {activeBookingRange.endDate}</span>
         </div>
-      )}
+        <div className="text-xs text-gray-500 mb-3">Hanya MENUNGGU dan DITERIMA; urut tanggal lalu jam layanan.</div>
+        {activeLoading && <div role="status" className="text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">Memuat booking aktif...</div>}
+        {activeError && (
+          <div role="alert" className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+            <div className="mb-2">Gagal memuat booking aktif: {activeError}</div>
+            <button onClick={fetchDashboard} disabled={activeLoading}
+              className="bg-white border border-red-300 rounded-lg px-3 py-2 font-semibold disabled:opacity-50">Coba Lagi</button>
+          </div>
+        )}
+        <div className="space-y-2">
+          {activeBookings.map(b => renderBookingCard(b, true))}
+          {!activeLoading && !activeError && activeBookings.length === 0 && <div className="text-center text-gray-500 text-sm py-6">Tidak ada booking aktif dalam horizon ini.</div>}
+        </div>
+      </section>
 
-      <div className="space-y-2">
-        {list.map(b => {
-          const maps = mapsLinkForBooking(b);
-          return (
-            <div key={b.id} className="bg-white rounded-xl p-3 border border-gray-200 text-sm">
-              <div className="flex justify-between items-start gap-2 mb-2">
-                <span className="font-semibold text-base break-words">{b.nama}</span>
-                <StatusBadge status={b.status} />
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs mb-2">
-                <div><div className="text-gray-500">Tanggal</div><div className="font-medium">{b.tanggal}</div></div>
-                <div><div className="text-gray-500">Jam</div><div className="font-medium">{b.jam_mulai}</div></div>
-              </div>
-              <div className="text-sm mb-1">{SERVICE_LABEL[b.service_id] || b.service_id} • {b.jumlah_orang} orang</div>
-              <div className="text-xs text-gray-700 mb-1">Lokasi: {b.tipe_lokasi === "HOME_SERVICE" ? "Home Service" : "Di Tempat"}</div>
-              <div className="text-sm font-bold mt-1">Total pembayaran: {formatRupiah(b.grand_total)}</div>
-
-              <div className="border-t border-gray-100 mt-2 pt-2 space-y-1">
-                <div className="text-xs text-gray-600">WA snapshot: {b.wa}</div>
-                {b.tipe_lokasi === "HOME_SERVICE" && b.alamat && <div className="text-xs text-gray-600">Alamat: {b.alamat}</div>}
-                {maps && (
-                  <a href={maps} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline inline-block">🗺️ Buka Google Maps</a>
-                )}
-                <div className="text-xs text-gray-600 pt-1">
-                  <div>Harga layanan: {formatRupiah(b.service_price)}</div>
-                  <div>Travel fee: {formatRupiah(b.travel_fee)}</div>
-                </div>
-              </div>
-
-              {acceptWarning[b.id] && (
-                <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2 mt-2">
-                  ⚠️ {acceptWarning[b.id]}
-                </div>
-              )}
-
-              {b.status === "MENUNGGU" && (
-                <div className="flex gap-2 mt-2">
-                  <button onClick={()=>handleTerima(b.id)} disabled={actionLoading[b.id]}
-                    style={{ flex:1, backgroundColor:"#10B981", color:"white", borderRadius:"10px", padding:"8px", fontWeight:"bold", opacity: actionLoading[b.id]?0.6:1 }}
-                    className="text-sm">✅ TERIMA</button>
-                  <button onClick={()=>handleTolak(b.id)} disabled={actionLoading[b.id]}
-                    style={{ flex:1, backgroundColor:"white", border:"1px solid #DC2626", color:"#DC2626", borderRadius:"10px", padding:"8px", opacity: actionLoading[b.id]?0.6:1 }}
-                    className="text-sm">❌ TOLAK</button>
-                </div>
-              )}
-
-              {b.status === "DITERIMA" && (
-                <div className="flex gap-2 mt-2">
-                  <button onClick={()=>handleSelesai(b.id)} disabled={actionLoading[b.id]}
-                    style={{ flex:1, backgroundColor:"#22C55E", color:"white", borderRadius:"10px", padding:"8px", fontWeight:"bold", opacity: actionLoading[b.id]?0.6:1 }}
-                    className="text-sm">✅ SELESAI</button>
-                </div>
-              )}
-            </div>
-          );
-        })}
-        {!loadingList && !listError && list.length === 0 && <div className="text-center text-gray-500 text-sm py-8">Belum ada booking pada periode ini.</div>}
-      </div>
+      <section aria-labelledby="recap-bookings-heading">
+        <div className="mb-2">
+          <h2 id="recap-bookings-heading" className="font-bold text-base">REKAP BOOKING</h2>
+          {dashboardRange && <div className="text-xs text-gray-500">Periode {dashboardRange.startDate} s.d. {dashboardRange.endDate}</div>}
+        </div>
+        {loadingList && <div role="status" className="text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">Memuat data...</div>}
+        {listError && (
+          <div role="alert" className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+            <div className="mb-2">Gagal memuat dashboard: {listError}</div>
+            <button onClick={fetchDashboard} disabled={loadingList || customRangeInvalid}
+              className="bg-white border border-red-300 rounded-lg px-3 py-2 font-semibold disabled:opacity-50">Coba Lagi</button>
+          </div>
+        )}
+        <div className="space-y-2">
+          {list.map(b => renderBookingCard(b, false))}
+          {!loadingList && !listError && list.length === 0 && <div className="text-center text-gray-500 text-sm py-8">Belum ada booking pada periode ini.</div>}
+        </div>
+      </section>
     </div>
   );
 }
