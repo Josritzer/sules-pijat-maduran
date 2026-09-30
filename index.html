@@ -98,6 +98,84 @@
     return data.session;
   }
 
+  // CP-6: short event-only chimes; no audio starts until a real user gesture unlocks Web Audio.
+  const playedRealtimeSoundEvents = new Set();
+  const realtimeSoundProfiles = {
+    booking: { frequency: 740, duration: 0.15, gain: 0.045 },
+    accepted: { frequency: 880, duration: 0.18, gain: 0.04 },
+    rejected: { frequency: 520, duration: 0.18, gain: 0.035 }
+  };
+  let realtimeAudioContext = null;
+  let realtimeAudioUnlocked = false;
+  let realtimeAudioUnlockListenersInstalled = false;
+
+  function removeRealtimeAudioUnlockListeners() {
+    if (typeof window.removeEventListener !== "function") return;
+    window.removeEventListener("pointerdown", unlockRealtimeAudio);
+    window.removeEventListener("keydown", unlockRealtimeAudio);
+  }
+  function unlockRealtimeAudio(event) {
+    if (event && event.isTrusted === false) return;
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) { removeRealtimeAudioUnlockListeners(); return; }
+    try {
+      if (!realtimeAudioContext) realtimeAudioContext = new AudioContextClass();
+      const resumeResult = realtimeAudioContext.state === "running"
+        ? Promise.resolve()
+        : realtimeAudioContext.resume();
+      Promise.resolve(resumeResult).then(() => {
+        if (realtimeAudioContext && realtimeAudioContext.state === "running") {
+          realtimeAudioUnlocked = true;
+          removeRealtimeAudioUnlockListeners();
+        }
+      }).catch(() => {});
+    } catch (_) { /* audio is optional; ignore browser/device failures */ }
+  }
+  function installRealtimeAudioUnlockListeners() {
+    if (realtimeAudioUnlockListenersInstalled || typeof window.addEventListener !== "function") return;
+    if (!window.AudioContext && !window.webkitAudioContext) return;
+    realtimeAudioUnlockListenersInstalled = true;
+    window.addEventListener("pointerdown", unlockRealtimeAudio, { passive: true });
+    window.addEventListener("keydown", unlockRealtimeAudio, { passive: true });
+  }
+  function playRealtimeAudio(soundType) {
+    const profile = realtimeSoundProfiles[soundType];
+    if (!profile || !realtimeAudioUnlocked || !realtimeAudioContext || realtimeAudioContext.state !== "running") return;
+    try {
+      const startAt = realtimeAudioContext.currentTime;
+      const oscillator = realtimeAudioContext.createOscillator();
+      const envelope = realtimeAudioContext.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(profile.frequency, startAt);
+      envelope.gain.setValueAtTime(0.0001, startAt);
+      envelope.gain.linearRampToValueAtTime(profile.gain, startAt + 0.02);
+      envelope.gain.exponentialRampToValueAtTime(0.0001, startAt + profile.duration);
+      oscillator.connect(envelope);
+      envelope.connect(realtimeAudioContext.destination);
+      oscillator.onended = () => {
+        try { oscillator.disconnect(); envelope.disconnect(); } catch (_) {}
+      };
+      oscillator.start(startAt);
+      oscillator.stop(startAt + profile.duration + 0.02);
+    } catch (_) { /* blocked/unsupported audio must never affect booking flows */ }
+  }
+  function playRealtimeAudioOnce(eventKey, soundType) {
+    if (!eventKey || !realtimeSoundProfiles[soundType] || playedRealtimeSoundEvents.has(eventKey)) return;
+    playedRealtimeSoundEvents.add(eventKey);
+    playRealtimeAudio(soundType);
+  }
+  function notifyAdminBookingCreated(bookingId) {
+    const id = String(bookingId || "");
+    if (id) playRealtimeAudioOnce(`admin:new:${id}`, "booking");
+  }
+  function notifyCustomerBookingStatusChanged(bookingId, previousStatus, nextStatus) {
+    const id = String(bookingId || "");
+    if (!id || !previousStatus || !nextStatus || previousStatus === nextStatus) return;
+    if (nextStatus === "DITERIMA") playRealtimeAudioOnce(`customer:accepted:${id}`, "accepted");
+    else if (nextStatus === "DITOLAK") playRealtimeAudioOnce(`customer:rejected:${id}`, "rejected");
+  }
+  installRealtimeAudioUnlockListeners();
+
   let realtimeChannelSequence = 0;
   function subscribeAdminBookingChanges(onChange) {
     return supabaseClient.channel(`sules-admin-bookings-${++realtimeChannelSequence}`)
@@ -116,7 +194,7 @@
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { createBooking, getMyBooking, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, removeRealtimeChannel };
+  window.bookingService = { createBooking, getMyBooking, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -291,10 +369,22 @@ function BookingTab() {
   const [loadingJarak, setLoadingJarak] = useState(false);
   const [screen, setScreen] = useState("form");
   const [currentBooking, setCurrentBooking] = useState(null);
+  const customerStatusSnapshotRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [formError, setFormError] = useState("");
   const [jarakError, setJarakError] = useState("");
+
+  useEffect(() => {
+    if (!currentBooking || !currentBooking.booking_id) {
+      customerStatusSnapshotRef.current = null;
+      return;
+    }
+    customerStatusSnapshotRef.current = {
+      bookingId: currentBooking.booking_id,
+      status: currentBooking.status || null
+    };
+  }, [currentBooking && currentBooking.booking_id, currentBooking && currentBooking.status]);
 
   // ===== Customer Auth (Email OTP) - gerbang wajib sebelum booking baru =====
   const [customerSession, setCustomerSession] = useState(null);
@@ -524,6 +614,13 @@ function BookingTab() {
       refreshInFlight = true;
       window.bookingService.getMyBooking(accessToken).then(b => {
         if (!active || !b) return;
+        const previousSnapshot = customerStatusSnapshotRef.current;
+        if (previousSnapshot && previousSnapshot.bookingId === bookingId) {
+          try {
+            window.bookingService.notifyCustomerBookingStatusChanged(bookingId, previousSnapshot.status, b.status);
+          } catch (_) { /* sound is optional */ }
+        }
+        customerStatusSnapshotRef.current = { bookingId, status: b.status || null };
         setCurrentBooking(prev => prev && prev.booking_id === bookingId
           ? { ...prev, status: b.status, grand_total: b.grand_total }
           : prev);
@@ -981,8 +1078,11 @@ function BosTab() {
     if (!loggedIn) return;
     let active = true;
     let refreshTimer = null;
-    const channel = window.bookingService.subscribeAdminBookingChanges(() => {
+    const channel = window.bookingService.subscribeAdminBookingChanges((payload) => {
       if (!active) return;
+      if (payload && payload.eventType === "INSERT" && payload.new && payload.new.id) {
+        try { window.bookingService.notifyAdminBookingCreated(payload.new.id); } catch (_) {}
+      }
       if (refreshTimer !== null) window.clearTimeout(refreshTimer);
       refreshTimer = window.setTimeout(() => {
         refreshTimer = null;
