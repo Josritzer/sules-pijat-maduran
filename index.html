@@ -282,7 +282,7 @@ function mapsLinkForBooking(b) {
   return null;
 }
 function generateSlotsForDurasi(durasiMenit) {
-  const closeMorning = 16 * 60;
+  const closeMorning = 15 * 60; // sama dengan backend: layanan harus selesai paling lambat 15:00
   const closeEvening = 24 * 60;
   const pagi = MORNING_SLOTS.filter(s => jamToMenit(s) + durasiMenit <= closeMorning);
   const malam = EVENING_SLOTS.filter(s => jamToMenit(s) + durasiMenit <= closeEvening);
@@ -474,6 +474,9 @@ function BookingTab() {
   };
 
   useEffect(() => { setJam(""); }, [layanan]);
+  // Paket 2 orang hanya untuk Pijat 90 Menit ke Rumah (aturan juga dijaga backend)
+  const duaOrangBoleh = layanan === "90m" && tipeLokasi === "HOME_SERVICE";
+  useEffect(() => { if (orang === 2 && !duaOrangBoleh) setOrang(1); }, [orang, duaOrangBoleh]);
 
   const setLatLng = (la, ln) => {
     setLat(la); setLng(ln);
@@ -567,7 +570,7 @@ function BookingTab() {
     if (!tanggal) { setFormError("Pilih tanggal dulu."); return; }
     if (!jam) { setFormError("Pilih jam dulu."); return; }
     if (tipeLokasi === "HOME_SERVICE" && (lat === null || lng === null)) {
-      setFormError("Untuk Home Service, lokasi wajib diisi (GPS atau alamat/link).");
+      setFormError("Untuk layanan ke Rumah, lokasi wajib diisi (GPS atau alamat/link).");
       return;
     }
     setSubmitting(true);
@@ -769,7 +772,7 @@ function BookingTab() {
           <div className="font-semibold mb-2">{b.layanan==="90m"?"Pijat 90 Menit":"Pijat 2 Jam"} × {b.orang} orang</div>
           <div className="text-sm text-gray-600 mb-1">📅 {b.tanggal}</div>
           <div className="text-sm text-gray-600 mb-1">🕐 {b.jam}</div>
-          <div className="text-sm text-gray-600 mb-1">📍 {b.tipeLokasi === "HOME_SERVICE" ? "Home Service" : "Di Tempat"}</div>
+          <div className="text-sm text-gray-600 mb-1">📍 {b.tipeLokasi === "HOME_SERVICE" ? "Ke Rumah" : "Di Tempat"}</div>
           {b.tipeLokasi === "HOME_SERVICE" && b.alamat && <div className="text-sm text-gray-600">📍 {b.alamat}</div>}
         </div>
 
@@ -818,12 +821,15 @@ function BookingTab() {
         <div className="text-sm font-semibold mb-2">Jumlah Orang</div>
         <div className="grid grid-cols-2 gap-2 mb-4">
           <PilihanButton selected={orang===1} onClick={()=>setOrang(1)} label="1 Orang" />
-          <PilihanButton selected={orang===2} onClick={()=>setOrang(2)} label="2 Orang" />
+          <PilihanButton selected={orang===2} onClick={()=>{ if (duaOrangBoleh) setOrang(2); }} label="2 Orang" />
         </div>
+        {!duaOrangBoleh && (
+          <div className="text-xs text-gray-500 mb-4">Paket 2 orang hanya untuk Pijat 90 Menit ke Rumah.</div>
+        )}
         <div className="text-sm font-semibold mb-1">Tanggal</div>
         <input type="date" value={tanggal} onChange={e=>setTanggal(e.target.value)} className="w-full border border-gray-300 rounded-xl p-3 mb-4" />
         <div className="text-sm font-semibold mb-2">Jam</div>
-        {renderSlotGrup("☀️ Pagi-Sore (08:00-16:00)", pagi)}
+        {renderSlotGrup("☀️ Pagi-Sore (08:00-15:00)", pagi)}
         {renderSlotGrup("🌙 Malam (19:00-00:00)", malam)}
       </div>
 
@@ -831,7 +837,7 @@ function BookingTab() {
         <div className="text-sm font-semibold mb-2">Lokasi</div>
         <div className="grid grid-cols-2 gap-2 mb-3">
           <PilihanButton selected={tipeLokasi==="DI_TEMPAT"} onClick={()=>setTipeLokasi("DI_TEMPAT")} label="DI TEMPAT" />
-          <PilihanButton selected={tipeLokasi==="HOME_SERVICE"} onClick={()=>setTipeLokasi("HOME_SERVICE")} label="HOME SERVICE" />
+          <PilihanButton selected={tipeLokasi==="HOME_SERVICE"} onClick={()=>setTipeLokasi("HOME_SERVICE")} label="KE RUMAH" />
         </div>
 
         {tipeLokasi === "HOME_SERVICE" && (
@@ -1319,7 +1325,7 @@ function BosTab() {
           <div><div className="text-gray-500">Jam</div><div className="font-medium">{b.jam_mulai}</div></div>
         </div>
         <div className="text-sm mb-1">{SERVICE_LABEL[b.service_id] || b.service_id} • {b.jumlah_orang} orang</div>
-        <div className="text-xs text-gray-700 mb-1">Lokasi: {b.tipe_lokasi === "HOME_SERVICE" ? "Home Service" : "Di Tempat"}</div>
+        <div className="text-xs text-gray-700 mb-1">Lokasi: {b.tipe_lokasi === "HOME_SERVICE" ? "Ke Rumah" : "Di Tempat"}</div>
         <div className="text-sm font-bold mt-1">Total pembayaran: {formatRupiah(b.grand_total)}</div>
 
         <div className="border-t border-gray-100 mt-2 pt-2 space-y-1">
