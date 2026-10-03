@@ -311,11 +311,158 @@
     .public-data dd { margin-bottom:8px; }
   }
 </style>
+<style>
+  :root {
+    color-scheme: dark;
+    --sules-bg:#070B14;
+    --sules-surface:#111827;
+    --sules-surface-raised:#172235;
+    --sules-glass:rgba(17,24,39,.82);
+    --sules-line:rgba(148,163,184,.18);
+    --sules-text:#F1F5F9;
+    --sules-muted:#9BAAC0;
+    --sules-blue:#4C9AFF;
+    --sules-cyan:#67DDF5;
+  }
+  html { background:var(--sules-bg); scroll-behavior:smooth; }
+  body {
+    background:radial-gradient(ellipse at 50% -18%,rgba(34,101,171,.2),transparent 48%),var(--sules-bg) !important;
+    color:var(--sules-text) !important;
+    padding-bottom:calc(104px + env(safe-area-inset-bottom));
+  }
+  ::selection { background:rgba(76,154,255,.34); color:#fff; }
+  a { transition:color .18s ease,opacity .18s ease; }
+  button,summary { -webkit-tap-highlight-color:transparent; }
+  button { transition:transform .18s ease,box-shadow .18s ease,background-color .18s ease,border-color .18s ease,opacity .18s ease; }
+  button:active { transform:scale(.985); }
+  :focus-visible { outline:2px solid var(--sules-cyan) !important; outline-offset:3px; }
+
+  .site-header { position:sticky; top:0; z-index:45; background:rgba(7,11,20,.82) !important; border-color:var(--sules-line) !important; backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); }
+  .site-nav { max-width:1120px; min-height:64px; padding:10px 18px; }
+  .site-brand { display:flex; align-items:center; gap:10px; color:#F8FAFC !important; letter-spacing:.03em; }
+  .site-brand img { width:36px; height:36px; border-radius:12px; object-fit:cover; box-shadow:0 0 22px rgba(76,154,255,.2); }
+  .site-brand small { color:#95A8C0 !important; letter-spacing:0; }
+  .site-links a { color:#9BAAC0 !important; }
+  .site-links a:hover { color:var(--sules-cyan) !important; }
+  .site-cta,.public-button { background:linear-gradient(135deg,#3478CF,#43B9DF) !important; color:white !important; border:1px solid rgba(103,221,245,.42) !important; box-shadow:0 8px 24px rgba(37,116,197,.18); }
+  .site-cta:hover,.public-button:hover { box-shadow:0 10px 28px rgba(37,116,197,.28); transform:translateY(-1px); }
+  .public-button.secondary { background:rgba(255,255,255,.055) !important; color:#DCEAF7 !important; border-color:var(--sules-line) !important; }
+
+  .app-host { max-width:1120px; padding:18px 18px 28px; }
+  #root { color:var(--sules-text); }
+  #root h1,#root h2,#root h3 { color:#F2F6FC !important; }
+  #root .bg-white { background:linear-gradient(145deg,rgba(22,32,49,.94),rgba(13,20,33,.96)) !important; }
+  #root .border-gray-100,#root .border-gray-200,#root .border-gray-300 { border-color:var(--sules-line) !important; }
+  #root .border-t { border-color:var(--sules-line) !important; }
+  #root .text-gray-400,#root .text-gray-500 { color:#9BAAC0 !important; }
+  #root .text-gray-600,#root .text-gray-700 { color:#C1CDDC !important; }
+  #root .text-blue-600 { color:#75B8FF !important; }
+  #root .text-red-600,#root .text-red-700,#root .text-red-800 { color:#FF969D !important; }
+  #root .text-green-800,#root .text-yellow-800,#root .text-blue-800 { color:#DCE8F6 !important; }
+  #root .bg-red-50 { background:rgba(127,29,29,.22) !important; border-color:rgba(248,113,113,.28) !important; }
+  #root .bg-green-50 { background:rgba(20,83,45,.22) !important; border-color:rgba(74,222,128,.26) !important; }
+  #root .bg-yellow-50 { background:rgba(120,71,10,.2) !important; border-color:rgba(251,191,36,.3) !important; }
+  #root .bg-blue-50 { background:rgba(30,64,110,.25) !important; border-color:rgba(96,165,250,.3) !important; }
+  #root input:not([type="checkbox"]),#root select,#root textarea {
+    color:#F1F5F9 !important; background:#0C1422 !important; border-color:rgba(148,163,184,.28) !important;
+    border-radius:14px !important; caret-color:var(--sules-cyan); color-scheme:dark;
+  }
+  #root input::placeholder,#root textarea::placeholder { color:#718199 !important; }
+  #root option { background:#111827; color:#F1F5F9; }
+  #root button { min-height:42px; border-radius:14px !important; color:#EAF2FA !important; background:rgba(255,255,255,.045) !important; border-color:var(--sules-line) !important; }
+  #root button:hover:not(:disabled) { border-color:rgba(103,221,245,.46) !important; box-shadow:0 6px 20px rgba(23,92,155,.13); }
+  #root button:disabled { opacity:.55; cursor:not-allowed; }
+  #root button[aria-pressed="true"],#root button.sules-primary {
+    color:#fff !important; background:linear-gradient(135deg,#3478CF,#35A7D5) !important;
+    border-color:rgba(103,221,245,.58) !important; box-shadow:0 8px 24px rgba(40,125,204,.2);
+  }
+  #root button.sules-success { color:#F2FFF8 !important; background:linear-gradient(135deg,#146B58,#16876C) !important; border-color:rgba(52,211,153,.34) !important; }
+  #root button.sules-danger { color:#FFC3C7 !important; background:rgba(127,29,29,.22) !important; border-color:rgba(248,113,113,.32) !important; }
+  #root button.text-red-600 { color:#FF969D !important; }
+  #root .sules-status-badge { border-radius:999px !important; padding:5px 10px !important; letter-spacing:.04em; }
+  #root .sules-status-badge[data-status="MENUNGGU"] { background:rgba(217,119,6,.16) !important; color:#FFD277 !important; border-color:rgba(251,191,36,.38) !important; }
+  #root .sules-status-badge[data-status="DITERIMA"] { background:rgba(37,99,235,.17) !important; color:#8EC5FF !important; border-color:rgba(96,165,250,.4) !important; }
+  #root .sules-status-badge[data-status="DITOLAK"],#root .sules-status-badge[data-status="DIBATALKAN"] { background:rgba(185,28,28,.16) !important; color:#FF9CA3 !important; border-color:rgba(248,113,113,.38) !important; }
+  #root .sules-status-badge[data-status="SELESAI"] { background:rgba(22,101,52,.18) !important; color:#83E0AA !important; border-color:rgba(74,222,128,.38) !important; }
+  #root svg line { stroke:#42516A; }
+  #root svg text { fill:#A5B4C8; }
+
+  .sules-app-content { max-width:760px; margin:0 auto; padding:8px 4px 30px; }
+  .sules-page-heading { margin:8px 0 16px; }
+  .sules-page-heading h1,.sules-page-heading h2 { color:#F3F7FC !important; letter-spacing:-.035em; }
+  .sules-eyebrow { color:var(--sules-cyan); font-size:10px; letter-spacing:.17em; font-weight:800; text-transform:uppercase; }
+  .sules-hero-card { position:relative; overflow:hidden; isolation:isolate; padding:24px; border-radius:24px; border:1px solid rgba(103,221,245,.2); background:radial-gradient(ellipse at 85% 0%,rgba(52,144,226,.28),transparent 40%),linear-gradient(135deg,#14233A,#0C1422 74%); box-shadow:0 18px 42px rgba(0,0,0,.25); }
+  .sules-hero-card:after { content:""; position:absolute; z-index:-1; width:190px; height:190px; right:-70px; bottom:-110px; border-radius:50%; background:rgba(48,155,219,.16); filter:blur(35px); }
+  .sules-hero-card h1 { margin:7px 0 8px; max-width:15ch; color:#F8FAFC; font-size:clamp(25px,6vw,38px); line-height:1.08; letter-spacing:-.04em; }
+  .sules-hero-card p { max-width:44ch; color:#B7C6D8; line-height:1.55; font-size:14px; }
+  .sules-active-card,.sules-menu-card,.sules-order-card { border:1px solid var(--sules-line); border-radius:20px; background:linear-gradient(145deg,rgba(22,32,49,.94),rgba(13,20,33,.96)); box-shadow:0 14px 34px rgba(0,0,0,.16); }
+  .sules-active-card { padding:18px; margin-top:16px; }
+  .sules-price { color:#F6FAFF; font-size:24px; font-weight:800; letter-spacing:-.04em; }
+  .sules-step-label { display:flex; align-items:center; gap:9px; color:#C8D6E7; font-size:11px; letter-spacing:.12em; font-weight:800; text-transform:uppercase; margin:0 0 11px; }
+  .sules-step-label span { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:9px; background:rgba(76,154,255,.14); color:#8EC5FF; letter-spacing:0; }
+  .sules-menu-card { padding:18px; margin:10px 0; }
+  .sules-menu-link { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:13px 14px; margin-top:8px; border:1px solid var(--sules-line); border-radius:14px; color:#DCE7F4; background:rgba(255,255,255,.035); text-decoration:none; text-align:left; }
+  .sules-menu-link:hover { border-color:rgba(103,221,245,.45); background:rgba(76,154,255,.08); }
+  .sules-bottom-nav { position:fixed; z-index:60; left:50%; bottom:calc(8px + env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(680px,calc(100% - 20px)); display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:3px; padding:8px 8px calc(8px + env(safe-area-inset-bottom)); border:1px solid rgba(148,163,184,.2); border-radius:23px; background:rgba(11,16,29,.86); box-shadow:0 18px 48px rgba(0,0,0,.48); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); }
+  #root .sules-bottom-nav button { min-width:0; min-height:54px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:4px 2px; border:1px solid transparent !important; border-radius:16px !important; color:#8292AA !important; background:transparent !important; font-size:9px; line-height:1.1; font-weight:650; white-space:nowrap; }
+  #root .sules-bottom-nav button svg { width:19px; height:19px; }
+  #root .sules-bottom-nav button[aria-current="page"] { color:#8CE6FA !important; background:linear-gradient(180deg,rgba(48,126,206,.24),rgba(29,70,115,.14)) !important; border-color:rgba(103,221,245,.17) !important; }
+  .public-shell { max-width:1120px; padding:26px 18px 48px; }
+  .public-section { scroll-margin-top:88px; }
+  .public-hero { border-color:var(--sules-line) !important; background:radial-gradient(ellipse at 80% 0%,rgba(44,133,206,.22),transparent 42%),linear-gradient(140deg,#121E31,#0D1422 78%) !important; box-shadow:0 18px 44px rgba(0,0,0,.24) !important; }
+  .public-hero h1,.public-section h2,.public-card h3 { color:#F2F6FC !important; }
+  .public-hero p,.public-section > p,.public-card p,.public-list { color:#B3C1D2 !important; }
+  .public-eyebrow { color:var(--sules-cyan) !important; }
+  .public-hero-panel { background:linear-gradient(145deg,#1D5790,#123350) !important; border:1px solid rgba(103,221,245,.24); box-shadow:0 14px 36px rgba(25,103,166,.19); }
+  .public-hero-panel p { color:#D4E8F6 !important; }
+  .public-card,.public-details { color:#E6EDF6; background:linear-gradient(145deg,rgba(22,32,49,.94),rgba(13,20,33,.96)) !important; border-color:var(--sules-line) !important; box-shadow:0 12px 28px rgba(0,0,0,.16) !important; }
+  .public-card h3 { margin-bottom:8px; }
+  .public-muted,.public-details p { color:#AAB9CC !important; }
+  .public-details summary { color:#E7F0FA !important; }
+  .public-data dt { color:#93A5BB !important; }
+  .public-data dd { color:#E4EDF7 !important; }
+  .public-footer { color:#91A1B5 !important; border-color:var(--sules-line) !important; }
+  .public-footer a,.public-card a:not(.public-button) { color:#83C7FF; }
+  .package-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+  .package-grid .public-card { position:relative; min-height:156px; padding:18px; transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease; }
+  .package-grid .public-card:hover { transform:translateY(-2px); border-color:rgba(103,221,245,.34) !important; box-shadow:0 17px 36px rgba(0,0,0,.25) !important; }
+  .package-grid .public-card strong { display:block; margin-top:13px; color:#F5FAFF; font-size:19px; letter-spacing:-.025em; }
+  @media (max-width:760px) {
+    .site-nav { min-height:58px; flex-wrap:nowrap; padding:9px 14px; }
+    .site-brand { font-size:13px; }
+    .site-brand img { width:34px; height:34px; }
+    .site-links { display:none; }
+    .site-cta { margin-left:auto; padding:9px 14px; font-size:12px; }
+    .app-host { padding:12px 12px 26px; }
+    .sules-app-content { padding:3px 0 26px; }
+    .sules-hero-card { padding:21px; border-radius:22px; }
+    .sules-active-card,.sules-menu-card { padding:15px; }
+    .public-shell { padding:14px 14px 36px; }
+    .public-hero { grid-template-columns:1fr; padding:22px; border-radius:22px; }
+    .public-hero-panel { min-height:145px; }
+    .package-grid,.public-two-col { grid-template-columns:1fr; }
+    .package-grid .public-card { min-height:0; }
+    .public-data { grid-template-columns:1fr; gap:2px; }
+    .public-data dd { margin-bottom:8px; }
+  }
+  @media (min-width:761px) and (max-width:1024px) { .package-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media (max-width:360px) {
+    .sules-bottom-nav { width:calc(100% - 14px); padding-inline:5px; }
+    #root .sules-bottom-nav button { font-size:8px; }
+    #root .sules-bottom-nav button svg { width:18px; height:18px; }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    *,*::before,*::after { scroll-behavior:auto !important; animation-duration:.01ms !important; transition-duration:.01ms !important; }
+  }
+</style>
 </head>
 <body>
 <header class="site-header">
   <div class="site-nav">
-    <a class="site-brand" href="#beranda" aria-label="Sules Pijat Maduran, beranda">SULES PIJAT MADURAN<small>Pijat di Maduran · Lamongan</small></a>
+    <a class="site-brand" href="#booking-app" data-app-tab="home" aria-label="Sules Pijat Maduran, beranda">
+      <img src="./icons/pwa-192.png" alt="" width="36" height="36" />
+      <span>SULES<small>PIJAT MADURAN · LAMONGAN</small></span>
+    </a>
     <nav class="site-links" aria-label="Navigasi publik">
       <a href="#beranda">Beranda</a><a href="#katalog">Katalog</a><a href="#faq">FAQ</a>
       <a href="#legalitas">Legalitas</a><a href="#syarat-ketentuan">Syarat</a><a href="#kebijakan-privasi">Privasi</a><a href="#kontak">Kontak</a>
@@ -323,6 +470,8 @@
     <a class="site-cta" href="#booking-app">Pesan</a>
   </div>
 </header>
+
+<section id="booking-app" class="app-host" aria-label="Aplikasi Sules"><div id="root"></div></section>
 
 <main class="public-shell">
   <section id="beranda" class="public-section public-hero">
@@ -347,11 +496,11 @@
     <h2>Lima paket layanan</h2>
     <p>Pilih satu paket. Harga layanan untuk paket 2 orang sudah mencakup dua orang; biaya perjalanan ke Rumah dihitung satu kali per booking.</p>
     <div class="package-grid">
-      <article class="public-card"><h3>1. Pijat 90 Menit</h3><p class="public-muted">Di Sules · 1 orang · 90 menit</p><strong>Rp60.000</strong></article>
-      <article class="public-card"><h3>2. Pijat 2 Jam</h3><p class="public-muted">Di Sules · 1 orang · 120 menit</p><strong>Rp80.000</strong></article>
-      <article class="public-card"><h3>3. Pijat 90 Menit ke Rumah</h3><p class="public-muted">Ke Rumah · 1 orang · 90 menit</p><strong>Rp60.000 + biaya perjalanan</strong></article>
-      <article class="public-card"><h3>4. Pijat 2 Jam ke Rumah</h3><p class="public-muted">Ke Rumah · 1 orang · 120 menit</p><strong>Rp80.000 + biaya perjalanan</strong></article>
-      <article class="public-card"><h3>5. Pijat 2 Orang ke Rumah – 90 Menit</h3><p class="public-muted">Ke Rumah · 2 orang · 90 menit</p><strong>Rp120.000 + satu biaya perjalanan</strong></article>
+      <article class="public-card"><p class="public-eyebrow">90 MIN · DI SULES</p><h3>1. Pijat 90 Menit</h3><p class="public-muted">Satu orang · layanan di tempat</p><strong>Rp60.000</strong><a class="public-button secondary" href="#booking-app" style="margin-top:14px;padding:9px 13px;font-size:13px">Pesan</a></article>
+      <article class="public-card"><p class="public-eyebrow">120 MIN · DI SULES</p><h3>2. Pijat 2 Jam</h3><p class="public-muted">Satu orang · layanan di tempat</p><strong>Rp80.000</strong><a class="public-button secondary" href="#booking-app" style="margin-top:14px;padding:9px 13px;font-size:13px">Pesan</a></article>
+      <article class="public-card"><p class="public-eyebrow">90 MIN · KE RUMAH</p><h3>3. Pijat 90 Menit ke Rumah</h3><p class="public-muted">Satu orang · travel dihitung sekali</p><strong>Rp60.000 <small>+ travel</small></strong><a class="public-button secondary" href="#booking-app" style="margin-top:14px;padding:9px 13px;font-size:13px">Pesan</a></article>
+      <article class="public-card"><p class="public-eyebrow">120 MIN · KE RUMAH</p><h3>4. Pijat 2 Jam ke Rumah</h3><p class="public-muted">Satu orang · travel dihitung sekali</p><strong>Rp80.000 <small>+ travel</small></strong><a class="public-button secondary" href="#booking-app" style="margin-top:14px;padding:9px 13px;font-size:13px">Pesan</a></article>
+      <article class="public-card"><p class="public-eyebrow">90 MIN · 2 ORANG · KE RUMAH</p><h3>5. Pijat 2 Orang ke Rumah – 90 Menit</h3><p class="public-muted">Dua orang · satu biaya perjalanan</p><strong>Rp120.000 <small>+ travel</small></strong><a class="public-button secondary" href="#booking-app" style="margin-top:14px;padding:9px 13px;font-size:13px">Pesan</a></article>
     </div>
     <div class="public-card" style="margin-top:12px"><h3>Biaya perjalanan ke Rumah</h3><p class="public-muted" style="margin:0">1.000 meter pertama gratis. Jarak setelah 1.000 meter dikenai Rp3,50 per meter, berdasarkan jarak jalan Google Routes, satu kali per booking dan tidak dikalikan jumlah orang. Jika Google Routes gagal, jarak tidak diperkirakan; silakan coba lagi atau hubungi Admin.</p></div>
   </section>
@@ -396,7 +545,6 @@
 </main>
 <footer class="public-footer">© SULES PIJAT MADURAN · <a href="#syarat-ketentuan">Syarat</a> · <a href="#kebijakan-privasi">Privasi</a> · <a href="#kontak">Kontak</a></footer>
 
-<section id="booking-app" class="app-host" aria-label="Aplikasi booking Sules"><div id="root"></div></section>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
@@ -497,8 +645,8 @@ function maskEmail(email) {
 function StatusBadge({ status }) {
   const meta = getStatusMeta(status);
   return (
-    <span style={{ backgroundColor: meta.bg, color: meta.text, border: `1px solid ${meta.border}`, fontWeight:"bold" }}
-      className="text-xs rounded-full px-3 py-1 inline-block">
+    <span data-status={status} style={{ backgroundColor: meta.bg, color: meta.text, border: `1px solid ${meta.border}`, fontWeight:"bold" }}
+      className="sules-status-badge text-xs rounded-full px-3 py-1 inline-block">
       {meta.emoji} {meta.label}
     </span>
   );
@@ -516,7 +664,7 @@ function PilihanButton({ selected, onClick, label, variant }) {
       : { backgroundColor:"white", color:"#18324B", border:"1px solid #E5E7EB", borderRadius:"12px", padding:"12px", fontWeight:"normal" };
   }
   return (
-    <button onClick={onClick} style={style} className="w-full text-sm transition-colors">
+    <button type="button" aria-pressed={selected} onClick={onClick} style={style} className="w-full text-sm transition-colors">
       {selected ? "✓ " : ""}{label}
     </button>
   );
@@ -869,7 +1017,7 @@ function BookingTab() {
                 onKeyDown={e=>{ if(e.key==="Enter") kirimKodeOtp(); }} />
               {authMsg && <div className="text-xs text-red-600 mb-3">{authMsg}</div>}
               <button onClick={kirimKodeOtp} disabled={authLoading}
-                style={{ backgroundColor:"#18324B", border:"2px solid #2F6F9F", color:"white", borderRadius:"12px", padding:"12px", width:"100%", fontWeight:"bold", opacity: authLoading?0.7:1 }}>
+                style={{ backgroundColor:"#18324B", border:"2px solid #2F6F9F", color:"white", borderRadius:"12px", padding:"12px", width:"100%", fontWeight:"bold", opacity: authLoading?0.7:1 }} className="sules-primary">
                 {authLoading ? "Mengirim..." : "Kirim Kode ke Email"}
               </button>
             </React.Fragment>
@@ -884,7 +1032,7 @@ function BookingTab() {
               {authMsg && <div className="text-xs text-red-600 mb-3">{authMsg}</div>}
               <button onClick={verifikasiOtp} disabled={authLoading}
                 style={{ backgroundColor:"#10B981", color:"white", borderRadius:"12px", padding:"12px", width:"100%", fontWeight:"bold", opacity: authLoading?0.7:1 }}
-                className="mb-2">
+                className="sules-primary mb-2">
                 {authLoading ? "Memeriksa..." : "Verifikasi & Masuk"}
               </button>
               <button onClick={()=>{ setOtpSent(false); setOtpCode(""); setAuthMsg(""); }}
@@ -988,6 +1136,7 @@ function BookingTab() {
       </div>
 
       <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
+        <div className="sules-step-label"><span>01</span> LAYANAN</div>
         <div className="text-sm font-semibold mb-2">Pilih Paket</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4" role="group" aria-label="Paket layanan">
           {SERVICE_PACKAGES.map(p => (
@@ -999,14 +1148,15 @@ function BookingTab() {
             </button>
           ))}
         </div>
-        <div className="text-sm font-semibold mb-1">Tanggal</div>
+        <div className="sules-step-label"><span>02</span> TANGGAL</div>
         <input type="date" value={tanggal} onChange={e=>setTanggal(e.target.value)} className="w-full border border-gray-300 rounded-xl p-3 mb-4" />
-        <div className="text-sm font-semibold mb-2">Jam</div>
+        <div className="sules-step-label"><span>03</span> WAKTU</div>
         {renderSlotGrup("☀️ Pagi (08:00-15:00)", pagi)}
         {renderSlotGrup("🌙 Malam (19:00-00:00)", malam)}
       </div>
 
       <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
+        <div className="sules-step-label"><span>04</span> LOKASI</div>
         <div className="text-sm font-semibold mb-2">Lokasi</div>
         <div className="grid grid-cols-2 gap-2 mb-3">
           <div className="col-span-2 text-sm text-gray-600">Paket terpilih: <b>{paketTerpilih.location}</b></div>
@@ -1053,7 +1203,7 @@ function BookingTab() {
             )}
             <div className="grid grid-cols-2 gap-2">
               <button onClick={()=>hitungJarakSekarang()} disabled={loadingJarak}
-                style={{ backgroundColor:"#2F6F9F", color:"white", fontWeight:"bold", borderRadius:"12px", padding:"12px" }}>
+                style={{ backgroundColor:"#2F6F9F", color:"white", fontWeight:"bold", borderRadius:"12px", padding:"12px" }} className="sules-primary">
                 {loadingJarak ? "Menghitung..." : "🛣️ Hitung Jarak Jalan"}
               </button>
               <button onClick={resetLokasi} disabled={loadingJarak}
@@ -1066,6 +1216,7 @@ function BookingTab() {
       </div>
 
       <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
+        <div className="sules-step-label"><span>05</span> KONFIRMASI</div>
         <div className="text-sm font-semibold mb-2">Rincian Biaya</div>
         <div className="flex justify-between text-sm mb-1">
           <span>Layanan: {layanan==="90m"?"90 Menit":"2 Jam"} x {orang}</span>
@@ -1084,7 +1235,7 @@ function BookingTab() {
         )}
         <div className="flex justify-between font-bold text-base mt-2 pt-2 border-t border-gray-200">
           <span>TOTAL</span>
-          <span>{formatRupiah(total)}</span>
+          <span className="sules-price">{formatRupiah(total)}</span>
         </div>
       </div>
 
@@ -1094,8 +1245,8 @@ function BookingTab() {
         </div>
       )}
       <button onClick={konfirmasiBooking} disabled={submitting}
-        style={{ backgroundColor:"#047857", color:"white", fontWeight:"bold", padding:"16px", borderRadius:"16px", width:"100%", boxShadow:"0 4px 12px rgba(0,0,0,0.15)", opacity: submitting?0.7:1 }}>
-        {submitting ? "Mengirim..." : "✅ KONFIRMASI BOOKING"}
+        style={{ backgroundColor:"#047857", color:"white", fontWeight:"bold", padding:"16px", borderRadius:"16px", width:"100%", boxShadow:"0 4px 12px rgba(0,0,0,0.15)", opacity: submitting?0.7:1 }} className="sules-primary">
+        {submitting ? "Mengirim..." : "Kirim Pesanan"}
       </button>
     </div>
   );
@@ -1214,7 +1365,7 @@ function RevenueChart({ days = [] }) {
   );
 }
 
-function CustomerOrdersTab({ onGoToBooking }) {
+function CustomerOrdersTab({ onGoToBooking, onGoToOrders, mode = "orders" }) {
   const [session, setSession] = useState(null);
   const [checkingSession, setCheckingSession] = useState(true);
   const [sessionError, setSessionError] = useState("");
@@ -1357,11 +1508,29 @@ function CustomerOrdersTab({ onGoToBooking }) {
 
   if (checkingSession) return <div className="text-center text-gray-500 text-sm py-16" role="status">Memeriksa akun pelanggan…</div>;
   if (!session) {
+    if (mode === "home") return <div className="sules-home-screen">
+      <section className="sules-hero-card">
+        <div className="sules-eyebrow">SULES PIJAT MADURAN</div>
+        <h1>Saatnya rileks.</h1>
+        <p>Pilih layanan pijat di Maduran dan jadwalkan waktu yang nyaman untuk Anda.</p>
+        <button type="button" className="sules-primary" onClick={onGoToBooking}>Pesan Sekarang <span aria-hidden="true">→</span></button>
+      </section>
+      <section className="sules-active-card" aria-label="Ringkasan booking">
+        <div className="sules-eyebrow">BOOKING ANDA</div>
+        <h2 className="text-lg font-bold mt-2">Masuk untuk melihat pesanan aktif</h2>
+        <p className="text-sm text-gray-500 mt-1 mb-4">Status dan riwayat hanya ditampilkan untuk akun pelanggan Anda.</p>
+        <button type="button" className="sules-primary" onClick={onGoToBooking}>Masuk &amp; Pesan</button>
+      </section>
+      <div className="grid grid-cols-2 gap-3 mt-3">
+        <div className="sules-active-card"><div className="sules-eyebrow">LAYANAN</div><strong className="block mt-2">5 paket</strong></div>
+        <div className="sules-active-card"><div className="sules-eyebrow">JADWAL</div><strong className="block mt-2">08–15 · 19–24</strong></div>
+      </div>
+    </div>;
     return <div className="max-w-md mx-auto px-4 py-12"><div className="bg-white rounded-2xl p-6 border border-gray-200">
       <h2 className="text-lg font-bold mb-2">Pesanan Aktif &amp; Riwayat</h2>
       <p className="text-sm text-gray-600 mb-4">Masuk dengan akun pelanggan yang digunakan saat booking untuk melihat pesanan milik Anda.</p>
       {sessionError && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert">{sessionError}</div>}
-      <button onClick={onGoToBooking} className="w-full rounded-xl px-4 py-3 font-bold text-white" style={{backgroundColor:"#18324B"}}>Buka Booking &amp; Masuk</button>
+      <button onClick={onGoToBooking} className="sules-primary w-full rounded-xl px-4 py-3 font-bold text-white" style={{backgroundColor:"#18324B"}}>Buka Booking &amp; Masuk</button>
     </div></div>;
   }
 
@@ -1371,6 +1540,36 @@ function CustomerOrdersTab({ onGoToBooking }) {
     .sort((a,b) => `${b.tanggal}T${b.jam_mulai}`.localeCompare(`${a.tanggal}T${a.jam_mulai}`));
   const visibleOrders = view === "active" ? activeOrders : historyOrders;
   const pageSize = window.bookingService.customerOrderPageSize;
+
+  if (mode === "home") {
+    const booking = activeOrders[0];
+    return <div className="sules-home-screen">
+      <section className="sules-hero-card">
+        <div className="sules-eyebrow">SULES PIJAT MADURAN</div>
+        <h1>Saatnya rileks.</h1>
+        <p>Pilih layanan pijat di Maduran dan jadwalkan waktu yang nyaman untuk Anda.</p>
+        <button type="button" className="sules-primary" onClick={onGoToBooking}>Pesan Sekarang <span aria-hidden="true">→</span></button>
+      </section>
+      <section className="sules-active-card" aria-label="Ringkasan booking aktif">
+        <div className="flex items-center justify-between gap-2 mb-3"><div className="sules-eyebrow">BOOKING ANDA</div><span className="text-xs text-gray-500">DARI SUPABASE</span></div>
+        {error && <div className="text-sm text-red-700 mb-3" role="alert">{error}</div>}
+        {(loading || checkingSession) && <div className="text-sm text-gray-500 py-3" role="status">Memuat booking aktif…</div>}
+        {!loading && !error && !booking && <div><h2 className="text-lg font-bold">Belum ada pesanan aktif</h2><p className="text-sm text-gray-500 mt-1">Pilih layanan dan jadwalkan sesi pijat Anda.</p></div>}
+        {!loading && !error && booking && <div className="sules-order-card p-4">
+          <div className="flex items-start justify-between gap-2"><strong className="text-base">{SERVICE_LABEL[booking.service_id] || booking.service_id} · {booking.jumlah_orang} orang</strong><StatusBadge status={booking.status} /></div>
+          <div className="grid grid-cols-2 gap-3 mt-4 text-sm"><div><span className="text-gray-500 block text-xs">Tanggal</span>{booking.tanggal}</div><div><span className="text-gray-500 block text-xs">Waktu</span>{String(booking.jam_mulai).slice(0,5)}</div></div>
+          <div className="text-sm text-gray-500 mt-3">{booking.tipe_lokasi === "HOME_SERVICE" ? "Ke Rumah" : "Di Sules"}</div>
+          <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-gray-200"><span className="text-xs text-gray-500">TOTAL</span><strong className="sules-price">{formatRupiah(booking.grand_total)}</strong></div>
+        </div>}
+        {sessionError && <p className="text-xs text-red-600 mt-2">{sessionError}</p>}
+        <button type="button" className="w-full mt-4" onClick={onGoToOrders}>Lihat semua pesanan <span aria-hidden="true">→</span></button>
+      </section>
+      <div className="grid grid-cols-2 gap-3 mt-3">
+        <div className="sules-active-card"><div className="sules-eyebrow">LAYANAN</div><strong className="block mt-2">5 paket</strong></div>
+        <div className="sules-active-card"><div className="sules-eyebrow">JADWAL</div><strong className="block mt-2">08–15 · 19–24</strong></div>
+      </div>
+    </div>;
+  }
 
   return <div className="max-w-md mx-auto px-4 pb-16">
     <div className="py-5"><h2 className="text-xl font-bold" style={{color:"#18324B"}}>Pesanan Anda</h2><p className="text-xs text-gray-500 mt-1">Data pesanan dimuat dari Supabase untuk akun yang sedang masuk.</p></div>
@@ -1389,7 +1588,7 @@ function CustomerOrdersTab({ onGoToBooking }) {
         <div className="text-xs text-gray-600 mb-2">{row.tipe_lokasi === "HOME_SERVICE" ? "ke Rumah" : "Di Sules"} · {row.durasi_menit} menit</div>
         <div className="text-sm font-bold">Total: {formatRupiah(row.grand_total)}</div>
         {row.status === "DITOLAK" && row.catatan_penolakan && <p className="text-xs text-gray-600 mt-2">Catatan Admin: {row.catatan_penolakan}</p>}
-        {row.status === "DITOLAK" && <button onClick={onGoToBooking} className="mt-3 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{backgroundColor:"#18324B"}}>BOOKING LAGI</button>}
+        {row.status === "DITOLAK" && <button onClick={onGoToBooking} className="sules-primary mt-3 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{backgroundColor:"#18324B"}}>BOOKING LAGI</button>}
       </article>)}
     </div>
     {hasMore && <button onClick={()=>void loadMore()} disabled={loadingMore} className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 mt-4 font-semibold disabled:opacity-60">{loadingMore ? "Memuat…" : `Muat ${view === "active" ? "pesanan aktif" : "riwayat"} berikutnya (hingga ${pageSize} per halaman)`}</button>}
@@ -1592,7 +1791,7 @@ function AdminTab() {
           </div>
           {loginError && <div className="text-xs text-red-600 mb-3 text-center">{loginError}</div>}
           <button onClick={doLogin} disabled={loggingIn}
-            style={{ backgroundColor:"#18324B", border:"2px solid #2F6F9F", color:"white", borderRadius:"12px", padding:"12px", width:"100%", fontWeight:"bold", opacity: loggingIn?0.7:1 }}>
+            style={{ backgroundColor:"#18324B", border:"2px solid #2F6F9F", color:"white", borderRadius:"12px", padding:"12px", width:"100%", fontWeight:"bold", opacity: loggingIn?0.7:1 }} className="sules-primary">
             {loggingIn ? "Memeriksa..." : "✅ Masuk Dashboard"}
           </button>
         </div>
@@ -1693,17 +1892,17 @@ function AdminTab() {
           <div className="flex gap-2 mt-2">
             <button onClick={()=>handleTerima(b.id)} disabled={actionLoading[b.id]}
               style={{ flex:1, backgroundColor:"#047857", color:"white", borderRadius:"10px", padding:"8px", fontWeight:"bold", opacity: actionLoading[b.id]?0.6:1 }}
-              className="text-sm">✅ TERIMA</button>
+              className="sules-primary text-sm">✅ TERIMA</button>
             <button onClick={()=>handleTolak(b.id)} disabled={actionLoading[b.id]}
               style={{ flex:1, backgroundColor:"white", border:"1px solid #DC2626", color:"#DC2626", borderRadius:"10px", padding:"8px", opacity: actionLoading[b.id]?0.6:1 }}
-              className="text-sm">❌ TOLAK</button>
+              className="sules-danger text-sm">❌ TOLAK</button>
           </div>
         )}
         {showActions && b.status === "DITERIMA" && (
           <div className="flex gap-2 mt-2">
             <button onClick={()=>handleSelesai(b.id)} disabled={actionLoading[b.id]}
               style={{ flex:1, backgroundColor:"#15803D", color:"white", borderRadius:"10px", padding:"8px", fontWeight:"bold", opacity: actionLoading[b.id]?0.6:1 }}
-              className="text-sm">✅ SELESAI</button>
+              className="sules-success text-sm">✅ SELESAI</button>
           </div>
         )}
       </div>
@@ -1837,26 +2036,84 @@ function App() {
   );
 }
 
+function SulesNavIcon({ name }) {
+  const common = { viewBox:"0 0 24 24", fill:"none", stroke:"currentColor", strokeWidth:"1.7", strokeLinecap:"round", strokeLinejoin:"round", "aria-hidden":"true" };
+  if (name === "home") return <svg {...common}><path d="m3 10 9-7 9 7"/><path d="M5 9.5V21h14V9.5M9 21v-7h6v7"/></svg>;
+  if (name === "catalog") return <svg {...common}><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>;
+  if (name === "book") return <svg {...common}><rect x="4" y="5" width="16" height="16" rx="2.5"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M8 17h6"/><path d="M18 14v5M15.5 16.5h5"/></svg>;
+  if (name === "orders") return <svg {...common}><path d="M7 3.5h8l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 20V5a1.5 1.5 0 0 1 1.5-1.5Z"/><path d="M15 3.5V8h4M8 12h8M8 16h8"/></svg>;
+  return <svg {...common}><circle cx="12" cy="8" r="3.2"/><path d="M5 20.5a7 7 0 0 1 14 0M19 4.5h2M20 3.5v2"/></svg>;
+}
+
+function ProfileMenuTab({ onOpenAdmin }) {
+  return <div className="sules-menu-screen">
+    <div className="sules-page-heading"><div className="sules-eyebrow">SULES · Pijat Maduran</div><h2 className="text-2xl font-bold mt-1">Profil &amp; Menu</h2><p className="text-sm text-gray-500 mt-1">Akses dashboard dan informasi layanan.</p></div>
+    <section className="sules-menu-card">
+      <div className="sules-eyebrow">OPERASIONAL</div><h3 className="text-lg font-bold mt-2 mb-3">Admin Dashboard</h3>
+      <button type="button" className="sules-primary w-full" onClick={onOpenAdmin}>Masuk ke Admin <span aria-hidden="true">→</span></button>
+    </section>
+    <section className="sules-menu-card">
+      <div className="sules-eyebrow">INFORMASI</div>
+      <a className="sules-menu-link" href="#faq"><span>FAQ &amp; bantuan</span><span aria-hidden="true">→</span></a>
+      <a className="sules-menu-link" href="#legalitas"><span>Informasi usaha</span><span aria-hidden="true">→</span></a>
+      <a className="sules-menu-link" href="#syarat-ketentuan"><span>Syarat &amp; ketentuan</span><span aria-hidden="true">→</span></a>
+      <a className="sules-menu-link" href="#kebijakan-privasi"><span>Kebijakan privasi</span><span aria-hidden="true">→</span></a>
+      <a className="sules-menu-link" href="#kontak"><span>Hubungi Sules</span><span aria-hidden="true">→</span></a>
+    </section>
+  </div>;
+}
+
 function AppTabs() {
-  const [tab, setTab] = useState("booking");
+  const [tab, setTab] = useState("home");
+  const [menuView, setMenuView] = useState("menu");
+
+  const navigate = (nextTab) => {
+    setTab(nextTab);
+    if (nextTab === "menu") setMenuView("menu");
+    else if (nextTab !== "admin") setMenuView("menu");
+    const targetId = nextTab === "catalog" ? "katalog" : "booking-app";
+    window.setTimeout(() => {
+      const target = document.getElementById(targetId);
+      if (target) target.scrollIntoView({ behavior:"smooth", block:"start" });
+    }, 60);
+  };
+
+  useEffect(() => {
+    const handleBookingLink = event => {
+      const link = event.target && event.target.closest && event.target.closest('a[href="#booking-app"]');
+      if (!link) return;
+      event.preventDefault();
+      navigate(link.dataset.appTab === "home" ? "home" : "book");
+    };
+    document.addEventListener("click", handleBookingLink);
+    return () => document.removeEventListener("click", handleBookingLink);
+  }, []);
+
+  const navItems = [
+    { id:"home", label:"Beranda", icon:"home" },
+    { id:"catalog", label:"Katalog", icon:"catalog" },
+    { id:"book", label:"Pesan", icon:"book" },
+    { id:"orders", label:"Pesanan", icon:"orders" },
+    { id:"menu", label:"Profil", icon:"profile", title:"Profil / Menu" }
+  ];
+
   return (
-    <React.Fragment>
-      <div style={{ position:"sticky", top:0, zIndex:40 }} className="bg-white border-b border-gray-200 flex">
-        <button onClick={()=>setTab("booking")}
-          style={{ flex:1, padding:"12px", fontWeight: tab==="booking" ? "bold" : "normal", color: tab==="booking" ? "#18324B" : "#9CA3AF", borderBottom: tab==="booking" ? "3px solid #2F6F9F" : "3px solid transparent" }}>
-          Booking
-        </button>
-        <button onClick={()=>setTab("orders")}
-          style={{ flex:1, padding:"12px", fontWeight: tab==="orders" ? "bold" : "normal", color: tab==="orders" ? "#18324B" : "#9CA3AF", borderBottom: tab==="orders" ? "3px solid #2F6F9F" : "3px solid transparent" }}>
-          Pesanan
-        </button>
-        <button onClick={()=>setTab("admin")}
-          style={{ flex:1, padding:"12px", fontWeight: tab==="admin" ? "bold" : "normal", color: tab==="admin" ? "#18324B" : "#9CA3AF", borderBottom: tab==="admin" ? "3px solid #2F6F9F" : "3px solid transparent" }}>
-          Admin
-        </button>
+    <div className="sules-app-shell">
+      <div className="sules-app-content">
+        {tab === "home" && <CustomerOrdersTab mode="home" onGoToBooking={()=>navigate("book")} onGoToOrders={()=>navigate("orders")} />}
+        {tab === "book" && <BookingTab />}
+        {tab === "orders" && <CustomerOrdersTab onGoToBooking={()=>navigate("book")} />}
+        {tab === "menu" && (menuView === "admin"
+          ? <div><button type="button" className="mb-3" onClick={()=>setMenuView("menu")}>← Kembali ke Menu</button><AdminTab /></div>
+          : <ProfileMenuTab onOpenAdmin={()=>setMenuView("admin")} />)}
       </div>
-      {tab === "booking" ? <BookingTab /> : tab === "orders" ? <CustomerOrdersTab onGoToBooking={()=>setTab("booking")} /> : <AdminTab />}
-    </React.Fragment>
+      <nav className="sules-bottom-nav" aria-label="Navigasi aplikasi">
+        {navItems.map(item => <button key={item.id} type="button" title={item.title || item.label} aria-label={item.title || item.label}
+          aria-current={tab === item.id ? "page" : undefined} onClick={()=>navigate(item.id)}>
+          <SulesNavIcon name={item.icon} /><span>{item.label}</span>
+        </button>)}
+      </nav>
+    </div>
   );
 }
 
