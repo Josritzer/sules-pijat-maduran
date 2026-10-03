@@ -3,12 +3,27 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="theme-color" content="#2B1B0E" />
-<meta name="description" content="Booking pijat Sules Maduran. Pilih paket pijat di Sules atau ke Rumah, lalu pantau pesanan Anda." />
+<meta name="theme-color" content="#18324B" />
+<meta name="description" content="Pesan pijat Sules Maduran: pilih 1 dari 5 paket di Sules atau ke Rumah, jadwal 08.00–15.00 dan 19.00–24.00, lalu pantau status booking." />
+<meta name="keywords" content="Sules Pijat Maduran, pijat Maduran, pijat Lamongan, booking pijat, pijat ke rumah" />
+<meta name="robots" content="index,follow" />
+<link rel="canonical" href="https://sules-pijat-maduran-hujc.vercel.app/" />
+<meta property="og:type" content="website" />
+<meta property="og:locale" content="id_ID" />
+<meta property="og:site_name" content="SULES PIJAT MADURAN" />
+<meta property="og:title" content="SULES PIJAT MADURAN | Booking Pijat di Maduran" />
+<meta property="og:description" content="Pilih paket pijat di Sules atau ke Rumah. Lima pilihan layanan dan status booking tersimpan di Supabase." />
+<meta property="og:url" content="https://sules-pijat-maduran-hujc.vercel.app/" />
+<meta property="og:image" content="https://sules-pijat-maduran-hujc.vercel.app/icons/pwa-512.png" />
+<meta property="og:image:alt" content="Ikon SULES PIJAT MADURAN" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="SULES PIJAT MADURAN | Booking Pijat di Maduran" />
+<meta name="twitter:description" content="Lihat lima paket pijat di Sules atau ke Rumah dan pesan langsung." />
+<meta name="twitter:image" content="https://sules-pijat-maduran-hujc.vercel.app/icons/pwa-512.png" />
 <link rel="manifest" href="./manifest.webmanifest" />
 <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
-<title>PIJAT SULES MADURAN</title>
+<title>SULES PIJAT MADURAN | Booking Pijat di Maduran</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -40,6 +55,21 @@
     const { data, error } = await supabaseClient.rpc("get_booking_by_token", { p_access_token: accessToken });
     if (error) throw error;
     return data && data[0] ? data[0] : null;
+  }
+  const CUSTOMER_ORDER_PAGE_SIZE = 50;
+  async function getCustomerBookings(customerId, offset = 0) {
+    const id = String(customerId || "");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      throw new Error("Sesi pelanggan tidak valid.");
+    }
+    const start = Number.isInteger(offset) && offset >= 0 ? offset : 0;
+    const { data, error } = await supabaseClient.from("bookings")
+      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
+      .eq("customer_id", id)
+      .order("created_at", { ascending: false })
+      .range(start, start + CUSTOMER_ORDER_PAGE_SIZE - 1);
+    if (error) throw error;
+    return data || [];
   }
   async function getBookings(status = null) {
     const { data, error } = await supabaseClient.rpc("list_bookings_admin", { p_status: status });
@@ -100,6 +130,13 @@
   async function getCustomerSession() {
     const { data } = await supabaseClient.auth.getSession();
     return data.session;
+  }
+  function subscribeCustomerAuthChanges(onChange) {
+    const result = supabaseClient.auth.onAuthStateChange(onChange);
+    return result && result.data ? result.data.subscription : null;
+  }
+  function removeCustomerAuthSubscription(subscription) {
+    if (subscription && typeof subscription.unsubscribe === "function") subscription.unsubscribe();
   }
 
   async function requestGoogleRoadDistance(origin, destination) {
@@ -210,21 +247,156 @@
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `id=eq.${id}` }, onChange)
       .subscribe();
   }
+  function subscribeCustomerOrders(customerId, onChange) {
+    const id = String(customerId || "");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+    return supabaseClient.channel(`sules-customer-orders-${id}-${++realtimeChannelSequence}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "bookings", filter: `customer_id=eq.${id}` }, onChange)
+      .subscribe();
+  }
   async function removeRealtimeChannel(channel) {
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { createBooking, getMyBooking, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+  window.bookingService = { createBooking, getMyBooking, getCustomerBookings, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
-  body { background:#FFF8E7; color:#2B1B0E; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  :root { --sules-navy:#18324B; --sules-blue:#2F6F9F; --sules-pale:#EFF6FB; --sules-line:#D9E5EF; }
+  body { background:#F3F7FB; color:#18324B; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
   * { box-sizing: border-box; }
   input[type="date"] { font-family: inherit; }
+  .site-header { background:#fff; border-bottom:1px solid var(--sules-line); }
+  .site-nav { max-width:1120px; margin:0 auto; padding:12px 18px; display:flex; align-items:center; gap:18px; }
+  .site-brand { color:var(--sules-navy); text-decoration:none; font-weight:800; line-height:1.15; white-space:nowrap; }
+  .site-brand small { display:block; color:#63809A; font-size:11px; font-weight:600; margin-top:3px; }
+  .site-links { display:flex; align-items:center; gap:14px; margin-left:auto; overflow-x:auto; white-space:nowrap; }
+  .site-links a { color:#45647E; font-size:13px; text-decoration:none; }
+  .site-links a:hover { color:var(--sules-blue); text-decoration:underline; }
+  .site-cta,.public-button { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:11px 17px; background:var(--sules-navy); color:#fff; font-weight:700; text-decoration:none; border:1px solid var(--sules-navy); }
+  .public-button.secondary { background:#fff; color:var(--sules-navy); border-color:var(--sules-line); }
+  .public-shell { max-width:1120px; margin:0 auto; padding:22px 18px 52px; }
+  .public-section { margin:24px 0; scroll-margin-top:18px; }
+  .public-hero { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(240px,.7fr); gap:22px; align-items:center; padding:34px; border:1px solid var(--sules-line); border-radius:28px; background:linear-gradient(130deg,#fff 8%,#EDF5FB 100%); box-shadow:0 14px 36px rgba(24,50,75,.07); }
+  .public-hero h1 { color:var(--sules-navy); font-size:clamp(30px,5vw,52px); line-height:1.05; letter-spacing:-.035em; margin:10px 0 14px; }
+  .public-hero p { color:#536E84; line-height:1.65; }
+  .public-eyebrow { color:var(--sules-blue)!important; font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+  .public-hero-panel { background:linear-gradient(150deg,#18324B,#2F6F9F); color:#fff; border-radius:22px; padding:24px; min-height:190px; display:flex; flex-direction:column; justify-content:space-between; }
+  .public-hero-panel p { color:#DCEAF5; }
+  .public-section h2 { color:var(--sules-navy); font-size:24px; line-height:1.2; margin:0 0 10px; }
+  .public-section > p { color:#536E84; line-height:1.65; }
+  .public-card { background:#fff; border:1px solid var(--sules-line); border-radius:18px; padding:18px; box-shadow:0 6px 20px rgba(24,50,75,.04); }
+  .public-card h3 { color:var(--sules-navy); font-size:16px; font-weight:800; margin:0 0 8px; }
+  .package-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:16px; }
+  .public-two-col { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+  .public-muted { color:#627B90; font-size:14px; line-height:1.6; }
+  .public-list { margin:10px 0 0; padding-left:20px; color:#536E84; line-height:1.7; }
+  .public-details { background:#fff; border:1px solid var(--sules-line); border-radius:14px; padding:14px 16px; margin:9px 0; }
+  .public-details summary { color:var(--sules-navy); cursor:pointer; font-weight:700; }
+  .public-details p { color:#536E84; font-size:14px; line-height:1.65; margin:10px 0 0; }
+  .public-data { display:grid; grid-template-columns:170px 1fr; gap:8px 14px; font-size:14px; }
+  .public-data dt { color:#698198; }
+  .public-data dd { margin:0; color:#18324B; font-weight:600; overflow-wrap:anywhere; }
+  .public-footer { border-top:1px solid var(--sules-line); padding:22px 18px 34px; color:#627B90; font-size:13px; text-align:center; }
+  .app-host { max-width:1120px; margin:0 auto; padding:0 0 36px; }
+  @media (max-width:760px) {
+    .site-nav { flex-wrap:wrap; gap:10px; padding:10px 14px; }
+    .site-links { order:3; width:100%; margin:0; gap:15px; padding:3px 0; }
+    .site-cta { margin-left:auto; padding:9px 14px; font-size:13px; }
+    .public-shell { padding:14px 14px 36px; }
+    .public-hero { grid-template-columns:1fr; padding:23px; border-radius:22px; }
+    .public-hero-panel { min-height:145px; }
+    .package-grid,.public-two-col { grid-template-columns:1fr; }
+    .public-data { grid-template-columns:1fr; gap:2px; }
+    .public-data dd { margin-bottom:8px; }
+  }
 </style>
 </head>
 <body>
-<div id="root"></div>
+<header class="site-header">
+  <div class="site-nav">
+    <a class="site-brand" href="#beranda" aria-label="Sules Pijat Maduran, beranda">SULES PIJAT MADURAN<small>Pijat di Maduran · Lamongan</small></a>
+    <nav class="site-links" aria-label="Navigasi publik">
+      <a href="#beranda">Beranda</a><a href="#katalog">Katalog</a><a href="#faq">FAQ</a>
+      <a href="#legalitas">Legalitas</a><a href="#syarat-ketentuan">Syarat</a><a href="#kebijakan-privasi">Privasi</a><a href="#kontak">Kontak</a>
+    </nav>
+    <a class="site-cta" href="#booking-app">Pesan</a>
+  </div>
+</header>
+
+<main class="public-shell">
+  <section id="beranda" class="public-section public-hero">
+    <div>
+      <p class="public-eyebrow">SULES PIJAT MADURAN</p>
+      <h1>Pijat nyaman di Maduran, dengan pilihan layanan yang jelas.</h1>
+      <p>Pilih layanan di Sules atau ke Rumah, lihat harga sejak awal, lalu ajukan jadwal melalui aplikasi Sules. Booking baru berstatus MENUNGGU sampai dikonfirmasi Admin.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:20px">
+        <a class="public-button" href="#booking-app">Pilih Paket &amp; Booking</a>
+        <a class="public-button secondary" href="#katalog">Lihat 5 Paket</a>
+      </div>
+      <p class="public-muted" style="margin-top:14px">Jadwal layanan: 08.00–15.00 dan 19.00–24.00 · pilihan waktu mengikuti durasi layanan.</p>
+    </div>
+    <div class="public-hero-panel" aria-label="Ringkasan layanan Sules">
+      <div><strong style="font-size:13px;letter-spacing:.12em">PILIHAN LAYANAN</strong><p style="margin:9px 0 0">90 menit atau 2 jam<br />Di Sules atau ke Rumah</p></div>
+      <div><strong style="font-size:26px">5 paket</strong><p style="margin:4px 0 0">Termasuk layanan ke Rumah untuk 2 orang.</p></div>
+    </div>
+  </section>
+
+  <section id="katalog" class="public-section">
+    <p class="public-eyebrow">Katalog</p>
+    <h2>Lima paket layanan</h2>
+    <p>Pilih satu paket. Harga layanan untuk paket 2 orang sudah mencakup dua orang; biaya perjalanan ke Rumah dihitung satu kali per booking.</p>
+    <div class="package-grid">
+      <article class="public-card"><h3>1. Pijat 90 Menit</h3><p class="public-muted">Di Sules · 1 orang · 90 menit</p><strong>Rp60.000</strong></article>
+      <article class="public-card"><h3>2. Pijat 2 Jam</h3><p class="public-muted">Di Sules · 1 orang · 120 menit</p><strong>Rp80.000</strong></article>
+      <article class="public-card"><h3>3. Pijat 90 Menit ke Rumah</h3><p class="public-muted">Ke Rumah · 1 orang · 90 menit</p><strong>Rp60.000 + biaya perjalanan</strong></article>
+      <article class="public-card"><h3>4. Pijat 2 Jam ke Rumah</h3><p class="public-muted">Ke Rumah · 1 orang · 120 menit</p><strong>Rp80.000 + biaya perjalanan</strong></article>
+      <article class="public-card"><h3>5. Pijat 2 Orang ke Rumah – 90 Menit</h3><p class="public-muted">Ke Rumah · 2 orang · 90 menit</p><strong>Rp120.000 + satu biaya perjalanan</strong></article>
+    </div>
+    <div class="public-card" style="margin-top:12px"><h3>Biaya perjalanan ke Rumah</h3><p class="public-muted" style="margin:0">1.000 meter pertama gratis. Jarak setelah 1.000 meter dikenai Rp3,50 per meter, berdasarkan jarak jalan Google Routes, satu kali per booking dan tidak dikalikan jumlah orang. Jika Google Routes gagal, jarak tidak diperkirakan; silakan coba lagi atau hubungi Admin.</p></div>
+  </section>
+
+  <section id="booking-info" class="public-section public-two-col">
+    <article class="public-card"><p class="public-eyebrow">Booking</p><h2>Ajukan jadwal secara langsung</h2><ol class="public-list"><li>Masuk menggunakan email dan kode OTP.</li><li>Pilih satu dari lima paket, tanggal, serta slot 30 menit yang tersedia.</li><li>Untuk layanan ke Rumah, masukkan lokasi agar jarak jalan dan biaya perjalanan dihitung.</li><li>Kirim booking. Status awal MENUNGGU; layanan belum dikonfirmasi sampai Admin memilih TERIMA.</li></ol><a class="public-button" style="margin-top:16px" href="#booking-app">Buka Form Booking</a></article>
+    <article id="pesanan" class="public-card"><p class="public-eyebrow">Pesanan Aktif &amp; Riwayat</p><h2>Pantau pesanan milik Anda</h2><p class="public-muted">Masuk ke akun pelanggan yang dipakai untuk booking, lalu buka tab <strong>Pesanan</strong> di aplikasi untuk melihat status MENUNGGU/DITERIMA serta riwayat DITOLAK/SELESAI. Data diambil dari Supabase dan dibatasi oleh akun pelanggan.</p><a class="public-button secondary" href="#booking-app">Buka Aplikasi Pesanan</a></article>
+  </section>
+
+  <section id="faq" class="public-section">
+    <p class="public-eyebrow">FAQ</p><h2>Pertanyaan umum</h2>
+    <details class="public-details"><summary>Apakah booking langsung terkonfirmasi?</summary><p>Tidak. Booking baru berstatus MENUNGGU. Admin yang memeriksa jadwal dan memilih TERIMA atau TOLAK.</p></details>
+    <details class="public-details"><summary>Jam layanan dan slotnya bagaimana?</summary><p>Jadwal layanan 08.00–15.00 dan 19.00–24.00 dengan interval 30 menit. Slot yang durasinya melewati batas sesi tidak tersedia.</p></details>
+    <details class="public-details"><summary>Bagaimana biaya perjalanan dihitung?</summary><p>Untuk layanan ke Rumah, 1.000 meter pertama gratis; selebihnya Rp3,50 per meter dari jarak jalan Google Routes. Biaya dihitung satu kali per booking, bukan per orang.</p></details>
+    <details class="public-details"><summary>Apa yang terjadi jika jarak jalan tidak dapat dihitung?</summary><p>Aplikasi tidak memakai jarak perkiraan. Coba hitung kembali atau hubungi Admin sebelum mengirim booking.</p></details>
+    <details class="public-details"><summary>Bagaimana masuk dan melihat pesanan?</summary><p>Booking pelanggan menggunakan verifikasi email OTP. Setelah masuk, tab Pesanan menampilkan booking aktif dan riwayat milik akun tersebut.</p></details>
+    <details class="public-details"><summary>Apakah pembayaran online sudah tersedia?</summary><p>Aplikasi saat ini belum menyediakan checkout atau pembayaran online.</p></details>
+  </section>
+
+  <section id="legalitas" class="public-section public-card">
+    <p class="public-eyebrow">Informasi Usaha</p><h2>Legalitas</h2>
+    <p class="public-muted">Informasi berikut ditampilkan sesuai data usaha yang diberikan pemilik.</p>
+    <dl class="public-data"><dt>Nama usaha</dt><dd>SULES PIJAT MADURAN</dd><dt>Nama pada data usaha</dt><dd>SULES HARIANTO</dd><dt>NIB</dt><dd>1709260049956</dd><dt>KBLI</dt><dd>86995 Aktivitas Rumah Pijat</dd><dt>Status OSS/BKPM</dt><dd>Terbit Otomatis</dd><dt>Alamat</dt><dd>Jl. Karya Bangun RT.06/RW.02, Maduran, Lamongan 62261</dd></dl>
+  </section>
+
+  <section id="syarat-ketentuan" class="public-section public-card">
+    <p class="public-eyebrow">Informasi Layanan</p><h2>Syarat &amp; Ketentuan</h2>
+    <ol class="public-list"><li>Harga, durasi, jumlah orang, dan lokasi mengikuti paket yang dipilih pada katalog.</li><li>Booking adalah permintaan jadwal dan berstatus MENUNGGU sampai Admin memilih TERIMA.</li><li>Slot tersedia dalam interval 30 menit pada jam 08.00–15.00 atau 19.00–24.00; durasi layanan tidak boleh melewati batas sesi.</li><li>Biaya perjalanan ke Rumah mengikuti jarak jalan Google Routes: 1.000 meter pertama gratis, selanjutnya Rp3,50 per meter, satu kali per booking.</li><li>Aplikasi ini belum menyediakan checkout atau pembayaran online. Konfirmasi status booking dilakukan di aplikasi.</li></ol>
+  </section>
+
+  <section id="kebijakan-privasi" class="public-section public-card">
+    <p class="public-eyebrow">Data Pelanggan</p><h2>Kebijakan Privasi</h2>
+    <p class="public-muted">Aplikasi memproses nama, email akun, nomor WhatsApp, pilihan layanan, jadwal, status booking, dan alamat/koordinat apabila memilih layanan ke Rumah. Data digunakan untuk autentikasi, pengelolaan booking, komunikasi layanan, dan perhitungan jarak jalan.</p>
+    <p class="public-muted">Data booking disimpan di Supabase sebagai sumber data aplikasi. Akses daftar booking pelanggan dibatasi berdasarkan akun yang masuk; Admin memakai fungsi yang memiliki pemeriksaan otorisasi. Untuk menghitung perjalanan ke Rumah, koordinat tujuan dikirim ke Google Routes. Notifikasi booking yang tersedia diproses melalui Supabase dan Resend.</p>
+    <p class="public-muted">Pertanyaan atau permintaan terkait data dapat disampaikan melalui kontak usaha di bawah. Kebijakan ini tidak menyatakan jangka retensi tertentu karena periode retensi belum ditetapkan dalam informasi yang tersedia.</p>
+  </section>
+
+  <section id="kontak" class="public-section public-card">
+    <p class="public-eyebrow">Kontak</p><h2>Hubungi Sules Pijat Maduran</h2>
+    <div class="public-two-col"><div><p class="public-muted"><strong>Alamat</strong><br />Jl. Karya Bangun RT.06/RW.02, Maduran, Lamongan 62261</p><p class="public-muted"><strong>WhatsApp</strong><br /><a href="https://wa.me/6285855603240" rel="noopener noreferrer">085855603240</a></p></div><div><p class="public-muted"><strong>Email</strong><br /><a href="mailto:srawungjagad3714@gmail.com">srawungjagad3714@gmail.com</a></p><a class="public-button" href="https://wa.me/6285855603240" rel="noopener noreferrer">Hubungi via WhatsApp</a></div></div>
+  </section>
+</main>
+<footer class="public-footer">© SULES PIJAT MADURAN · <a href="#syarat-ketentuan">Syarat</a> · <a href="#kebijakan-privasi">Privasi</a> · <a href="#kontak">Kontak</a></footer>
+
+<section id="booking-app" class="app-host" aria-label="Aplikasi booking Sules"><div id="root"></div></section>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
@@ -266,12 +438,12 @@ function hitungTransport(jarakMeter) {
 }
 function getStatusMeta(status) {
   switch (status) {
-    case "MENUNGGU": return { emoji: "🟡", label: "MENUNGGU", bg: "#FFFBEB", text: "#92400E", border: "#D4AF37" };
+    case "MENUNGGU": return { emoji: "🟡", label: "MENUNGGU", bg: "#FFFBEB", text: "#92400E", border: "#F59E0B" };
     case "DITERIMA": return { emoji: "🟢", label: "DITERIMA", bg: "#ECFDF5", text: "#065F46", border: "#10B981" };
     case "SELESAI": return { emoji: "✅", label: "SELESAI", bg: "#F0FDF4", text: "#166534", border: "#22C55E" };
     case "DITOLAK": return { emoji: "🚫", label: "DITOLAK", bg: "#FEF2F2", text: "#991B1B", border: "#EF4444" };
     case "DIBATALKAN": return { emoji: "🔴", label: "DIBATALKAN", bg: "#FEF2F2", text: "#7F1D1D", border: "#DC2626" };
-    default: return { emoji: "🟡", label: "MENUNGGU", bg: "#FFFBEB", text: "#92400E", border: "#D4AF37" };
+    default: return { emoji: "🟡", label: "MENUNGGU", bg: "#FFFBEB", text: "#92400E", border: "#F59E0B" };
   }
 }
 function mapsLinkForBooking(b) {
@@ -336,12 +508,12 @@ function PilihanButton({ selected, onClick, label, variant }) {
   let style;
   if (variant === "jam") {
     style = selected
-      ? { backgroundColor:"#D4AF37", color:"#2B1B0E", fontWeight:"bold", border:"2px solid #2B1B0E", borderRadius:"12px", padding:"10px 4px" }
-      : { backgroundColor:"white", color:"#2B1B0E", border:"1px solid #E5E7EB", borderRadius:"12px", padding:"10px 4px" };
+      ? { backgroundColor:"#2F6F9F", color:"white", fontWeight:"bold", border:"2px solid #18324B", borderRadius:"12px", padding:"10px 4px" }
+      : { backgroundColor:"white", color:"#18324B", border:"1px solid #E5E7EB", borderRadius:"12px", padding:"10px 4px" };
   } else {
     style = selected
-      ? { backgroundColor:"#2B1B0E", color:"white", border:"2px solid #D4AF37", borderRadius:"12px", padding:"12px", fontWeight:"bold" }
-      : { backgroundColor:"white", color:"#2B1B0E", border:"1px solid #E5E7EB", borderRadius:"12px", padding:"12px", fontWeight:"normal" };
+      ? { backgroundColor:"#18324B", color:"white", border:"2px solid #2F6F9F", borderRadius:"12px", padding:"12px", fontWeight:"bold" }
+      : { backgroundColor:"white", color:"#18324B", border:"1px solid #E5E7EB", borderRadius:"12px", padding:"12px", fontWeight:"normal" };
   }
   return (
     <button onClick={onClick} style={style} className="w-full text-sm transition-colors">
@@ -682,7 +854,7 @@ function BookingTab() {
     return (
       <div className="max-w-sm mx-auto px-4 py-16">
         <div className="text-center py-4">
-          <h1 className="text-xl font-bold" style={{color:"#2B1B0E"}}>PIJAT SULES MADURAN</h1>
+          <h2 className="text-xl font-bold" style={{color:"#18324B"}}>SULES PIJAT MADURAN</h2>
         </div>
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
           <div className="text-center text-lg font-bold mb-1">📧 Masuk untuk Booking</div>
@@ -697,7 +869,7 @@ function BookingTab() {
                 onKeyDown={e=>{ if(e.key==="Enter") kirimKodeOtp(); }} />
               {authMsg && <div className="text-xs text-red-600 mb-3">{authMsg}</div>}
               <button onClick={kirimKodeOtp} disabled={authLoading}
-                style={{ backgroundColor:"#2B1B0E", border:"2px solid #D4AF37", color:"white", borderRadius:"12px", padding:"12px", width:"100%", fontWeight:"bold", opacity: authLoading?0.7:1 }}>
+                style={{ backgroundColor:"#18324B", border:"2px solid #2F6F9F", color:"white", borderRadius:"12px", padding:"12px", width:"100%", fontWeight:"bold", opacity: authLoading?0.7:1 }}>
                 {authLoading ? "Mengirim..." : "Kirim Kode ke Email"}
               </button>
             </React.Fragment>
@@ -716,7 +888,7 @@ function BookingTab() {
                 {authLoading ? "Memeriksa..." : "Verifikasi & Masuk"}
               </button>
               <button onClick={()=>{ setOtpSent(false); setOtpCode(""); setAuthMsg(""); }}
-                style={{ backgroundColor:"white", border:"1px solid #2B1B0E", color:"#2B1B0E", borderRadius:"12px", padding:"10px", width:"100%" }}>
+                style={{ backgroundColor:"white", border:"1px solid #18324B", color:"#18324B", borderRadius:"12px", padding:"10px", width:"100%" }}>
                 Ganti Email
               </button>
             </React.Fragment>
@@ -732,7 +904,7 @@ function BookingTab() {
       <div className="max-w-md mx-auto px-4 py-8 pb-24">
         <div className="text-center mb-4">
           <div className="text-3xl mb-2">✅</div>
-          <h1 className="text-xl font-bold">Pesanan Berhasil Dikirim</h1>
+          <h2 className="text-xl font-bold">Pesanan Berhasil Dikirim</h2>
         </div>
 
         <div className="text-center mb-4">
@@ -757,7 +929,7 @@ function BookingTab() {
         )}
         {shouldShowGoogleReview(b.status) && (
           <a href="https://g.page/r/CWXCZycYzhXqEBE/review" target="_blank" rel="noopener noreferrer"
-            style={{ display:"block", textAlign:"center", backgroundColor:"white", border:"1px solid #D4AF37", color:"#2B1B0E", borderRadius:"12px", padding:"12px", fontWeight:"bold" }}
+            style={{ display:"block", textAlign:"center", backgroundColor:"white", border:"1px solid #2F6F9F", color:"#18324B", borderRadius:"12px", padding:"12px", fontWeight:"bold" }}
             className="mb-4">⭐ Bagikan Pengalaman di Google</a>
         )}
         {b.status === "DITOLAK" && (
@@ -787,10 +959,10 @@ function BookingTab() {
         </div>
 
         <button onClick={refreshStatus} disabled={loadingStatus}
-          style={{ backgroundColor:"#2B1B0E", color:"white", fontWeight:"bold", padding:"14px", borderRadius:"14px", width:"100%" }}
+          style={{ backgroundColor:"#18324B", color:"white", fontWeight:"bold", padding:"14px", borderRadius:"14px", width:"100%" }}
           className="mb-2">{loadingStatus ? "Memuat..." : "🔄 Cek Status Terbaru"}</button>
         <button onClick={()=>{ localStorage.removeItem(LAST_TOKEN_KEY); setCurrentBooking(null); setScreen("form"); }}
-          style={{ backgroundColor:"white", border:"1px solid #2B1B0E", color:"#2B1B0E", padding:"14px", borderRadius:"14px", width:"100%" }}>
+          style={{ backgroundColor:"white", border:"1px solid #18324B", color:"#18324B", padding:"14px", borderRadius:"14px", width:"100%" }}>
           Kembali ke Beranda
         </button>
       </div>
@@ -800,7 +972,7 @@ function BookingTab() {
   return (
     <div className="max-w-md mx-auto px-4 pb-24">
       <div className="text-center py-6">
-        <h1 className="text-2xl font-bold" style={{color:"#2B1B0E"}}>PIJAT SULES MADURAN</h1>
+        <h2 className="text-2xl font-bold" style={{color:"#18324B"}}>SULES PIJAT MADURAN</h2>
         {customerSession && (
           <div className="text-xs text-gray-400 mt-2">
             {customerSession.user.email} · <button onClick={customerDoLogout} className="text-red-600 underline">Logout</button>
@@ -820,7 +992,7 @@ function BookingTab() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4" role="group" aria-label="Paket layanan">
           {SERVICE_PACKAGES.map(p => (
             <button key={p.id} type="button" aria-pressed={paketId === p.id} onClick={()=>setPaketId(p.id)}
-              style={{ backgroundColor: paketId === p.id ? "#2B1B0E" : "white", color: paketId === p.id ? "white" : "#2B1B0E", border: paketId === p.id ? "2px solid #D4AF37" : "1px solid #D1D5DB", borderRadius:"12px", padding:"12px", textAlign:"left" }}>
+              style={{ backgroundColor: paketId === p.id ? "#18324B" : "white", color: paketId === p.id ? "white" : "#18324B", border: paketId === p.id ? "2px solid #2F6F9F" : "1px solid #D1D5DB", borderRadius:"12px", padding:"12px", textAlign:"left" }}>
               <span className="block font-semibold text-sm">{p.label}</span>
               <span className="block text-xs opacity-80 mt-1">{p.location} · {p.people} orang</span>
               <span className="block text-sm font-bold mt-2">{formatRupiah(p.price)}{p.type === "HOME_SERVICE" ? " + travel" : ""}</span>
@@ -844,7 +1016,7 @@ function BookingTab() {
           <div>
             <div className="text-xs text-gray-500 mb-3">1 km pertama gratis, selanjutnya Rp3,50 per meter untuk seluruh booking.</div>
             <button onClick={ambilLokasiGPS} disabled={loadingGPS}
-              style={{ backgroundColor:"#3B82F6", color:"white", borderRadius:"999px", padding:"14px", width:"100%", fontWeight:"bold" }}
+              style={{ backgroundColor:"#2F6F9F", color:"white", borderRadius:"999px", padding:"14px", width:"100%", fontWeight:"bold" }}
               className="mb-2">
               {loadingGPS ? "📡 Mencari Lokasi..." : "📍 Bagikan Lokasi Saya (1 Klik Otomatis)"}
             </button>
@@ -856,7 +1028,7 @@ function BookingTab() {
               placeholder="Tempel link Google Maps atau ketik alamat. Contoh link pendek: https://maps.app.goo.gl/xxx atau tempel langsung koordinat -7.xxx,112.xxx"
               className="w-full border border-gray-300 rounded-xl p-3 mb-2 text-sm" rows="3"></textarea>
             <button onClick={parseAlamat}
-              style={{ backgroundColor:"white", border:"1px solid #2B1B0E", color:"#2B1B0E", borderRadius:"12px", padding:"12px", width:"100%" }}
+              style={{ backgroundColor:"white", border:"1px solid #18324B", color:"#18324B", borderRadius:"12px", padding:"12px", width:"100%" }}
               className="mb-2">📋 Parse Alamat / Link</button>
             {parseMsg && <div className="text-xs text-red-600 mb-3">{parseMsg}</div>}
 
@@ -881,11 +1053,11 @@ function BookingTab() {
             )}
             <div className="grid grid-cols-2 gap-2">
               <button onClick={()=>hitungJarakSekarang()} disabled={loadingJarak}
-                style={{ backgroundColor:"#D4AF37", color:"#2B1B0E", fontWeight:"bold", borderRadius:"12px", padding:"12px" }}>
+                style={{ backgroundColor:"#2F6F9F", color:"white", fontWeight:"bold", borderRadius:"12px", padding:"12px" }}>
                 {loadingJarak ? "Menghitung..." : "🛣️ Hitung Jarak Jalan"}
               </button>
               <button onClick={resetLokasi} disabled={loadingJarak}
-                style={{ backgroundColor:"white", border:"2px solid #2B1B0E", color:"#2B1B0E", borderRadius:"12px", padding:"12px" }}>
+                style={{ backgroundColor:"white", border:"2px solid #18324B", color:"#18324B", borderRadius:"12px", padding:"12px" }}>
                 🗑️ Reset
               </button>
             </div>
@@ -922,14 +1094,14 @@ function BookingTab() {
         </div>
       )}
       <button onClick={konfirmasiBooking} disabled={submitting}
-        style={{ backgroundColor:"#10B981", color:"white", fontWeight:"bold", padding:"16px", borderRadius:"16px", width:"100%", boxShadow:"0 4px 12px rgba(0,0,0,0.15)", opacity: submitting?0.7:1 }}>
+        style={{ backgroundColor:"#047857", color:"white", fontWeight:"bold", padding:"16px", borderRadius:"16px", width:"100%", boxShadow:"0 4px 12px rgba(0,0,0,0.15)", opacity: submitting?0.7:1 }}>
         {submitting ? "Mengirim..." : "✅ KONFIRMASI BOOKING"}
       </button>
     </div>
   );
 }
 
-/* ================= TAB BOS (ADMIN) ================= */
+/* ================= TAB ADMIN ================= */
 const SERVICE_LABEL = { "90m": "90 Menit", "120m": "2 Jam" };
 
 function localDateKey(date) {
@@ -1028,7 +1200,7 @@ function RevenueChart({ days = [] }) {
           {points.map(point => (
             <g key={point.day.tanggal}>
               <title>{point.day.tanggal}: {formatRupiah(point.value)}</title>
-              <circle cx={point.x} cy={point.y} r="3" fill="#2B1B0E" stroke="white" strokeWidth="1" />
+              <circle cx={point.x} cy={point.y} r="3" fill="#18324B" stroke="white" strokeWidth="1" />
             </g>
           ))}
           {labels.map(index => (
@@ -1042,7 +1214,189 @@ function RevenueChart({ days = [] }) {
   );
 }
 
-function BosTab() {
+function CustomerOrdersTab({ onGoToBooking }) {
+  const [session, setSession] = useState(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [sessionError, setSessionError] = useState("");
+  const [view, setView] = useState("active");
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [error, setError] = useState("");
+  const aliveRef = useRef(true);
+  const fetchSequenceRef = useRef(0);
+  const statusByIdRef = useRef(new Map());
+  const reloadRef = useRef(null);
+  const currentCustomerIdRef = useRef("");
+  const customerId = session && session.user ? session.user.id : "";
+
+  function applyCustomerSession(nextSession) {
+    const nextCustomerId = nextSession && nextSession.user ? nextSession.user.id : "";
+    if (currentCustomerIdRef.current !== nextCustomerId) {
+      currentCustomerIdRef.current = nextCustomerId;
+      fetchSequenceRef.current += 1;
+      statusByIdRef.current.clear();
+      setOrders([]);
+      setHasMore(false);
+      setError("");
+      setLoading(false);
+      setRefreshing(false);
+      setLoadingMore(false);
+    }
+    setSession(nextSession || null);
+  }
+
+  useEffect(() => {
+    let mounted = true;
+    const authSubscription = window.bookingService.subscribeCustomerAuthChanges((_event, nextSession) => {
+      if (!mounted) return;
+      applyCustomerSession(nextSession);
+      setSessionError("");
+      setCheckingSession(false);
+    });
+    window.bookingService.getCustomerSession().then(currentSession => {
+      if (mounted) applyCustomerSession(currentSession);
+    }).catch(e => {
+      if (mounted) setSessionError((e && e.message) || "Gagal memeriksa sesi pelanggan.");
+    }).finally(() => {
+      if (mounted) setCheckingSession(false);
+    });
+    return () => {
+      mounted = false;
+      window.bookingService.removeCustomerAuthSubscription(authSubscription);
+    };
+  }, []);
+
+  useEffect(() => () => {
+    aliveRef.current = false;
+    fetchSequenceRef.current += 1;
+  }, []);
+
+  async function fetchFirstPage(silent = false) {
+    if (!customerId || currentCustomerIdRef.current !== customerId) return;
+    const requestId = ++fetchSequenceRef.current;
+    if (silent) setRefreshing(true); else setLoading(true);
+    try {
+      const page = await window.bookingService.getCustomerBookings(customerId, 0);
+      if (!aliveRef.current || currentCustomerIdRef.current !== customerId || requestId !== fetchSequenceRef.current) return;
+      page.forEach(row => {
+        const previousStatus = statusByIdRef.current.get(row.id);
+        if (previousStatus && previousStatus !== row.status) {
+          try { window.bookingService.notifyCustomerBookingStatusChanged(row.id, previousStatus, row.status); } catch (_) {}
+        }
+        statusByIdRef.current.set(row.id, row.status);
+      });
+      setOrders(previous => {
+        const merged = new Map(previous.map(row => [row.id, row]));
+        page.forEach(row => merged.set(row.id, row));
+        return Array.from(merged.values());
+      });
+      setHasMore(page.length === window.bookingService.customerOrderPageSize);
+      setError("");
+    } catch (e) {
+      if (aliveRef.current && requestId === fetchSequenceRef.current) setError((e && e.message) || "Gagal memuat pesanan. Coba lagi.");
+    } finally {
+      if (aliveRef.current && requestId === fetchSequenceRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    }
+  }
+  reloadRef.current = fetchFirstPage;
+
+  useEffect(() => {
+    if (!customerId) return;
+    let active = true;
+    let refreshTimer = null;
+    const channel = window.bookingService.subscribeCustomerOrders(customerId, payload => {
+      if (!active || currentCustomerIdRef.current !== customerId) return;
+      if (payload && payload.eventType === "UPDATE" && payload.new && payload.new.id && payload.new.status) {
+        const bookingId = payload.new.id;
+        const previousStatus = (payload.old && payload.old.status) || statusByIdRef.current.get(bookingId);
+        if (previousStatus && previousStatus !== payload.new.status) {
+          try { window.bookingService.notifyCustomerBookingStatusChanged(bookingId, previousStatus, payload.new.status); } catch (_) {}
+        }
+        statusByIdRef.current.set(bookingId, payload.new.status);
+      }
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => {
+        refreshTimer = null;
+        if (active && reloadRef.current) void reloadRef.current(true);
+      }, 120);
+    });
+    void fetchFirstPage(false);
+    return () => {
+      active = false;
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+      void window.bookingService.removeRealtimeChannel(channel);
+    };
+  }, [customerId]);
+
+  async function loadMore() {
+    if (!customerId || currentCustomerIdRef.current !== customerId || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    setError("");
+    try {
+      const page = await window.bookingService.getCustomerBookings(customerId, orders.length);
+      if (!aliveRef.current || currentCustomerIdRef.current !== customerId) return;
+      page.forEach(row => statusByIdRef.current.set(row.id, row.status));
+      setOrders(previous => {
+        const merged = new Map(previous.map(row => [row.id, row]));
+        page.forEach(row => merged.set(row.id, row));
+        return Array.from(merged.values());
+      });
+      setHasMore(page.length === window.bookingService.customerOrderPageSize);
+    } catch (e) {
+      setError((e && e.message) || "Gagal memuat riwayat berikutnya.");
+    } finally {
+      if (aliveRef.current) setLoadingMore(false);
+    }
+  }
+
+  if (checkingSession) return <div className="text-center text-gray-500 text-sm py-16" role="status">Memeriksa akun pelanggan…</div>;
+  if (!session) {
+    return <div className="max-w-md mx-auto px-4 py-12"><div className="bg-white rounded-2xl p-6 border border-gray-200">
+      <h2 className="text-lg font-bold mb-2">Pesanan Aktif &amp; Riwayat</h2>
+      <p className="text-sm text-gray-600 mb-4">Masuk dengan akun pelanggan yang digunakan saat booking untuk melihat pesanan milik Anda.</p>
+      {sessionError && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert">{sessionError}</div>}
+      <button onClick={onGoToBooking} className="w-full rounded-xl px-4 py-3 font-bold text-white" style={{backgroundColor:"#18324B"}}>Buka Booking &amp; Masuk</button>
+    </div></div>;
+  }
+
+  const activeOrders = orders.filter(row => row.status === "MENUNGGU" || row.status === "DITERIMA")
+    .sort((a,b) => `${a.tanggal}T${a.jam_mulai}`.localeCompare(`${b.tanggal}T${b.jam_mulai}`));
+  const historyOrders = orders.filter(row => row.status === "DITOLAK" || row.status === "SELESAI" || row.status === "DIBATALKAN")
+    .sort((a,b) => `${b.tanggal}T${b.jam_mulai}`.localeCompare(`${a.tanggal}T${a.jam_mulai}`));
+  const visibleOrders = view === "active" ? activeOrders : historyOrders;
+  const pageSize = window.bookingService.customerOrderPageSize;
+
+  return <div className="max-w-md mx-auto px-4 pb-16">
+    <div className="py-5"><h2 className="text-xl font-bold" style={{color:"#18324B"}}>Pesanan Anda</h2><p className="text-xs text-gray-500 mt-1">Data pesanan dimuat dari Supabase untuk akun yang sedang masuk.</p></div>
+    <div className="grid grid-cols-2 gap-2 mb-4" role="group" aria-label="Jenis pesanan">
+      <button type="button" aria-pressed={view === "active"} onClick={()=>setView("active")} className="rounded-xl border px-3 py-3 text-sm font-semibold" style={{backgroundColor:view==="active"?"#18324B":"white",color:view==="active"?"white":"#18324B",borderColor:"#D9E5EF"}}>Aktif ({activeOrders.length})</button>
+      <button type="button" aria-pressed={view === "history"} onClick={()=>setView("history")} className="rounded-xl border px-3 py-3 text-sm font-semibold" style={{backgroundColor:view==="history"?"#18324B":"white",color:view==="history"?"white":"#18324B",borderColor:"#D9E5EF"}}>Riwayat ({historyOrders.length})</button>
+    </div>
+    {refreshing && <div className="text-xs text-gray-500 mb-2" role="status">Menyinkronkan perubahan…</div>}
+    {error && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert"><div>{error}</div><button onClick={()=>void fetchFirstPage(false)} className="underline font-semibold mt-1">Coba lagi</button></div>}
+    {loading && orders.length === 0 && <div className="text-center text-gray-500 text-sm py-10" role="status">Memuat pesanan…</div>}
+    {!loading && !error && visibleOrders.length === 0 && <div className="bg-white border border-gray-200 rounded-xl p-5 text-center text-sm text-gray-500">{view === "active" ? "Belum ada pesanan aktif." : "Belum ada riwayat pesanan."}</div>}
+    <div className="space-y-3">
+      {visibleOrders.map(row => <article key={row.id} className="bg-white rounded-xl p-4 border border-gray-200 text-sm">
+        <div className="flex items-start justify-between gap-2 mb-2"><strong>{SERVICE_LABEL[row.service_id] || row.service_id} · {row.jumlah_orang} orang</strong><StatusBadge status={row.status} /></div>
+        <div className="grid grid-cols-2 gap-2 text-xs mb-2"><div><span className="text-gray-500 block">Tanggal</span>{row.tanggal}</div><div><span className="text-gray-500 block">Jam</span>{String(row.jam_mulai).slice(0,5)}</div></div>
+        <div className="text-xs text-gray-600 mb-2">{row.tipe_lokasi === "HOME_SERVICE" ? "ke Rumah" : "Di Sules"} · {row.durasi_menit} menit</div>
+        <div className="text-sm font-bold">Total: {formatRupiah(row.grand_total)}</div>
+        {row.status === "DITOLAK" && row.catatan_penolakan && <p className="text-xs text-gray-600 mt-2">Catatan Admin: {row.catatan_penolakan}</p>}
+        {row.status === "DITOLAK" && <button onClick={onGoToBooking} className="mt-3 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{backgroundColor:"#18324B"}}>BOOKING LAGI</button>}
+      </article>)}
+    </div>
+    {hasMore && <button onClick={()=>void loadMore()} disabled={loadingMore} className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 mt-4 font-semibold disabled:opacity-60">{loadingMore ? "Memuat…" : `Muat ${view === "active" ? "pesanan aktif" : "riwayat"} berikutnya (hingga ${pageSize} per halaman)`}</button>}
+  </div>;
+}
+
+function AdminTab() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [password, setPassword] = useState("");
@@ -1238,7 +1592,7 @@ function BosTab() {
           </div>
           {loginError && <div className="text-xs text-red-600 mb-3 text-center">{loginError}</div>}
           <button onClick={doLogin} disabled={loggingIn}
-            style={{ backgroundColor:"#2B1B0E", border:"2px solid #D4AF37", color:"white", borderRadius:"12px", padding:"12px", width:"100%", fontWeight:"bold", opacity: loggingIn?0.7:1 }}>
+            style={{ backgroundColor:"#18324B", border:"2px solid #2F6F9F", color:"white", borderRadius:"12px", padding:"12px", width:"100%", fontWeight:"bold", opacity: loggingIn?0.7:1 }}>
             {loggingIn ? "Memeriksa..." : "✅ Masuk Dashboard"}
           </button>
         </div>
@@ -1338,7 +1692,7 @@ function BosTab() {
         {showActions && b.status === "MENUNGGU" && (
           <div className="flex gap-2 mt-2">
             <button onClick={()=>handleTerima(b.id)} disabled={actionLoading[b.id]}
-              style={{ flex:1, backgroundColor:"#10B981", color:"white", borderRadius:"10px", padding:"8px", fontWeight:"bold", opacity: actionLoading[b.id]?0.6:1 }}
+              style={{ flex:1, backgroundColor:"#047857", color:"white", borderRadius:"10px", padding:"8px", fontWeight:"bold", opacity: actionLoading[b.id]?0.6:1 }}
               className="text-sm">✅ TERIMA</button>
             <button onClick={()=>handleTolak(b.id)} disabled={actionLoading[b.id]}
               style={{ flex:1, backgroundColor:"white", border:"1px solid #DC2626", color:"#DC2626", borderRadius:"10px", padding:"8px", opacity: actionLoading[b.id]?0.6:1 }}
@@ -1348,7 +1702,7 @@ function BosTab() {
         {showActions && b.status === "DITERIMA" && (
           <div className="flex gap-2 mt-2">
             <button onClick={()=>handleSelesai(b.id)} disabled={actionLoading[b.id]}
-              style={{ flex:1, backgroundColor:"#22C55E", color:"white", borderRadius:"10px", padding:"8px", fontWeight:"bold", opacity: actionLoading[b.id]?0.6:1 }}
+              style={{ flex:1, backgroundColor:"#15803D", color:"white", borderRadius:"10px", padding:"8px", fontWeight:"bold", opacity: actionLoading[b.id]?0.6:1 }}
               className="text-sm">✅ SELESAI</button>
           </div>
         )}
@@ -1422,7 +1776,7 @@ function BosTab() {
       <div className="mb-3">
         <div className="flex gap-2 flex-wrap">
         <button onClick={()=>setFilterStatus(filterStatus === "MENUNGGU" ? null : "MENUNGGU")}
-          style={{ backgroundColor: filterStatus==="MENUNGGU" ? "#D4AF37" : "white", color:"#2B1B0E", border:"1px solid #D4AF37", borderRadius:"10px", padding:"8px 12px" }}
+          style={{ backgroundColor: filterStatus==="MENUNGGU" ? "#2F6F9F" : "white", color:filterStatus==="MENUNGGU" ? "white" : "#18324B", border:"1px solid #2F6F9F", borderRadius:"10px", padding:"8px 12px" }}
           className="text-sm">🟡 Hanya MENUNGGU</button>
         <button onClick={fetchDashboard} disabled={loadingList || customRangeInvalid}
           className="text-sm border border-gray-300 rounded-lg px-3 py-2 disabled:opacity-50">🔄 Refresh</button>
@@ -1489,15 +1843,19 @@ function AppTabs() {
     <React.Fragment>
       <div style={{ position:"sticky", top:0, zIndex:40 }} className="bg-white border-b border-gray-200 flex">
         <button onClick={()=>setTab("booking")}
-          style={{ flex:1, padding:"12px", fontWeight: tab==="booking" ? "bold" : "normal", color: tab==="booking" ? "#2B1B0E" : "#9CA3AF", borderBottom: tab==="booking" ? "3px solid #D4AF37" : "3px solid transparent" }}>
+          style={{ flex:1, padding:"12px", fontWeight: tab==="booking" ? "bold" : "normal", color: tab==="booking" ? "#18324B" : "#9CA3AF", borderBottom: tab==="booking" ? "3px solid #2F6F9F" : "3px solid transparent" }}>
           Booking
         </button>
-        <button onClick={()=>setTab("bos")}
-          style={{ flex:1, padding:"12px", fontWeight: tab==="bos" ? "bold" : "normal", color: tab==="bos" ? "#2B1B0E" : "#9CA3AF", borderBottom: tab==="bos" ? "3px solid #D4AF37" : "3px solid transparent" }}>
+        <button onClick={()=>setTab("orders")}
+          style={{ flex:1, padding:"12px", fontWeight: tab==="orders" ? "bold" : "normal", color: tab==="orders" ? "#18324B" : "#9CA3AF", borderBottom: tab==="orders" ? "3px solid #2F6F9F" : "3px solid transparent" }}>
+          Pesanan
+        </button>
+        <button onClick={()=>setTab("admin")}
+          style={{ flex:1, padding:"12px", fontWeight: tab==="admin" ? "bold" : "normal", color: tab==="admin" ? "#18324B" : "#9CA3AF", borderBottom: tab==="admin" ? "3px solid #2F6F9F" : "3px solid transparent" }}>
           Admin
         </button>
       </div>
-      {tab === "booking" ? <BookingTab /> : <BosTab />}
+      {tab === "booking" ? <BookingTab /> : tab === "orders" ? <CustomerOrdersTab onGoToBooking={()=>setTab("booking")} /> : <AdminTab />}
     </React.Fragment>
   );
 }
