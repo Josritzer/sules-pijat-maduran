@@ -150,6 +150,24 @@
     if (error) throw error;
     return data;
   }
+  async function getShopeeAffiliateSlots() {
+    const { data, error } = await supabaseClient.rpc("admin_get_shopee_affiliate_slots");
+    if (error) throw error;
+    return Array.isArray(data) ? data : [];
+  }
+  async function saveShopeeAffiliateSlot(slot) {
+    const { data, error } = await supabaseClient.rpc("admin_save_shopee_affiliate_slot", {
+      p_slot: slot.slot,
+      p_nama_produk: slot.nama_produk,
+      p_gambar_url: slot.gambar_url,
+      p_harga_display: slot.harga_display,
+      p_deskripsi_singkat: slot.deskripsi_singkat,
+      p_affiliate_url: slot.affiliate_url,
+      p_aktif: slot.aktif
+    });
+    if (error) throw error;
+    return Array.isArray(data) ? (data[0] || null) : data;
+  }
   async function adminLogin(email, password) {
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) throw error;
@@ -303,7 +321,7 @@
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { createBooking, getMyBooking, getCustomerBookings, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+  window.bookingService = { createBooking, getMyBooking, getCustomerBookings, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, getShopeeAffiliateSlots, saveShopeeAffiliateSlot, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -439,6 +457,44 @@
   .sules-app-content { max-width:760px; margin:0 auto; padding:8px 4px 34px; }
   .sules-admin-shell { max-width:1120px; min-height:calc(100vh - 64px); margin:0 auto; padding:8px 4px 24px; }
   .sules-admin-content { width:100%; margin:0 auto; }
+  body.sules-admin-mode { min-height:100vh; padding-bottom:0 !important; }
+  body.sules-admin-mode > .site-header,
+  body.sules-admin-mode > .public-shell,
+  body.sules-admin-mode > .public-footer { display:none !important; }
+  body.sules-admin-mode > #booking-app { width:100%; max-width:none; min-height:100vh; margin:0; padding:22px clamp(12px,3vw,32px) 40px; }
+  body.sules-admin-mode #root { min-height:100vh; }
+  body.sules-admin-mode #root .sules-admin-shell { max-width:1120px; min-height:calc(100vh - 62px); margin:0 auto; padding:0 4px 30px; }
+  .sules-admin-page { width:100%; }
+  .sules-admin-dashboard { width:100%; max-width:1120px; margin:0 auto; }
+  .sules-admin-header { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin:0 auto 16px; padding:16px 18px; border:1px solid var(--sules-line); border-radius:18px; background:#fff; box-shadow:0 7px 18px rgba(24,50,75,.06); }
+  .sules-admin-brand { color:var(--sules-navy); font-size:12px; font-weight:850; letter-spacing:.12em; }
+  .sules-admin-heading { margin-top:4px; color:var(--sules-navy); font-size:clamp(20px,3vw,26px); font-weight:850; letter-spacing:-.03em; }
+  .sules-admin-header-actions { display:flex; align-items:center; gap:8px; }
+  .sules-admin-header-actions button { min-height:40px; padding:8px 12px; border:1px solid var(--sules-line); border-radius:12px; background:#fff; color:var(--sules-navy); font-size:13px; font-weight:700; }
+  .sules-admin-header-actions .sules-admin-logout { color:#A33C42; border-color:#EBC8C8; background:#FFF5F5; }
+  .sules-affiliate-section { margin-top:20px; padding:18px; border:1px solid var(--sules-line); border-radius:20px; background:#fff; box-shadow:0 8px 20px rgba(24,50,75,.055); }
+  .sules-affiliate-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:14px; }
+  .sules-affiliate-card { min-width:0; padding:15px; border:1px solid var(--sules-line); border-radius:16px; background:#FAFCFE; }
+  .sules-affiliate-preview { display:grid; place-items:center; min-height:118px; margin:10px 0; border:1px dashed #C9D8E5; border-radius:13px; background:#F3F7FB; color:#60768A; overflow:hidden; }
+  .sules-affiliate-preview img { width:100%; height:150px; object-fit:contain; }
+  .sules-affiliate-field { display:block; margin-top:10px; color:#405B73; font-size:12px; font-weight:750; }
+  .sules-affiliate-field input,.sules-affiliate-field textarea { display:block; width:100%; margin-top:5px; padding:10px 11px; border:1px solid #C9D8E5; border-radius:11px; background:#fff; color:var(--sules-navy); font:inherit; font-size:13px; }
+  .sules-affiliate-field textarea { min-height:68px; resize:vertical; }
+  .sules-affiliate-toggle { display:flex; align-items:center; gap:9px; margin-top:12px; color:var(--sules-navy); font-size:13px; font-weight:750; }
+  .sules-affiliate-toggle input { width:18px; height:18px; accent-color:#2F6F9F; }
+  .sules-affiliate-actions { display:flex; gap:8px; margin-top:12px; }
+  .sules-affiliate-actions > * { flex:1; }
+  .sules-affiliate-actions a,.sules-affiliate-actions button { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:8px 10px; border:1px solid #C9D8E5; border-radius:12px; background:#fff; color:var(--sules-navy); font-size:12px; font-weight:750; text-decoration:none; text-align:center; }
+  .sules-affiliate-actions a { border-color:#2F6F9F; background:#2F6F9F; color:#fff; }
+  .sules-affiliate-actions button:disabled { opacity:.55; cursor:not-allowed; }
+  @media (max-width:760px) {
+    body.sules-admin-mode > #booking-app { padding:12px 12px 26px; }
+    .sules-admin-header { align-items:flex-start; padding:14px; }
+    .sules-admin-header-actions { width:100%; }
+    .sules-admin-header-actions button { flex:1; }
+    .sules-affiliate-section { padding:14px; }
+    .sules-affiliate-grid { grid-template-columns:1fr; }
+  }
   #root .sules-location-share {
     color:#FFFFFF !important;
     background:linear-gradient(125deg,#18324B 0%,#2F6F9F 62%,#3F9FBC 100%) !important;
@@ -638,7 +694,7 @@
 <footer class="public-footer">© SULES PIJAT MADURAN · <a href="#syarat-ketentuan">Syarat</a> · <a href="#kebijakan-privasi">Privasi</a> · <a href="#kontak">Kontak</a></footer>
 
 <script type="text/babel">
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect, useLayoutEffect, useRef } = React;
 
 /* ================= KONSTANTA ================= */
 const BASE_LAT = -7.0000833;
@@ -1912,7 +1968,210 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
   </div>;
 }
 
-function AdminTab() {
+const EMPTY_AFFILIATE_SLOT = slot => ({
+  slot,
+  nama_produk: "",
+  gambar_url: "",
+  harga_display: "",
+  deskripsi_singkat: "",
+  affiliate_url: "",
+  aktif: false
+});
+
+const SHOPEE_AFFILIATE_URL_RE = /^https:\/\/((?:[a-z0-9-]+\.)*shopee\.co\.id|shopee\.ee)(?:[/?#][^\s]*)?$/i;
+
+function safeShopeeAffiliateUrl(raw) {
+  if (typeof raw !== "string") return null;
+  const value = raw.trim();
+  if (!value || !SHOPEE_AFFILIATE_URL_RE.test(value)) return null;
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.port) return null;
+    return value;
+  } catch (_) {
+    return null;
+  }
+}
+
+function safeAffiliateImageUrl(raw) {
+  if (typeof raw !== "string") return "";
+  const value = raw.trim();
+  if (!value) return "";
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password || !parsed.hostname) return "";
+    return value;
+  } catch (_) {
+    return "";
+  }
+}
+
+function normalizeAffiliateSlots(rows) {
+  const bySlot = new Map();
+  if (Array.isArray(rows)) rows.forEach(row => {
+    const slot = Number(row && row.slot);
+    if (!Number.isInteger(slot) || slot < 1 || slot > 6 || bySlot.has(slot)) return;
+    bySlot.set(slot, {
+      slot,
+      nama_produk: typeof row.nama_produk === "string" ? row.nama_produk : "",
+      gambar_url: typeof row.gambar_url === "string" ? row.gambar_url : "",
+      harga_display: typeof row.harga_display === "string" ? row.harga_display : "",
+      deskripsi_singkat: typeof row.deskripsi_singkat === "string" ? row.deskripsi_singkat : "",
+      affiliate_url: typeof row.affiliate_url === "string" ? row.affiliate_url : "",
+      aktif: row.aktif === true
+    });
+  });
+  return Array.from({ length: 6 }, (_, index) => bySlot.get(index + 1) || EMPTY_AFFILIATE_SLOT(index + 1));
+}
+
+function ShopeeAffiliateAdmin() {
+  const initialSlots = Array.from({ length: 6 }, (_, index) => EMPTY_AFFILIATE_SLOT(index + 1));
+  const [slots, setSlots] = useState(initialSlots);
+  const [drafts, setDrafts] = useState(Object.fromEntries(initialSlots.map(slot => [slot.slot, slot])));
+  const [loading, setLoading] = useState(true);
+  const [savingSlot, setSavingSlot] = useState(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const mounted = useRef(false);
+
+  const loadSlots = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const rows = await window.bookingService.getShopeeAffiliateSlots();
+      if (!mounted.current) return;
+      const normalized = normalizeAffiliateSlots(rows);
+      setSlots(normalized);
+      setDrafts(Object.fromEntries(normalized.map(slot => [slot.slot, slot])));
+    } catch (e) {
+      if (mounted.current) setError((e && e.message) || "Gagal memuat slot Affiliate dari Supabase.");
+    } finally {
+      if (mounted.current) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    mounted.current = true;
+    void loadSlots();
+    return () => { mounted.current = false; };
+  }, []);
+
+  const updateDraft = (slot, field, value) => {
+    setNotice("");
+    setDrafts(previous => ({
+      ...previous,
+      [slot]: { ...(previous[slot] || EMPTY_AFFILIATE_SLOT(slot)), [field]: value }
+    }));
+  };
+
+  const saveSlot = async slotNumber => {
+    const draft = drafts[slotNumber] || EMPTY_AFFILIATE_SLOT(slotNumber);
+    const affiliateUrl = typeof draft.affiliate_url === "string" ? draft.affiliate_url.trim() : "";
+    const imageUrl = typeof draft.gambar_url === "string" ? draft.gambar_url.trim() : "";
+    const validAffiliateUrl = affiliateUrl ? safeShopeeAffiliateUrl(affiliateUrl) : null;
+    if (affiliateUrl && !validAffiliateUrl) {
+      setError(`Produk ${slotNumber}: URL harus HTTPS pada domain resmi Shopee.`);
+      setNotice("");
+      return;
+    }
+    if (imageUrl && !safeAffiliateImageUrl(imageUrl)) {
+      setError(`Produk ${slotNumber}: gambar harus menggunakan URL HTTPS yang valid.`);
+      setNotice("");
+      return;
+    }
+    if (draft.aktif && (!String(draft.nama_produk || "").trim() || !validAffiliateUrl)) {
+      setError(`Produk ${slotNumber}: isi nama produk dan Affiliate URL Shopee yang valid sebelum mengaktifkan.`);
+      setNotice("");
+      return;
+    }
+
+    setSavingSlot(slotNumber);
+    setError("");
+    setNotice("");
+    try {
+      const saved = await window.bookingService.saveShopeeAffiliateSlot({
+        slot: slotNumber,
+        nama_produk: String(draft.nama_produk || ""),
+        gambar_url: imageUrl,
+        harga_display: String(draft.harga_display || ""),
+        deskripsi_singkat: String(draft.deskripsi_singkat || ""),
+        affiliate_url: affiliateUrl,
+        aktif: draft.aktif === true
+      });
+      if (!saved) throw new Error("Supabase tidak mengembalikan slot yang tersimpan.");
+      if (!mounted.current) return;
+      const normalized = normalizeAffiliateSlots([...slots.filter(item => item.slot !== slotNumber), saved]);
+      setSlots(normalized);
+      setDrafts(previous => ({ ...previous, [slotNumber]: normalized[slotNumber - 1] }));
+      setNotice(`Produk ${slotNumber} tersimpan di Supabase.`);
+    } catch (e) {
+      if (mounted.current) setError((e && e.message) || `Gagal menyimpan Produk ${slotNumber}.`);
+    } finally {
+      if (mounted.current) setSavingSlot(null);
+    }
+  };
+
+  return (
+    <section className="sules-affiliate-section" aria-labelledby="shopee-affiliate-heading">
+      <div>
+        <div className="sules-eyebrow">KONTEN ADMIN</div>
+        <h2 id="shopee-affiliate-heading" className="text-lg font-bold mt-1">SHOPEE AFFILIATE — 6 SLOT</h2>
+        <p className="text-sm text-gray-500 mt-1">Enam posisi tetap. Isi hanya data dan Affiliate URL yang diberikan Admin; slot tidak dapat ditambah atau dihapus.</p>
+      </div>
+      {loading && <div role="status" className="text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">Memuat enam slot dari Supabase…</div>}
+      {error && <div role="alert" className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg p-3 mt-3">{error}</div>}
+      {notice && <div role="status" className="text-sm text-green-800 bg-green-50 border border-green-200 rounded-lg p-3 mt-3">{notice}</div>}
+      <div className="sules-affiliate-grid">
+        {slots.map(slot => {
+          const draft = drafts[slot.slot] || slot;
+          const savedUrl = safeShopeeAffiliateUrl(slot.affiliate_url);
+          const canOpenSavedLink = slot.aktif === true && Boolean(String(slot.nama_produk || "").trim()) && Boolean(savedUrl);
+          const draftUrlIsInvalid = Boolean(String(draft.affiliate_url || "").trim()) && !safeShopeeAffiliateUrl(draft.affiliate_url);
+          const previewImage = safeAffiliateImageUrl(draft.gambar_url);
+          return (
+            <article className="sules-affiliate-card" key={slot.slot} aria-label={`Produk ${slot.slot}`}>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-bold text-base">Produk {slot.slot}</h3>
+                <span className={`text-xs font-bold ${slot.aktif ? "text-green-800" : "text-gray-500"}`}>{slot.aktif ? "Tersimpan · Aktif" : "Tersimpan · Tidak aktif"}</span>
+              </div>
+              <div className="sules-affiliate-preview">
+                {previewImage ? <img src={previewImage} alt={`Pratinjau ${draft.nama_produk || `Produk ${slot.slot}`}`} loading="lazy" /> : <span>{draft.nama_produk ? "Pratinjau gambar belum tersedia" : "Slot kosong · belum ada produk"}</span>}
+              </div>
+              <label className="sules-affiliate-field">Nama produk
+                <input type="text" value={draft.nama_produk} onChange={e => updateDraft(slot.slot, "nama_produk", e.target.value)} autoComplete="off" />
+              </label>
+              <label className="sules-affiliate-field">Gambar URL (opsional)
+                <input type="url" value={draft.gambar_url} onChange={e => updateDraft(slot.slot, "gambar_url", e.target.value)} autoComplete="off" />
+              </label>
+              <label className="sules-affiliate-field">Harga display (opsional)
+                <input type="text" value={draft.harga_display} onChange={e => updateDraft(slot.slot, "harga_display", e.target.value)} autoComplete="off" />
+              </label>
+              <label className="sules-affiliate-field">Deskripsi singkat (opsional)
+                <textarea value={draft.deskripsi_singkat} onChange={e => updateDraft(slot.slot, "deskripsi_singkat", e.target.value)} />
+              </label>
+              <label className="sules-affiliate-field">Affiliate URL Shopee
+                <input type="url" value={draft.affiliate_url} onChange={e => updateDraft(slot.slot, "affiliate_url", e.target.value)} autoComplete="off" aria-invalid={draftUrlIsInvalid || undefined} />
+              </label>
+              {draftUrlIsInvalid && <div className="text-xs text-red-700 mt-1">URL INVALID — tautan hanya aktif jika HTTPS dan domain Shopee resmi.</div>}
+              <label className="sules-affiliate-toggle">
+                <input type="checkbox" checked={draft.aktif === true} onChange={e => updateDraft(slot.slot, "aktif", e.target.checked)} />
+                Aktif
+              </label>
+              <div className="sules-affiliate-actions">
+                {canOpenSavedLink
+                  ? <a href={savedUrl} target="_blank" rel="noopener noreferrer">Bagikan / Buka Shopee</a>
+                  : <button type="button" disabled aria-disabled="true">Bagikan / Buka Shopee</button>}
+                <button type="button" className="sules-primary" disabled={loading || savingSlot !== null} onClick={() => void saveSlot(slot.slot)}>{savingSlot === slot.slot ? "Menyimpan…" : "Simpan"}</button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function AdminTab({ onExitToApp }) {
   const [loggedIn, setLoggedIn] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [password, setPassword] = useState("");
@@ -2072,16 +2331,32 @@ function AdminTab() {
     setListError("");
     setLoadingList(false);
     setLastUpdated("");
+    if (typeof onExitToApp === "function") onExitToApp();
   };
 
+  const adminHeader = (
+    <header className="sules-admin-header">
+      <div>
+        <div className="sules-admin-brand">SULES PIJAT MADURAN</div>
+        <div className="sules-admin-heading">Dashboard Admin</div>
+      </div>
+      <div className="sules-admin-header-actions">
+        <button type="button" onClick={onExitToApp}>← Kembali ke aplikasi</button>
+        {loggedIn && <button type="button" className="sules-admin-logout" onClick={doLogout}>Logout</button>}
+      </div>
+    </header>
+  );
+
   if (checkingSession) {
-    return <div className="text-center text-gray-400 text-sm py-16">Memuat...</div>;
+    return <div className="sules-admin-page">{adminHeader}<div className="text-center text-gray-400 text-sm py-16">Memuat...</div></div>;
   }
 
   if (!loggedIn) {
     return (
-      <div className="max-w-sm mx-auto px-4 py-16">
-        <div className="bg-white rounded-2xl p-6 border border-gray-200">
+      <div className="sules-admin-page">
+        {adminHeader}
+        <div className="max-w-sm mx-auto px-4 py-10">
+          <div className="bg-white rounded-2xl p-6 border border-gray-200">
         <div className="text-center text-lg font-bold mb-4">🔐 Login Admin</div>
           <label htmlFor="admin-email" className="text-sm font-semibold block mb-1">Email Admin:</label>
           <input
@@ -2111,6 +2386,7 @@ function AdminTab() {
             style={{ backgroundColor:"#18324B", border:"2px solid #2F6F9F", color:"white", borderRadius:"12px", padding:"12px", width:"100%", fontWeight:"bold", opacity: loggingIn?0.7:1 }} className="sules-primary">
             {loggingIn ? "Memeriksa..." : "✅ Masuk Dashboard"}
           </button>
+          </div>
         </div>
       </div>
     );
@@ -2227,12 +2503,9 @@ function AdminTab() {
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 pb-16">
-      <div className="flex justify-between items-center py-4">
-        <div className="font-bold">Halo Admin 👋</div>
-        <button onClick={doLogout} className="text-sm text-red-600 underline">Logout</button>
-      </div>
-      <div className="text-xs text-gray-500 mb-4">Dashboard Admin</div>
+    <div className="sules-admin-page">
+      {adminHeader}
+      <div className="sules-admin-dashboard pb-8">
 
       <div className="bg-white rounded-xl p-3 border border-gray-200 mb-3">
         <label htmlFor="dashboard-period" className="text-sm font-semibold block mb-1">Periode Dashboard</label>
@@ -2340,6 +2613,8 @@ function AdminTab() {
           {!loadingList && !listError && list.length === 0 && <div className="text-center text-gray-500 text-sm py-8">Belum ada booking pada periode ini.</div>}
         </div>
       </section>
+      <ShopeeAffiliateAdmin />
+      </div>
     </div>
   );
 }
@@ -2438,6 +2713,12 @@ function AppTabs() {
   ];
   const currentNavTab = tab === "book" ? "catalog" : tab;
   const isAdminScreen = tab === "account" && menuView === "admin";
+  useLayoutEffect(() => {
+    const body = document.body;
+    if (isAdminScreen) body.classList.add("sules-admin-mode");
+    else body.classList.remove("sules-admin-mode");
+    return () => body.classList.remove("sules-admin-mode");
+  }, [isAdminScreen]);
 
   return (
     <div className={isAdminScreen ? "sules-admin-shell" : "sules-app-shell"}>
@@ -2448,7 +2729,7 @@ function AppTabs() {
         {tab === "orders" && <CustomerOrdersTab initialView={ordersView} onGoToBooking={()=>navigate("book")} />}
         {tab === "notifications" && <NotificationsTab onGoToOrders={()=>goToOrders("active")} />}
         {tab === "account" && (menuView === "admin"
-          ? <div><button type="button" className="mb-3" onClick={()=>setMenuView("menu")}>← Kembali ke Akun</button><AdminTab /></div>
+          ? <AdminTab onExitToApp={()=>setMenuView("menu")} />
           : <ProfileMenuTab onOpenAdmin={()=>setMenuView("admin")} />)}
       </div>
       {!isAdminScreen && <nav className="sules-bottom-nav" aria-label="Navigasi aplikasi">
