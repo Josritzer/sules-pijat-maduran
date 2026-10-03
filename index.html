@@ -392,6 +392,18 @@
   #root svg text { fill:#60768A; }
 
   .sules-app-content { max-width:760px; margin:0 auto; padding:8px 4px 34px; }
+  .sules-admin-shell { max-width:1120px; min-height:calc(100vh - 64px); margin:0 auto; padding:8px 4px 24px; }
+  .sules-admin-content { width:100%; margin:0 auto; }
+  #root .sules-location-share {
+    color:#FFFFFF !important;
+    background:linear-gradient(125deg,#18324B 0%,#2F6F9F 62%,#3F9FBC 100%) !important;
+    border:2px solid #B9E3F0 !important;
+    box-shadow:0 8px 18px rgba(47,111,159,.22),inset 0 1px rgba(255,255,255,.18);
+    min-height:56px;
+    font-size:15px;
+    letter-spacing:.01em;
+  }
+  #root .sules-location-share:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 10px 22px rgba(47,111,159,.28); }
   .sules-page-heading { margin:8px 0 16px; }
   .sules-page-heading h1,.sules-page-heading h2 { color:var(--sules-navy) !important; letter-spacing:-.03em; }
   .sules-eyebrow { color:var(--sules-blue); font-size:10px; letter-spacing:.14em; font-weight:800; text-transform:uppercase; }
@@ -1202,8 +1214,8 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id } = {}) {
             <div className="text-xs text-gray-500 mb-3">1 km pertama gratis, selanjutnya Rp3,50 per meter untuk seluruh booking.</div>
             <button onClick={ambilLokasiGPS} disabled={loadingGPS}
               style={{ backgroundColor:"#2F6F9F", color:"white", borderRadius:"999px", padding:"14px", width:"100%", fontWeight:"bold" }}
-              className="mb-2">
-              {loadingGPS ? "📡 Mencari Lokasi..." : "📍 Bagikan Lokasi Saya (1 Klik Otomatis)"}
+              className="mb-2 sules-location-share">
+              {loadingGPS ? "📡 Mencari Lokasi..." : "📍 Bagikan Lokasi Saya"}
             </button>
             {gpsMsg && <div className="text-xs text-red-600 mb-3">{gpsMsg}</div>}
 
@@ -2228,10 +2240,11 @@ function AppTabs() {
     { id:"account", label:"Akun", icon:"account" }
   ];
   const currentNavTab = tab === "book" ? "catalog" : tab;
+  const isAdminScreen = tab === "account" && menuView === "admin";
 
   return (
-    <div className="sules-app-shell">
-      <div className="sules-app-content">
+    <div className={isAdminScreen ? "sules-admin-shell" : "sules-app-shell"}>
+      <div className={isAdminScreen ? "sules-admin-content" : "sules-app-content"}>
         {tab === "home" && <CustomerOrdersTab mode="home" onGoToBooking={()=>navigate("book")} onBookPackage={bookPackage} onGoToCatalog={()=>navigate("catalog")} onGoToOrders={goToOrders} onOpenPublicSection={openPublicSection} />}
         {tab === "catalog" && <CatalogTab onBookPackage={bookPackage} />}
         {tab === "book" && <BookingTab initialPackageId={bookingPackageId} />}
@@ -2241,12 +2254,12 @@ function AppTabs() {
           ? <div><button type="button" className="mb-3" onClick={()=>setMenuView("menu")}>← Kembali ke Akun</button><AdminTab /></div>
           : <ProfileMenuTab onOpenAdmin={()=>setMenuView("admin")} />)}
       </div>
-      <nav className="sules-bottom-nav" aria-label="Navigasi aplikasi">
+      {!isAdminScreen && <nav className="sules-bottom-nav" aria-label="Navigasi aplikasi">
         {navItems.map(item => <button key={item.id} type="button" data-nav={item.id} title={item.title || item.label} aria-label={item.title || item.label}
           aria-current={currentNavTab === item.id ? "page" : undefined} onClick={()=>navigate(item.id)}>
           <SulesNavIcon name={item.icon} /><span>{item.label}</span>
         </button>)}
-      </nav>
+      </nav>}
     </div>
   );
 }
