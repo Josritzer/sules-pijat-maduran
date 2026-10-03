@@ -424,10 +424,15 @@
   .sules-empty-icon { display:grid; place-items:center; width:58px; height:58px; border-radius:18px; color:#2F6F9F; background:#EAF3FA; }
   .sules-empty-icon svg { width:26px; height:26px; }
   .sules-empty-state p { max-width:38ch; color:#5B7186; font-size:14px; line-height:1.55; }
-  .sules-bottom-nav { position:fixed; z-index:60; left:50%; bottom:calc(7px + env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(680px,calc(100% - 20px)); display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:3px; padding:7px 8px calc(7px + env(safe-area-inset-bottom)); border:1px solid rgba(187,204,219,.85); border-radius:20px; background:rgba(255,255,255,.94); box-shadow:0 9px 28px rgba(24,50,75,.13); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); }
+  .sules-bottom-nav { position:fixed; z-index:60; left:50%; bottom:0; transform:translateX(-50%); width:min(680px,calc(100% - 20px)); display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:3px; padding:7px 8px calc(7px + env(safe-area-inset-bottom,0px)); border:1px solid rgba(187,204,219,.85); border-radius:20px; background:rgba(255,255,255,.94); box-shadow:0 9px 28px rgba(24,50,75,.13); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); }
   #root .sules-bottom-nav button { min-width:0; min-height:52px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:4px 2px; border:1px solid transparent !important; border-radius:14px !important; color:#687F93 !important; background:transparent !important; font-size:9px; line-height:1.1; font-weight:650; white-space:nowrap; }
-  #root .sules-bottom-nav button svg { width:19px; height:19px; }
-  #root .sules-bottom-nav button[aria-current="page"] { color:#225F91 !important; background:#EAF3FA !important; border-color:#D8E7F2 !important; }
+  #root .sules-bottom-nav button[data-nav="home"] { --nav-accent:#2F6F9F; --nav-tint:#EFF6FB; --nav-line:#D8E7F2; }
+  #root .sules-bottom-nav button[data-nav="catalog"] { --nav-accent:#1686A0; --nav-tint:#EAF6F8; --nav-line:#CBE7EC; }
+  #root .sules-bottom-nav button[data-nav="orders"] { --nav-accent:#397552; --nav-tint:#EDF6F0; --nav-line:#CFE4D5; }
+  #root .sules-bottom-nav button[data-nav="notifications"] { --nav-accent:#B3444C; --nav-tint:#FFF0F1; --nav-line:#F0D0D2; }
+  #root .sules-bottom-nav button[data-nav="account"] { --nav-accent:#75669A; --nav-tint:#F2EFF8; --nav-line:#DDD7EA; }
+  #root .sules-bottom-nav button svg { width:19px; height:19px; color:var(--nav-accent,#687F93); }
+  #root .sules-bottom-nav button[aria-current="page"] { color:var(--nav-accent,#225F91) !important; background:var(--nav-tint,#EAF3FA) !important; border-color:var(--nav-line,#D8E7F2) !important; }
   .public-shell { max-width:1120px; padding:26px 18px 48px; }
   .public-section { scroll-margin-top:88px; }
   .public-hero { background:linear-gradient(135deg,#FFFFFF,#EDF5FB 95%) !important; box-shadow:0 12px 28px rgba(24,50,75,.07) !important; }
@@ -594,7 +599,7 @@ const SERVICE_PACKAGES = [
 ];
 const LAST_TOKEN_KEY = "sules_last_booking_token"; // hanya pointer, bukan source of truth
 
-const MORNING_SLOTS = ["08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30","15:00","15:30"];
+const MORNING_SLOTS = ["08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30","15:00"];
 const EVENING_SLOTS = ["19:00","19:30","20:00","20:30","21:00","21:30","22:00","22:30"];
 
 /* ================= HELPER ================= */
@@ -2237,7 +2242,7 @@ function AppTabs() {
           : <ProfileMenuTab onOpenAdmin={()=>setMenuView("admin")} />)}
       </div>
       <nav className="sules-bottom-nav" aria-label="Navigasi aplikasi">
-        {navItems.map(item => <button key={item.id} type="button" title={item.title || item.label} aria-label={item.title || item.label}
+        {navItems.map(item => <button key={item.id} type="button" data-nav={item.id} title={item.title || item.label} aria-label={item.title || item.label}
           aria-current={currentNavTab === item.id ? "page" : undefined} onClick={()=>navigate(item.id)}>
           <SulesNavIcon name={item.icon} /><span>{item.label}</span>
         </button>)}
