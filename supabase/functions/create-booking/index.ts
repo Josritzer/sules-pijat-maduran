@@ -19,6 +19,20 @@ function validPoint(lat: unknown, lng: unknown): lat is number {
     typeof lng === "number" && Number.isFinite(lng) && lng >= -180 && lng <= 180;
 }
 
+function normalizeIndonesianWhatsapp(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 40 || !/^\+?[\d\s().-]+$/.test(trimmed)) return null;
+  const compact = trimmed.replace(/[\s().-]/g, "");
+  if (!/^\+?\d+$/.test(compact)) return null;
+  let subscriber: string;
+  if (compact.startsWith("+62")) subscriber = compact.slice(3);
+  else if (compact.startsWith("62")) subscriber = compact.slice(2);
+  else if (compact.startsWith("0")) subscriber = compact.slice(1);
+  else return null;
+  return /^8\d{8,11}$/.test(subscriber) ? `+62${subscriber}` : null;
+}
+
 function rpcMessage(message: string) {
   const known: Array<[RegExp, string]> = [
     [/Nama pelanggan wajib/i, "Nama lengkap wajib diisi."],
@@ -58,15 +72,14 @@ Deno.serve(async (req: Request) => {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return json({ error: "Format permintaan tidak valid." }, 400);
 
   const body = parsed as Record<string, unknown>;
+  // nama/wa remain accepted for older clients but are deliberately ignored.
   const allowed = ["nama", "wa", "serviceId", "jumlahOrang", "tanggal", "jamMulai", "tipeLokasi", "alamat", "lat", "lng"];
   if (Object.keys(body).some(key => !allowed.includes(key))) return json({ error: "Data booking berisi kolom yang tidak diizinkan." }, 400);
-  const { nama, wa, serviceId, jumlahOrang, tanggal, jamMulai, tipeLokasi } = body;
+  const { serviceId, jumlahOrang, tanggal, jamMulai, tipeLokasi } = body;
   const alamat = body.alamat === undefined ? null : body.alamat;
   const lat = body.lat === undefined ? null : body.lat;
   const lng = body.lng === undefined ? null : body.lng;
 
-  if (typeof nama !== "string" || !nama.trim() || nama.trim().length > 120) return json({ error: "Nama lengkap wajib diisi (maksimal 120 karakter)." }, 400);
-  if (typeof wa !== "string" || !wa.trim() || wa.trim().length > 40) return json({ error: "Nomor WhatsApp wajib diisi (maksimal 40 karakter)." }, 400);
   if (serviceId !== "90m" && serviceId !== "120m") return json({ error: "Paket yang dipilih tidak valid." }, 400);
   if (jumlahOrang !== 1 && jumlahOrang !== 2) return json({ error: "Jumlah orang pada paket tidak valid." }, 400);
   if (tipeLokasi !== "DI_TEMPAT" && tipeLokasi !== "HOME_SERVICE") return json({ error: "Lokasi layanan tidak valid." }, 400);
@@ -78,6 +91,19 @@ Deno.serve(async (req: Request) => {
   if (alamat !== null && (typeof alamat !== "string" || alamat.length > 500)) return json({ error: "Alamat terlalu panjang atau tidak valid." }, 400);
   if (jumlahOrang === 2 && !(tipeLokasi === "HOME_SERVICE" && serviceId === "90m")) {
     return json({ error: "Paket 2 orang hanya tersedia untuk Pijat 90 Menit ke Rumah." }, 400);
+  }
+
+  const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data: profile, error: profileError } = await adminClient
+    .from("customers")
+    .select("nama,wa")
+    .eq("id", userData.user.id)
+    .maybeSingle();
+  if (profileError) return json({ error: "Profil pelanggan tidak dapat diperiksa. Coba lagi." }, 503);
+  const nama = typeof profile?.nama === "string" ? profile.nama.trim() : "";
+  const wa = typeof profile?.wa === "string" ? profile.wa.trim() : "";
+  if (!nama || !wa || !normalizeIndonesianWhatsapp(wa)) {
+    return json({ code: "PROFIL_BELUM_LENGKAP", error: "Profil belum lengkap. Lengkapi nama dan nomor WhatsApp yang valid sebelum membuat booking." }, 409);
   }
 
   let jarakMeter: number | null = null;
@@ -117,11 +143,10 @@ Deno.serve(async (req: Request) => {
     if (!validPoint(lat, lng)) return json({ error: "Koordinat tidak valid." }, 400);
   }
 
-  const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data, error } = await adminClient.rpc("create_booking_server", {
     p_customer_id: userData.user.id,
-    p_nama: nama.trim(),
-    p_wa: wa.trim(),
+    p_nama: nama,
+    p_wa: wa,
     p_service_id: serviceId,
     p_jumlah_orang: jumlahOrang,
     p_tanggal: tanggal,

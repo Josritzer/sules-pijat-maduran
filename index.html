@@ -39,16 +39,27 @@
   const SUPABASE_ANON_KEY = "sb_publishable_-0r7zhfsw4-3UPh8ReG6Ag_dwOQQ2K9";
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  async function createBooking({ nama, wa, serviceId, jumlahOrang, tanggal, jamMulai, tipeLokasi, alamat, lat, lng }) {
+  async function getFunctionError(error) {
+    let payload = null;
+    try {
+      const response = error && error.context;
+      if (response && typeof response.clone === "function") payload = await response.clone().json();
+    } catch (_) {}
+    const wrapped = new Error(payload && payload.error || error && error.message || "Permintaan ke layanan server gagal.");
+    if (payload && typeof payload.code === "string") wrapped.code = payload.code;
+    return wrapped;
+  }
+
+  async function createBooking({ serviceId, jumlahOrang, tanggal, jamMulai, tipeLokasi, alamat, lat, lng }) {
     const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
     if (sessionError) throw sessionError;
     const accessToken = sessionData && sessionData.session && sessionData.session.access_token;
     if (!accessToken) throw new Error("Silakan masuk sebelum membuat booking.");
     const { data, error } = await supabaseClient.functions.invoke("create-booking", {
-      body: { nama, wa, serviceId, jumlahOrang, tanggal, jamMulai, tipeLokasi, alamat: alamat ?? null, lat: lat ?? null, lng: lng ?? null },
+      body: { serviceId, jumlahOrang, tanggal, jamMulai, tipeLokasi, alamat: alamat ?? null, lat: lat ?? null, lng: lng ?? null },
       headers: { Authorization: `Bearer ${accessToken}`, apikey: SUPABASE_ANON_KEY }
     });
-    if (error) throw error;
+    if (error) throw await getFunctionError(error);
     return data;
   }
   async function getMyBooking(accessToken) {
@@ -66,10 +77,44 @@
     const { data, error } = await supabaseClient.from("bookings")
       .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
       .eq("customer_id", id)
+      .is("disembunyikan_pelanggan_at", null)
       .order("created_at", { ascending: false })
       .range(start, start + CUSTOMER_ORDER_PAGE_SIZE - 1);
     if (error) throw error;
     return data || [];
+  }
+  async function getCustomerProfile(customerId) {
+    const id = String(customerId || "");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      throw new Error("Sesi pelanggan tidak valid.");
+    }
+    const { data, error } = await supabaseClient.from("customers")
+      .select("id,nama,wa")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    return data || null;
+  }
+  async function saveCustomerProfile({ nama, wa }) {
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+    const accessToken = sessionData && sessionData.session && sessionData.session.access_token;
+    if (!accessToken) throw new Error("Silakan masuk sebelum melengkapi profil.");
+    const { data, error } = await supabaseClient.functions.invoke("save-profile", {
+      body: { nama, wa },
+      headers: { Authorization: `Bearer ${accessToken}`, apikey: SUPABASE_ANON_KEY }
+    });
+    if (error) throw await getFunctionError(error);
+    return data;
+  }
+  async function hideCustomerBooking(bookingId) {
+    const id = String(bookingId || "");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      throw new Error("ID pesanan tidak valid.");
+    }
+    const { data, error } = await supabaseClient.rpc("sembunyikan_riwayat", { p_booking_id: id });
+    if (error) throw error;
+    return data;
   }
   async function getBookings(status = null) {
     const { data, error } = await supabaseClient.rpc("list_bookings_admin", { p_status: status });
@@ -258,7 +303,7 @@
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { createBooking, getMyBooking, getCustomerBookings, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+  window.bookingService = { createBooking, getMyBooking, getCustomerBookings, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -717,10 +762,34 @@ function PilihanButton({ selected, onClick, label, variant }) {
   );
 }
 
+function normalizeIndonesianWhatsappForUi(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 40 || !/^\+?[\d\s().-]+$/.test(trimmed)) return null;
+  const compact = trimmed.replace(/[\s().-]/g, "");
+  if (!/^\+?\d+$/.test(compact)) return null;
+  let subscriber;
+  if (compact.startsWith("+62")) subscriber = compact.slice(3);
+  else if (compact.startsWith("62")) subscriber = compact.slice(2);
+  else if (compact.startsWith("0")) subscriber = compact.slice(1);
+  else return null;
+  return /^8\d{8,11}$/.test(subscriber) ? `+62${subscriber}` : null;
+}
+
+function isCustomerProfileComplete(profile) {
+  return !!(profile && typeof profile.nama === "string" && profile.nama.trim() &&
+    typeof profile.wa === "string" && profile.wa.trim() && normalizeIndonesianWhatsappForUi(profile.wa));
+}
+
 /* ================= TAB BOOKING (PELANGGAN) ================= */
 function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id } = {}) {
-  const [nama, setNama] = useState("");
-  const [wa, setWa] = useState("");
+  const [customerProfile, setCustomerProfile] = useState(null);
+  const [profileStatus, setProfileStatus] = useState("idle");
+  const [profileNama, setProfileNama] = useState("");
+  const [profileWa, setProfileWa] = useState("");
+  const [profileError, setProfileError] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileReloadKey, setProfileReloadKey] = useState(0);
   const [paketId, setPaketId] = useState(initialPackageId);
   const paketTerpilih = SERVICE_PACKAGES.find(p => p.id === paketId) || SERVICE_PACKAGES[0];
   const layanan = paketTerpilih.serviceId;
@@ -774,6 +843,34 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id } = {}) {
     });
   }, []);
 
+  useEffect(() => {
+    const customerId = customerSession && customerSession.user && customerSession.user.id;
+    if (!customerId) {
+      setCustomerProfile(null);
+      setProfileNama("");
+      setProfileWa("");
+      setProfileStatus("idle");
+      setProfileError("");
+      return;
+    }
+    let active = true;
+    setProfileStatus("loading");
+    window.bookingService.getCustomerProfile(customerId).then(profile => {
+      if (!active) return;
+      setCustomerProfile(profile);
+      setProfileNama(profile && typeof profile.nama === "string" ? profile.nama : "");
+      setProfileWa(profile && typeof profile.wa === "string" ? profile.wa : "");
+      setProfileError("");
+      setProfileStatus(isCustomerProfileComplete(profile) ? "complete" : "incomplete");
+    }).catch(e => {
+      if (!active) return;
+      setCustomerProfile(null);
+      setProfileStatus("error");
+      setProfileError((e && e.message) || "Profil pelanggan tidak dapat dimuat. Coba lagi.");
+    });
+    return () => { active = false; };
+  }, [customerSession && customerSession.user && customerSession.user.id, profileReloadKey]);
+
   const kirimKodeOtp = async () => {
     setAuthMsg("");
     if (!custEmail.trim()) { setAuthMsg("Isi email dulu."); return; }
@@ -800,11 +897,44 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id } = {}) {
     setAuthLoading(false);
   };
 
+  const simpanProfil = async () => {
+    setProfileError("");
+    if (!profileNama.trim()) { setProfileError("Nama lengkap wajib diisi."); return; }
+    const storedWa = customerProfile && typeof customerProfile.wa === "string" ? customerProfile.wa.trim() : "";
+    if (storedWa && !normalizeIndonesianWhatsappForUi(storedWa)) {
+      setProfileError("Nomor WhatsApp yang sudah tersimpan belum lolos format dan tidak dapat diganti tanpa verifikasi tambahan. Hubungi Admin untuk bantuan.");
+      return;
+    }
+    if (!normalizeIndonesianWhatsappForUi(profileWa)) {
+      setProfileError("Masukkan nomor WhatsApp Indonesia yang valid, misalnya 08… atau +62…. Ini validasi format, bukan verifikasi kepemilikan nomor.");
+      return;
+    }
+    setProfileSaving(true);
+    try {
+      const result = await window.bookingService.saveCustomerProfile({ nama: profileNama, wa: profileWa });
+      const savedProfile = result && result.profile;
+      if (!isCustomerProfileComplete(savedProfile)) throw new Error("Profil belum lengkap. Periksa kembali nama dan nomor WhatsApp.");
+      setCustomerProfile(savedProfile);
+      setProfileNama(savedProfile.nama || "");
+      setProfileWa(savedProfile.wa || "");
+      setProfileStatus("complete");
+    } catch (e) {
+      setProfileError((e && e.message) || "Profil belum dapat disimpan. Coba lagi.");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
   const customerDoLogout = async () => {
     try { await window.bookingService.customerLogout(); }
     finally { localStorage.removeItem(LAST_TOKEN_KEY); } // jangan bawa token booking customer sebelumnya, walau signOut gagal
     setCurrentBooking(null);
     setCustomerSession(null);
+    setCustomerProfile(null);
+    setProfileNama("");
+    setProfileWa("");
+    setProfileStatus("idle");
+    setProfileError("");
     setOtpSent(false);
     setOtpCode("");
     setCustEmail("");
@@ -931,8 +1061,11 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id } = {}) {
 
   const konfirmasiBooking = async () => {
     setFormError("");
-    if (!nama.trim()) { setFormError("Isi nama lengkap dulu."); return; }
-    if (!wa.trim()) { setFormError("Isi nomor WA dulu."); return; }
+    if (!isCustomerProfileComplete(customerProfile) || profileStatus !== "complete") {
+      setProfileStatus("incomplete");
+      setProfileError("Lengkapi profil Nama dan nomor WhatsApp yang valid sebelum membuat booking.");
+      return;
+    }
     if (!tanggal) { setFormError("Pilih tanggal dulu."); return; }
     if (!jam) { setFormError("Pilih jam dulu."); return; }
     if (tipeLokasi === "HOME_SERVICE" && (lat === null || lng === null)) {
@@ -946,7 +1079,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id } = {}) {
     setSubmitting(true);
     try {
       const result = await window.bookingService.createBooking({
-        nama, wa, serviceId: layanan, jumlahOrang: orang, tanggal, jamMulai: jam,
+        serviceId: layanan, jumlahOrang: orang, tanggal, jamMulai: jam,
         tipeLokasi, alamat: alamatText || null, lat, lng, jarakMeter: jarak
       });
       localStorage.setItem(LAST_TOKEN_KEY, result.access_token);
@@ -958,10 +1091,15 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id } = {}) {
         grand_total: result.grand_total, status: result.status
       });
       setScreen("status");
-      setNama(""); setWa(""); setTanggal(""); setJam("");
+      setTanggal(""); setJam("");
       resetLokasi();
     } catch (e) {
-      setFormError(e.message || "Terjadi kesalahan saat menyimpan booking, coba lagi.");
+      if (e && e.code === "PROFIL_BELUM_LENGKAP") {
+        setProfileError(e.message || "Lengkapi profil Nama dan nomor WhatsApp yang valid sebelum membuat booking.");
+        setProfileReloadKey(key => key + 1);
+      } else {
+        setFormError(e.message || "Terjadi kesalahan saat menyimpan booking, coba lagi.");
+      }
     }
     setSubmitting(false);
   };
@@ -1164,6 +1302,47 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id } = {}) {
     );
   }
 
+  if (customerSession && profileStatus !== "complete") {
+    if (profileStatus === "error") return <div className="max-w-md mx-auto px-4 py-12">
+      <section className="bg-white rounded-2xl border border-gray-200 p-6" aria-labelledby="profile-load-error-title">
+        <h2 id="profile-load-error-title" className="text-xl font-bold mb-2">Profil belum dapat dimuat</h2>
+        <p className="text-sm text-red-700 mb-4" role="alert">{profileError}</p>
+        <button type="button" className="sules-primary w-full" onClick={() => setProfileReloadKey(key => key + 1)}>Coba lagi</button>
+        <button type="button" className="w-full mt-3 text-sm text-gray-600 underline" onClick={customerDoLogout}>Keluar</button>
+      </section>
+    </div>;
+
+    if (profileStatus !== "incomplete") return <div className="text-center text-gray-500 text-sm py-16" role="status">Memeriksa kelengkapan profil…</div>;
+
+    const savedName = !!(customerProfile && typeof customerProfile.nama === "string" && customerProfile.nama.trim());
+    const savedWa = !!(customerProfile && typeof customerProfile.wa === "string" && customerProfile.wa.trim());
+    const savedWaValid = !!(savedWa && normalizeIndonesianWhatsappForUi(customerProfile.wa));
+    return <div className="max-w-md mx-auto px-4 py-10 pb-24">
+      <section className="bg-white rounded-2xl border border-gray-200 p-5" aria-labelledby="complete-profile-title">
+        <div className="sules-eyebrow">LANGKAH WAJIB SEBELUM BOOKING</div>
+        <h2 id="complete-profile-title" className="text-xl font-bold mt-2 mb-2">Lengkapi Profil</h2>
+        <p className="text-sm text-gray-600 mb-5">Nama dan nomor WhatsApp disimpan pada profil akun Anda dan digunakan untuk pesanan berikutnya.</p>
+        <label htmlFor="customer-profile-name" className="text-sm font-semibold block mb-1">Nama Lengkap</label>
+        <input id="customer-profile-name" type="text" autoComplete="name" value={profileNama}
+          onChange={e => setProfileNama(e.target.value)} readOnly={savedName}
+          className={`w-full border border-gray-300 rounded-xl p-3 mb-4 ${savedName ? "bg-gray-100" : ""}`} placeholder="Nama Anda" />
+        <label htmlFor="customer-profile-wa" className="text-sm font-semibold block mb-1">Nomor WhatsApp</label>
+        <input id="customer-profile-wa" type="tel" inputMode="tel" autoComplete="tel" maxLength="40" value={profileWa}
+          onChange={e => setProfileWa(e.target.value)} readOnly={savedWa}
+          className={`w-full border border-gray-300 rounded-xl p-3 mb-2 ${savedWa ? "bg-gray-100" : ""}`} placeholder="08xxxxxxxxxx atau +62xxxxxxxxxx" />
+        <p className={`text-xs mb-4 ${savedWa && !savedWaValid ? "text-amber-700" : "text-gray-500"}`}>
+          {savedWa && !savedWaValid
+            ? "Nomor WhatsApp yang sudah tersimpan belum lolos format. Perubahan nomor memerlukan verifikasi tambahan; booking tetap diblokir sampai profil valid."
+            : "Nomor dinilai dari format Indonesia; ini bukan verifikasi kepemilikan WhatsApp. Nomor yang sudah tersimpan tidak dapat diganti melalui booking."}
+        </p>
+        {profileError && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert">{profileError}</div>}
+        <button type="button" className="sules-primary w-full" onClick={simpanProfil} disabled={profileSaving}
+          style={{ opacity: profileSaving ? 0.7 : 1 }}>{profileSaving ? "Menyimpan Profil…" : "Simpan Profil"}</button>
+        <button type="button" className="w-full mt-3 text-sm text-gray-600 underline" onClick={customerDoLogout}>Keluar</button>
+      </section>
+    </div>;
+  }
+
   return (
     <div className="max-w-md mx-auto px-4 pb-24">
       <div className="text-center py-6">
@@ -1173,13 +1352,6 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id } = {}) {
             {customerSession.user.email} · <button onClick={customerDoLogout} className="text-red-600 underline">Logout</button>
           </div>
         )}
-      </div>
-
-      <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
-        <label className="text-sm font-semibold block mb-1">Nama Lengkap</label>
-        <input value={nama} onChange={e=>setNama(e.target.value)} className="w-full border border-gray-300 rounded-xl p-3 mb-3" placeholder="Nama Anda" />
-        <label className="text-sm font-semibold block mb-1">No WA</label>
-        <input value={wa} onChange={e=>setWa(e.target.value)} className="w-full border border-gray-300 rounded-xl p-3" placeholder="08xxxxxxxxxx" />
       </div>
 
       <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
@@ -1494,6 +1666,8 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState("");
+  const [hideError, setHideError] = useState("");
+  const [hidingBookingId, setHidingBookingId] = useState("");
   const aliveRef = useRef(true);
   const fetchSequenceRef = useRef(0);
   const statusByIdRef = useRef(new Map());
@@ -1513,6 +1687,8 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
       setLoading(false);
       setRefreshing(false);
       setLoadingMore(false);
+      setHideError("");
+      setHidingBookingId("");
     }
     setSession(nextSession || null);
   }
@@ -1624,6 +1800,26 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
     }
   }
 
+  async function hideHistoryBooking(row) {
+    if (!row || view !== "history" || !customerId ||
+        (row.status !== "SELESAI" && row.status !== "DITOLAK")) return;
+    const requestCustomerId = customerId;
+    setHideError("");
+    setHidingBookingId(row.id);
+    try {
+      const hidden = await window.bookingService.hideCustomerBooking(row.id);
+      if (hidden !== true) throw new Error("Pesanan ini tidak dapat disembunyikan dari riwayat.");
+      if (!aliveRef.current || currentCustomerIdRef.current !== requestCustomerId) return;
+      statusByIdRef.current.delete(row.id);
+      setOrders(previous => previous.filter(item => item.id !== row.id));
+      await fetchFirstPage(true);
+    } catch (e) {
+      if (aliveRef.current && currentCustomerIdRef.current === requestCustomerId) setHideError((e && e.message) || "Riwayat belum dapat disembunyikan. Coba lagi.");
+    } finally {
+      if (aliveRef.current && currentCustomerIdRef.current === requestCustomerId) setHidingBookingId("");
+    }
+  }
+
   if (checkingSession) return <div className="text-center text-gray-500 text-sm py-16" role="status">Memeriksa akun pelanggan…</div>;
   if (!session) {
     if (mode === "home") return <div className="sules-home-screen">
@@ -1699,11 +1895,12 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
     </div>
     {refreshing && <div className="text-xs text-gray-500 mb-2" role="status">Menyinkronkan perubahan…</div>}
     {error && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert"><div>{error}</div><button onClick={()=>void fetchFirstPage(false)} className="underline font-semibold mt-1">Coba lagi</button></div>}
+    {hideError && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert">{hideError}</div>}
     {loading && orders.length === 0 && <div className="text-center text-gray-500 text-sm py-10" role="status">Memuat pesanan…</div>}
     {!loading && !error && visibleOrders.length === 0 && <div className="bg-white border border-gray-200 rounded-xl p-5 text-center text-sm text-gray-500"><p>{view === "active" ? "Belum ada pesanan aktif." : "Belum ada riwayat pesanan."}</p>{view === "active" && <button type="button" className="sules-primary mt-3" onClick={onGoToBooking}>Pesan Sekarang</button>}</div>}
     <div className="space-y-3">
       {visibleOrders.map(row => <article key={row.id} className="bg-white rounded-xl p-4 border border-gray-200 text-sm">
-        <div className="flex items-start justify-between gap-2 mb-2"><strong>{SERVICE_LABEL[row.service_id] || row.service_id} · {row.jumlah_orang} orang</strong><StatusBadge status={row.status} /></div>
+        <div className="flex items-start justify-between gap-2 mb-2"><strong>{SERVICE_LABEL[row.service_id] || row.service_id} · {row.jumlah_orang} orang</strong><div className="flex items-center gap-2"><StatusBadge status={row.status} />{view === "history" && (row.status === "SELESAI" || row.status === "DITOLAK") && <button type="button" aria-label="Sembunyikan dari riwayat" title="Sembunyikan dari riwayat" disabled={hidingBookingId === row.id} onClick={() => void hideHistoryBooking(row)} className="rounded-full border border-gray-300 text-gray-500 hover:text-red-700 hover:border-red-300 disabled:opacity-50" style={{ width: 28, height: 28, lineHeight: "24px", fontSize: 18 }}>×</button>}</div></div>
         <div className="grid grid-cols-2 gap-2 text-xs mb-2"><div><span className="text-gray-500 block">Tanggal</span>{row.tanggal}</div><div><span className="text-gray-500 block">Jam</span>{String(row.jam_mulai).slice(0,5)}</div></div>
         <div className="text-xs text-gray-600 mb-2">{row.tipe_lokasi === "HOME_SERVICE" ? "ke Rumah" : "Di Sules"} · {row.durasi_menit} menit</div>
         <div className="text-sm font-bold">Total: {formatRupiah(row.grand_total)}</div>
