@@ -312,140 +312,168 @@
   }
 </style>
 <style>
-  :root {
-    color-scheme: dark;
-    --sules-bg:#070B14;
-    --sules-surface:#111827;
-    --sules-surface-raised:#172235;
-    --sules-glass:rgba(17,24,39,.82);
-    --sules-line:rgba(148,163,184,.18);
-    --sules-text:#F1F5F9;
-    --sules-muted:#9BAAC0;
-    --sules-blue:#4C9AFF;
-    --sules-cyan:#67DDF5;
+:root {
+    color-scheme:light;
+    --sules-bg:#F3F7FB;
+    --sules-surface:#FFFFFF;
+    --sules-surface-raised:#F7FAFD;
+    --sules-glass:rgba(255,255,255,.92);
+    --sules-line:#D9E4EE;
+    --sules-text:#18324B;
+    --sules-muted:#5B7186;
+    --sules-blue:#2F6F9F;
+    --sules-cyan:#3F9FBC;
   }
   html { background:var(--sules-bg); scroll-behavior:smooth; }
   body {
-    background:radial-gradient(ellipse at 50% -18%,rgba(34,101,171,.2),transparent 48%),var(--sules-bg) !important;
+    background:radial-gradient(ellipse at 50% -20%,rgba(99,167,216,.12),transparent 46%),var(--sules-bg) !important;
     color:var(--sules-text) !important;
-    padding-bottom:calc(104px + env(safe-area-inset-bottom));
+    padding-bottom:calc(100px + env(safe-area-inset-bottom));
   }
-  ::selection { background:rgba(76,154,255,.34); color:#fff; }
+  ::selection { background:rgba(47,111,159,.18); color:var(--sules-navy); }
   a { transition:color .18s ease,opacity .18s ease; }
   button,summary { -webkit-tap-highlight-color:transparent; }
-  button { transition:transform .18s ease,box-shadow .18s ease,background-color .18s ease,border-color .18s ease,opacity .18s ease; }
+  button { transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease,border-color .16s ease,opacity .16s ease; }
   button:active { transform:scale(.985); }
   :focus-visible { outline:2px solid var(--sules-cyan) !important; outline-offset:3px; }
 
-  .site-header { position:sticky; top:0; z-index:45; background:rgba(7,11,20,.82) !important; border-color:var(--sules-line) !important; backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); }
+  .site-header { position:sticky; top:0; z-index:45; background:rgba(255,255,255,.92) !important; border-color:var(--sules-line) !important; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); }
   .site-nav { max-width:1120px; min-height:64px; padding:10px 18px; }
-  .site-brand { display:flex; align-items:center; gap:10px; color:#F8FAFC !important; letter-spacing:.03em; }
-  .site-brand img { width:36px; height:36px; border-radius:12px; object-fit:cover; box-shadow:0 0 22px rgba(76,154,255,.2); }
-  .site-brand small { color:#95A8C0 !important; letter-spacing:0; }
-  .site-links a { color:#9BAAC0 !important; }
-  .site-links a:hover { color:var(--sules-cyan) !important; }
-  .site-cta,.public-button { background:linear-gradient(135deg,#3478CF,#43B9DF) !important; color:white !important; border:1px solid rgba(103,221,245,.42) !important; box-shadow:0 8px 24px rgba(37,116,197,.18); }
-  .site-cta:hover,.public-button:hover { box-shadow:0 10px 28px rgba(37,116,197,.28); transform:translateY(-1px); }
-  .public-button.secondary { background:rgba(255,255,255,.055) !important; color:#DCEAF7 !important; border-color:var(--sules-line) !important; }
+  .site-brand { display:flex; align-items:center; gap:10px; color:var(--sules-navy) !important; letter-spacing:.02em; }
+  .site-brand img { width:36px; height:36px; border-radius:12px; object-fit:cover; box-shadow:0 4px 12px rgba(24,50,75,.12); }
+  .site-brand small { color:#668096 !important; letter-spacing:0; }
+  .site-links a { color:#49677F !important; }
+  .site-links a:hover { color:var(--sules-blue) !important; }
+  .site-cta,.public-button { background:linear-gradient(135deg,#2F6F9F,#397FAE) !important; color:white !important; border:1px solid rgba(47,111,159,.24) !important; box-shadow:0 6px 16px rgba(47,111,159,.16); }
+  .site-cta:hover,.public-button:hover { box-shadow:0 8px 20px rgba(47,111,159,.23); transform:translateY(-1px); }
+  .public-button.secondary { background:#FFFFFF !important; color:var(--sules-navy) !important; border-color:#C9D8E5 !important; }
+  .site-app-shortcut { display:inline-grid; place-items:center; width:40px; height:40px; border:1px solid var(--sules-line); border-radius:13px; color:var(--sules-navy); background:#fff; text-decoration:none; }
+  .site-app-shortcut svg { width:19px; height:19px; }
 
   .app-host { max-width:1120px; padding:18px 18px 28px; }
   #root { color:var(--sules-text); }
-  #root h1,#root h2,#root h3 { color:#F2F6FC !important; }
-  #root .bg-white { background:linear-gradient(145deg,rgba(22,32,49,.94),rgba(13,20,33,.96)) !important; }
+  #root h1,#root h2,#root h3 { color:var(--sules-navy) !important; }
+  #root .bg-white { background:#FFFFFF !important; }
   #root .border-gray-100,#root .border-gray-200,#root .border-gray-300 { border-color:var(--sules-line) !important; }
   #root .border-t { border-color:var(--sules-line) !important; }
-  #root .text-gray-400,#root .text-gray-500 { color:#9BAAC0 !important; }
-  #root .text-gray-600,#root .text-gray-700 { color:#C1CDDC !important; }
-  #root .text-blue-600 { color:#75B8FF !important; }
-  #root .text-red-600,#root .text-red-700,#root .text-red-800 { color:#FF969D !important; }
-  #root .text-green-800,#root .text-yellow-800,#root .text-blue-800 { color:#DCE8F6 !important; }
-  #root .bg-red-50 { background:rgba(127,29,29,.22) !important; border-color:rgba(248,113,113,.28) !important; }
-  #root .bg-green-50 { background:rgba(20,83,45,.22) !important; border-color:rgba(74,222,128,.26) !important; }
-  #root .bg-yellow-50 { background:rgba(120,71,10,.2) !important; border-color:rgba(251,191,36,.3) !important; }
-  #root .bg-blue-50 { background:rgba(30,64,110,.25) !important; border-color:rgba(96,165,250,.3) !important; }
+  #root .text-gray-400,#root .text-gray-500 { color:#60768A !important; }
+  #root .text-gray-600,#root .text-gray-700 { color:#465D72 !important; }
+  #root .text-blue-600 { color:#276B9E !important; }
+  #root .text-red-600,#root .text-red-700,#root .text-red-800 { color:#A33C42 !important; }
+  #root .text-green-800 { color:#286B45 !important; }
+  #root .text-yellow-800 { color:#76550A !important; }
+  #root .text-blue-800 { color:#245F91 !important; }
+  #root .bg-red-50 { background:#FFF1F1 !important; border-color:#F1C4C4 !important; }
+  #root .bg-green-50 { background:#EDF8F0 !important; border-color:#BDE0C6 !important; }
+  #root .bg-yellow-50 { background:#FFF8E5 !important; border-color:#E9D397 !important; }
+  #root .bg-blue-50 { background:#EFF6FC !important; border-color:#C7DCEE !important; }
   #root input:not([type="checkbox"]),#root select,#root textarea {
-    color:#F1F5F9 !important; background:#0C1422 !important; border-color:rgba(148,163,184,.28) !important;
-    border-radius:14px !important; caret-color:var(--sules-cyan); color-scheme:dark;
+    color:#18324B !important; background:#FFFFFF !important; border-color:#C9D8E5 !important;
+    border-radius:13px !important; caret-color:var(--sules-blue); color-scheme:light;
   }
-  #root input::placeholder,#root textarea::placeholder { color:#718199 !important; }
-  #root option { background:#111827; color:#F1F5F9; }
-  #root button { min-height:42px; border-radius:14px !important; color:#EAF2FA !important; background:rgba(255,255,255,.045) !important; border-color:var(--sules-line) !important; }
-  #root button:hover:not(:disabled) { border-color:rgba(103,221,245,.46) !important; box-shadow:0 6px 20px rgba(23,92,155,.13); }
+  #root input::placeholder,#root textarea::placeholder { color:#8193A3 !important; }
+  #root option { background:#FFFFFF; color:#18324B; }
+  #root button { min-height:42px; border-radius:13px !important; color:var(--sules-navy) !important; background:#FFFFFF !important; border-color:#D5E1EB !important; }
+  #root button:hover:not(:disabled) { border-color:#95B8D2 !important; box-shadow:0 5px 14px rgba(24,50,75,.08); }
   #root button:disabled { opacity:.55; cursor:not-allowed; }
   #root button[aria-pressed="true"],#root button.sules-primary {
-    color:#fff !important; background:linear-gradient(135deg,#3478CF,#35A7D5) !important;
-    border-color:rgba(103,221,245,.58) !important; box-shadow:0 8px 24px rgba(40,125,204,.2);
+    color:#FFFFFF !important; background:linear-gradient(135deg,#2F6F9F,#397FAE) !important;
+    border-color:#2F6F9F !important; box-shadow:0 6px 16px rgba(47,111,159,.17);
   }
-  #root button.sules-success { color:#F2FFF8 !important; background:linear-gradient(135deg,#146B58,#16876C) !important; border-color:rgba(52,211,153,.34) !important; }
-  #root button.sules-danger { color:#FFC3C7 !important; background:rgba(127,29,29,.22) !important; border-color:rgba(248,113,113,.32) !important; }
-  #root button.text-red-600 { color:#FF969D !important; }
-  #root .sules-status-badge { border-radius:999px !important; padding:5px 10px !important; letter-spacing:.04em; }
-  #root .sules-status-badge[data-status="MENUNGGU"] { background:rgba(217,119,6,.16) !important; color:#FFD277 !important; border-color:rgba(251,191,36,.38) !important; }
-  #root .sules-status-badge[data-status="DITERIMA"] { background:rgba(37,99,235,.17) !important; color:#8EC5FF !important; border-color:rgba(96,165,250,.4) !important; }
-  #root .sules-status-badge[data-status="DITOLAK"],#root .sules-status-badge[data-status="DIBATALKAN"] { background:rgba(185,28,28,.16) !important; color:#FF9CA3 !important; border-color:rgba(248,113,113,.38) !important; }
-  #root .sules-status-badge[data-status="SELESAI"] { background:rgba(22,101,52,.18) !important; color:#83E0AA !important; border-color:rgba(74,222,128,.38) !important; }
-  #root svg line { stroke:#42516A; }
-  #root svg text { fill:#A5B4C8; }
+  #root button.sules-success { color:#FFFFFF !important; background:#2F6F9F !important; border-color:#2F6F9F !important; }
+  #root button.sules-danger { color:#A33C42 !important; background:#FFF5F5 !important; border-color:#EBC8C8 !important; }
+  #root button.text-red-600 { color:#A33C42 !important; }
+  #root .sules-status-badge { border-radius:999px !important; padding:5px 10px !important; letter-spacing:.035em; font-weight:750 !important; }
+  #root .sules-status-badge[data-status="MENUNGGU"] { background:#FFF6DE !important; color:#79590C !important; border-color:#E9CB7D !important; }
+  #root .sules-status-badge[data-status="DITERIMA"] { background:#EDF5FF !important; color:#225E94 !important; border-color:#B7D0EC !important; }
+  #root .sules-status-badge[data-status="DITOLAK"],#root .sules-status-badge[data-status="DIBATALKAN"] { background:#FFF1F1 !important; color:#A33C42 !important; border-color:#EBC1C3 !important; }
+  #root .sules-status-badge[data-status="SELESAI"] { background:#EDF8F0 !important; color:#286B45 !important; border-color:#B9DCC3 !important; }
+  #root svg line { stroke:#A8B8C6; }
+  #root svg text { fill:#60768A; }
 
-  .sules-app-content { max-width:760px; margin:0 auto; padding:8px 4px 30px; }
+  .sules-app-content { max-width:760px; margin:0 auto; padding:8px 4px 34px; }
   .sules-page-heading { margin:8px 0 16px; }
-  .sules-page-heading h1,.sules-page-heading h2 { color:#F3F7FC !important; letter-spacing:-.035em; }
-  .sules-eyebrow { color:var(--sules-cyan); font-size:10px; letter-spacing:.17em; font-weight:800; text-transform:uppercase; }
-  .sules-hero-card { position:relative; overflow:hidden; isolation:isolate; padding:24px; border-radius:24px; border:1px solid rgba(103,221,245,.2); background:radial-gradient(ellipse at 85% 0%,rgba(52,144,226,.28),transparent 40%),linear-gradient(135deg,#14233A,#0C1422 74%); box-shadow:0 18px 42px rgba(0,0,0,.25); }
-  .sules-hero-card:after { content:""; position:absolute; z-index:-1; width:190px; height:190px; right:-70px; bottom:-110px; border-radius:50%; background:rgba(48,155,219,.16); filter:blur(35px); }
-  .sules-hero-card h1 { margin:7px 0 8px; max-width:15ch; color:#F8FAFC; font-size:clamp(25px,6vw,38px); line-height:1.08; letter-spacing:-.04em; }
-  .sules-hero-card p { max-width:44ch; color:#B7C6D8; line-height:1.55; font-size:14px; }
-  .sules-active-card,.sules-menu-card,.sules-order-card { border:1px solid var(--sules-line); border-radius:20px; background:linear-gradient(145deg,rgba(22,32,49,.94),rgba(13,20,33,.96)); box-shadow:0 14px 34px rgba(0,0,0,.16); }
-  .sules-active-card { padding:18px; margin-top:16px; }
-  .sules-price { color:#F6FAFF; font-size:24px; font-weight:800; letter-spacing:-.04em; }
-  .sules-step-label { display:flex; align-items:center; gap:9px; color:#C8D6E7; font-size:11px; letter-spacing:.12em; font-weight:800; text-transform:uppercase; margin:0 0 11px; }
-  .sules-step-label span { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:9px; background:rgba(76,154,255,.14); color:#8EC5FF; letter-spacing:0; }
-  .sules-menu-card { padding:18px; margin:10px 0; }
-  .sules-menu-link { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:13px 14px; margin-top:8px; border:1px solid var(--sules-line); border-radius:14px; color:#DCE7F4; background:rgba(255,255,255,.035); text-decoration:none; text-align:left; }
-  .sules-menu-link:hover { border-color:rgba(103,221,245,.45); background:rgba(76,154,255,.08); }
-  .sules-bottom-nav { position:fixed; z-index:60; left:50%; bottom:calc(8px + env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(680px,calc(100% - 20px)); display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:3px; padding:8px 8px calc(8px + env(safe-area-inset-bottom)); border:1px solid rgba(148,163,184,.2); border-radius:23px; background:rgba(11,16,29,.86); box-shadow:0 18px 48px rgba(0,0,0,.48); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); }
-  #root .sules-bottom-nav button { min-width:0; min-height:54px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:4px 2px; border:1px solid transparent !important; border-radius:16px !important; color:#8292AA !important; background:transparent !important; font-size:9px; line-height:1.1; font-weight:650; white-space:nowrap; }
+  .sules-page-heading h1,.sules-page-heading h2 { color:var(--sules-navy) !important; letter-spacing:-.03em; }
+  .sules-eyebrow { color:var(--sules-blue); font-size:10px; letter-spacing:.14em; font-weight:800; text-transform:uppercase; }
+  .sules-section-title { margin:22px 0 10px; color:var(--sules-navy); font-size:17px; font-weight:800; letter-spacing:-.02em; }
+  .sules-hero-card { position:relative; overflow:hidden; isolation:isolate; padding:24px; border-radius:22px; border:1px solid #D4E3EF; background:radial-gradient(ellipse at 88% 0%,rgba(96,165,211,.15),transparent 40%),linear-gradient(135deg,#FFFFFF,#EDF5FB 86%); box-shadow:0 12px 28px rgba(24,50,75,.07); }
+  .sules-hero-card:after { content:""; position:absolute; z-index:-1; width:170px; height:170px; right:-72px; bottom:-112px; border-radius:50%; background:rgba(72,143,190,.1); filter:blur(32px); }
+  .sules-hero-card h1 { margin:7px 0 8px; max-width:15ch; color:#18324B !important; font-size:clamp(25px,6vw,38px); line-height:1.08; letter-spacing:-.04em; }
+  .sules-hero-card p { max-width:44ch; color:#526B80; line-height:1.55; font-size:14px; }
+  .sules-active-card,.sules-menu-card,.sules-order-card { border:1px solid var(--sules-line); border-radius:18px; background:#FFFFFF; box-shadow:0 8px 20px rgba(24,50,75,.055); }
+  .sules-active-card { padding:18px; margin-top:14px; }
+  .sules-price { color:var(--sules-navy); font-size:21px; font-weight:850; letter-spacing:-.035em; }
+  .sules-step-label { display:flex; align-items:center; gap:9px; color:#405B73; font-size:11px; letter-spacing:.1em; font-weight:800; text-transform:uppercase; margin:0 0 11px; }
+  .sules-step-label span { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:9px; background:#E8F2FA; color:#2F6F9F; letter-spacing:0; }
+  .sules-menu-card { padding:17px; margin:10px 0; }
+  .sules-menu-link { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; min-height:44px; padding:11px 13px; margin-top:8px; border:1px solid var(--sules-line); border-radius:13px; color:var(--sules-navy); background:#FAFCFE; text-decoration:none; text-align:left; }
+  .sules-menu-link:hover { border-color:#9CBBD2; background:#F0F6FB; }
+  .sules-quick-menu { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; }
+  #root .sules-quick-item { min-width:0; min-height:75px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:9px 4px; border:1px solid #DCE7F0 !important; border-radius:14px !important; color:#294B68 !important; background:#FFFFFF !important; font-size:10px; line-height:1.2; font-weight:700; text-align:center; white-space:normal; box-shadow:0 3px 9px rgba(24,50,75,.035); }
+  #root .sules-quick-item svg { width:19px; height:19px; color:#2F6F9F; flex:none; }
+  #root .sules-quick-item:hover { background:#F3F8FC !important; }
+  .sules-service-rail { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(78%,1fr); gap:10px; overflow-x:auto; padding:2px 1px 8px; scroll-snap-type:x mandatory; overscroll-behavior-inline:contain; }
+  .sules-service-card { display:flex; flex-direction:column; align-items:flex-start; min-width:0; padding:15px; border:1px solid var(--sules-line); border-radius:16px; background:#FFFFFF; box-shadow:0 5px 14px rgba(24,50,75,.045); scroll-snap-align:start; }
+  .sules-service-card h3 { margin:7px 0 4px; font-size:14px; line-height:1.35; }
+  .sules-service-card .sules-service-meta { color:#60768A; font-size:12px; line-height:1.45; }
+  .sules-service-card .sules-service-price { margin-top:10px; color:#18324B; font-size:18px; font-weight:850; letter-spacing:-.025em; }
+  .sules-service-card button { margin-top:12px; width:100%; }
+  .sules-catalog-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+  .sules-catalog-grid .sules-service-card { min-height:190px; }
+  .sules-empty-state { display:grid; justify-items:center; gap:10px; max-width:500px; margin:18px auto; padding:30px 20px; border:1px solid var(--sules-line); border-radius:20px; background:#FFFFFF; box-shadow:0 8px 20px rgba(24,50,75,.05); text-align:center; }
+  .sules-empty-icon { display:grid; place-items:center; width:58px; height:58px; border-radius:18px; color:#2F6F9F; background:#EAF3FA; }
+  .sules-empty-icon svg { width:26px; height:26px; }
+  .sules-empty-state p { max-width:38ch; color:#5B7186; font-size:14px; line-height:1.55; }
+  .sules-bottom-nav { position:fixed; z-index:60; left:50%; bottom:calc(7px + env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(680px,calc(100% - 20px)); display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:3px; padding:7px 8px calc(7px + env(safe-area-inset-bottom)); border:1px solid rgba(187,204,219,.85); border-radius:20px; background:rgba(255,255,255,.94); box-shadow:0 9px 28px rgba(24,50,75,.13); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); }
+  #root .sules-bottom-nav button { min-width:0; min-height:52px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:4px 2px; border:1px solid transparent !important; border-radius:14px !important; color:#687F93 !important; background:transparent !important; font-size:9px; line-height:1.1; font-weight:650; white-space:nowrap; }
   #root .sules-bottom-nav button svg { width:19px; height:19px; }
-  #root .sules-bottom-nav button[aria-current="page"] { color:#8CE6FA !important; background:linear-gradient(180deg,rgba(48,126,206,.24),rgba(29,70,115,.14)) !important; border-color:rgba(103,221,245,.17) !important; }
+  #root .sules-bottom-nav button[aria-current="page"] { color:#225F91 !important; background:#EAF3FA !important; border-color:#D8E7F2 !important; }
   .public-shell { max-width:1120px; padding:26px 18px 48px; }
   .public-section { scroll-margin-top:88px; }
-  .public-hero { border-color:var(--sules-line) !important; background:radial-gradient(ellipse at 80% 0%,rgba(44,133,206,.22),transparent 42%),linear-gradient(140deg,#121E31,#0D1422 78%) !important; box-shadow:0 18px 44px rgba(0,0,0,.24) !important; }
-  .public-hero h1,.public-section h2,.public-card h3 { color:#F2F6FC !important; }
-  .public-hero p,.public-section > p,.public-card p,.public-list { color:#B3C1D2 !important; }
-  .public-eyebrow { color:var(--sules-cyan) !important; }
-  .public-hero-panel { background:linear-gradient(145deg,#1D5790,#123350) !important; border:1px solid rgba(103,221,245,.24); box-shadow:0 14px 36px rgba(25,103,166,.19); }
-  .public-hero-panel p { color:#D4E8F6 !important; }
-  .public-card,.public-details { color:#E6EDF6; background:linear-gradient(145deg,rgba(22,32,49,.94),rgba(13,20,33,.96)) !important; border-color:var(--sules-line) !important; box-shadow:0 12px 28px rgba(0,0,0,.16) !important; }
+  .public-hero { background:linear-gradient(135deg,#FFFFFF,#EDF5FB 95%) !important; box-shadow:0 12px 28px rgba(24,50,75,.07) !important; }
+  .public-hero h1,.public-section h2,.public-card h3 { color:var(--sules-navy) !important; }
+  .public-hero p,.public-section > p,.public-card p,.public-list { color:#526B80 !important; }
+  .public-eyebrow { color:var(--sules-blue) !important; }
+  .public-hero-panel { background:linear-gradient(145deg,#214F73,#2F6F9F) !important; border:1px solid rgba(47,111,159,.2); box-shadow:0 9px 22px rgba(24,50,75,.12); }
+  .public-hero-panel p { color:#E7F1F8 !important; }
+  .public-card,.public-details { color:var(--sules-text); background:#FFFFFF !important; border-color:var(--sules-line) !important; box-shadow:0 6px 16px rgba(24,50,75,.045) !important; }
   .public-card h3 { margin-bottom:8px; }
-  .public-muted,.public-details p { color:#AAB9CC !important; }
-  .public-details summary { color:#E7F0FA !important; }
-  .public-data dt { color:#93A5BB !important; }
-  .public-data dd { color:#E4EDF7 !important; }
-  .public-footer { color:#91A1B5 !important; border-color:var(--sules-line) !important; }
-  .public-footer a,.public-card a:not(.public-button) { color:#83C7FF; }
+  .public-muted,.public-details p { color:#5B7186 !important; }
+  .public-details summary { color:var(--sules-navy) !important; }
+  .public-data dt { color:#5D7489 !important; }
+  .public-data dd { color:#18324B !important; }
+  .public-footer { color:#5B7186 !important; border-color:var(--sules-line) !important; }
+  .public-footer a,.public-card a:not(.public-button) { color:#286D9F; }
   .package-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
-  .package-grid .public-card { position:relative; min-height:156px; padding:18px; transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease; }
-  .package-grid .public-card:hover { transform:translateY(-2px); border-color:rgba(103,221,245,.34) !important; box-shadow:0 17px 36px rgba(0,0,0,.25) !important; }
-  .package-grid .public-card strong { display:block; margin-top:13px; color:#F5FAFF; font-size:19px; letter-spacing:-.025em; }
+  .package-grid .public-card { position:relative; min-height:156px; padding:18px; transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease; }
+  .package-grid .public-card:hover { transform:translateY(-2px); border-color:#A8C5DA !important; box-shadow:0 10px 22px rgba(24,50,75,.09) !important; }
+  .package-grid .public-card strong { display:block; margin-top:13px; color:#18324B; font-size:19px; letter-spacing:-.025em; }
   @media (max-width:760px) {
     .site-nav { min-height:58px; flex-wrap:nowrap; padding:9px 14px; }
     .site-brand { font-size:13px; }
     .site-brand img { width:34px; height:34px; }
-    .site-links { display:none; }
+    .site-links,.site-app-shortcut { display:none; }
     .site-cta { margin-left:auto; padding:9px 14px; font-size:12px; }
     .app-host { padding:12px 12px 26px; }
     .sules-app-content { padding:3px 0 26px; }
-    .sules-hero-card { padding:21px; border-radius:22px; }
+    .sules-hero-card { padding:21px; border-radius:20px; }
     .sules-active-card,.sules-menu-card { padding:15px; }
+    .sules-quick-menu { gap:7px; }
     .public-shell { padding:14px 14px 36px; }
-    .public-hero { grid-template-columns:1fr; padding:22px; border-radius:22px; }
+    .public-hero { grid-template-columns:1fr; padding:22px; border-radius:20px; }
     .public-hero-panel { min-height:145px; }
     .package-grid,.public-two-col { grid-template-columns:1fr; }
     .package-grid .public-card { min-height:0; }
+    .sules-catalog-grid { grid-template-columns:1fr; }
+    .sules-catalog-grid .sules-service-card { min-height:0; }
     .public-data { grid-template-columns:1fr; gap:2px; }
     .public-data dd { margin-bottom:8px; }
   }
   @media (min-width:761px) and (max-width:1024px) { .package-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media (min-width:761px) {
+    .sules-service-rail { grid-auto-flow:initial; grid-template-columns:repeat(3,minmax(0,1fr)); overflow:visible; }
+    .sules-app-content { padding-top:12px; }
+  }
   @media (max-width:360px) {
     .sules-bottom-nav { width:calc(100% - 14px); padding-inline:5px; }
     #root .sules-bottom-nav button { font-size:8px; }
@@ -467,6 +495,8 @@
       <a href="#beranda">Beranda</a><a href="#katalog">Katalog</a><a href="#faq">FAQ</a>
       <a href="#legalitas">Legalitas</a><a href="#syarat-ketentuan">Syarat</a><a href="#kebijakan-privasi">Privasi</a><a href="#kontak">Kontak</a>
     </nav>
+    <a class="site-app-shortcut" href="#booking-app" data-app-tab="notifications" aria-label="Buka Notifikasi" title="Notifikasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></a>
+    <a class="site-app-shortcut" href="#booking-app" data-app-tab="account" aria-label="Buka Akun" title="Akun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5 20.5a7 7 0 0 1 14 0"/></svg></a>
     <a class="site-cta" href="#booking-app">Pesan</a>
   </div>
 </header>
@@ -671,10 +701,10 @@ function PilihanButton({ selected, onClick, label, variant }) {
 }
 
 /* ================= TAB BOOKING (PELANGGAN) ================= */
-function BookingTab() {
+function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id } = {}) {
   const [nama, setNama] = useState("");
   const [wa, setWa] = useState("");
-  const [paketId, setPaketId] = useState("sules-90m-1");
+  const [paketId, setPaketId] = useState(initialPackageId);
   const paketTerpilih = SERVICE_PACKAGES.find(p => p.id === paketId) || SERVICE_PACKAGES[0];
   const layanan = paketTerpilih.serviceId;
   const orang = paketTerpilih.people;
@@ -1365,11 +1395,82 @@ function RevenueChart({ days = [] }) {
   );
 }
 
-function CustomerOrdersTab({ onGoToBooking, onGoToOrders, mode = "orders" }) {
+function ServicePackageCard({ item, onBookPackage }) {
+  const homeService = item.type === "HOME_SERVICE";
+  return <article className="sules-service-card">
+    <div className="sules-eyebrow">{DURASI[item.serviceId]} MENIT · {homeService ? "KE RUMAH" : "DI SULES"}</div>
+    <h3>{item.label}</h3>
+    <p className="sules-service-meta">{item.people} orang · {homeService ? "Layanan ke Rumah" : "Layanan di tempat"}</p>
+    <div className="sules-service-price">{formatRupiah(item.price)}{homeService && <small className="ml-1 text-xs font-semibold">+ travel</small>}</div>
+    {homeService && <p className="sules-service-meta mt-1">Travel dihitung satu kali per booking.</p>}
+    <button type="button" className="sules-primary" aria-label={`Pilih ${item.label}`} onClick={() => onBookPackage(item.id)}>Pilih paket</button>
+  </article>;
+}
+
+function ServicePackageList({ onBookPackage, compact = false }) {
+  return <div className={compact ? "sules-service-rail" : "sules-catalog-grid"}>
+    {SERVICE_PACKAGES.map(item => <ServicePackageCard key={item.id} item={item} onBookPackage={onBookPackage} />)}
+  </div>;
+}
+
+function HomeQuickMenu({ onGoToCatalog, onGoToBooking, onGoToOrders, onOpenPublicSection }) {
+  const items = [
+    { label:"Katalog", icon:"catalog", action:onGoToCatalog },
+    { label:"Pesan", icon:"book", action:onGoToBooking },
+    { label:"Pesanan aktif", icon:"orders", action:() => onGoToOrders("active") },
+    { label:"Riwayat", icon:"history", action:() => onGoToOrders("history") },
+    { label:"FAQ", icon:"help", action:() => onOpenPublicSection("faq") },
+    { label:"Legalitas", icon:"legal", action:() => onOpenPublicSection("legalitas") },
+    { label:"Kontak", icon:"phone", action:() => onOpenPublicSection("kontak") }
+  ];
+  return <section aria-labelledby="home-quick-menu-title">
+    <h2 id="home-quick-menu-title" className="sules-section-title">Menu cepat</h2>
+    <div className="sules-quick-menu">
+      {items.map(item => <button key={item.label} type="button" className="sules-quick-item" onClick={item.action}>
+        <SulesNavIcon name={item.icon} /><span>{item.label}</span>
+      </button>)}
+    </div>
+  </section>;
+}
+
+function HomeDiscoveryContent({ onGoToCatalog, onGoToBooking, onBookPackage, onGoToOrders, onOpenPublicSection }) {
+  return <React.Fragment>
+    <HomeQuickMenu onGoToCatalog={onGoToCatalog} onGoToBooking={onGoToBooking} onGoToOrders={onGoToOrders} onOpenPublicSection={onOpenPublicSection} />
+    <section aria-labelledby="home-service-title">
+      <div className="flex items-center justify-between gap-3">
+        <h2 id="home-service-title" className="sules-section-title">Layanan pilihan</h2>
+        <button type="button" className="text-sm font-semibold" onClick={onGoToCatalog}>Lihat semua</button>
+      </div>
+      <ServicePackageList compact onBookPackage={onBookPackage} />
+    </section>
+  </React.Fragment>;
+}
+
+function CatalogTab({ onBookPackage }) {
+  return <div className="sules-catalog-screen">
+    <div className="sules-page-heading"><div className="sules-eyebrow">Katalog layanan</div><h1 className="text-2xl font-bold mt-1">Pilih sesi yang sesuai</h1><p className="text-sm text-gray-500 mt-1">Lima paket resmi Sules, dengan harga layanan ditampilkan sejak awal.</p></div>
+    <div className="rounded-2xl border border-gray-200 bg-blue-50 p-4 mb-4 text-sm text-blue-800">Untuk layanan ke Rumah, 1.000 meter pertama gratis; biaya setelahnya dihitung satu kali per booking berdasarkan jarak jalan Google Routes.</div>
+    <ServicePackageList onBookPackage={onBookPackage} />
+  </div>;
+}
+
+function NotificationsTab({ onGoToOrders }) {
+  return <div className="sules-notifications-screen">
+    <div className="sules-page-heading"><div className="sules-eyebrow">Pusat informasi</div><h1 className="text-2xl font-bold mt-1">Notifikasi</h1><p className="text-sm text-gray-500 mt-1">Pembaruan yang tersedia untuk Anda.</p></div>
+    <section className="sules-empty-state" aria-labelledby="notifications-empty-title">
+      <div className="sules-empty-icon"><SulesNavIcon name="bell" /></div>
+      <h2 id="notifications-empty-title" className="text-lg font-bold">Belum ada notifikasi</h2>
+      <p>Informasi terbaru tentang pesananmu akan muncul di sini.</p>
+      <button type="button" className="sules-primary" onClick={onGoToOrders}>Lihat Pesanan</button>
+    </section>
+  </div>;
+}
+
+function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToCatalog, onOpenPublicSection, mode = "orders", initialView = "active" }) {
   const [session, setSession] = useState(null);
   const [checkingSession, setCheckingSession] = useState(true);
   const [sessionError, setSessionError] = useState("");
-  const [view, setView] = useState("active");
+  const [view, setView] = useState(initialView === "history" ? "history" : "active");
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -1525,6 +1626,7 @@ function CustomerOrdersTab({ onGoToBooking, onGoToOrders, mode = "orders" }) {
         <div className="sules-active-card"><div className="sules-eyebrow">LAYANAN</div><strong className="block mt-2">5 paket</strong></div>
         <div className="sules-active-card"><div className="sules-eyebrow">JADWAL</div><strong className="block mt-2">08–15 · 19–24</strong></div>
       </div>
+      <HomeDiscoveryContent onGoToCatalog={onGoToCatalog} onGoToBooking={onGoToBooking} onBookPackage={onBookPackage} onGoToOrders={onGoToOrders} onOpenPublicSection={onOpenPublicSection} />
     </div>;
     return <div className="max-w-md mx-auto px-4 py-12"><div className="bg-white rounded-2xl p-6 border border-gray-200">
       <h2 className="text-lg font-bold mb-2">Pesanan Aktif &amp; Riwayat</h2>
@@ -1568,6 +1670,7 @@ function CustomerOrdersTab({ onGoToBooking, onGoToOrders, mode = "orders" }) {
         <div className="sules-active-card"><div className="sules-eyebrow">LAYANAN</div><strong className="block mt-2">5 paket</strong></div>
         <div className="sules-active-card"><div className="sules-eyebrow">JADWAL</div><strong className="block mt-2">08–15 · 19–24</strong></div>
       </div>
+      <HomeDiscoveryContent onGoToCatalog={onGoToCatalog} onGoToBooking={onGoToBooking} onBookPackage={onBookPackage} onGoToOrders={onGoToOrders} onOpenPublicSection={onOpenPublicSection} />
     </div>;
   }
 
@@ -1580,7 +1683,7 @@ function CustomerOrdersTab({ onGoToBooking, onGoToOrders, mode = "orders" }) {
     {refreshing && <div className="text-xs text-gray-500 mb-2" role="status">Menyinkronkan perubahan…</div>}
     {error && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert"><div>{error}</div><button onClick={()=>void fetchFirstPage(false)} className="underline font-semibold mt-1">Coba lagi</button></div>}
     {loading && orders.length === 0 && <div className="text-center text-gray-500 text-sm py-10" role="status">Memuat pesanan…</div>}
-    {!loading && !error && visibleOrders.length === 0 && <div className="bg-white border border-gray-200 rounded-xl p-5 text-center text-sm text-gray-500">{view === "active" ? "Belum ada pesanan aktif." : "Belum ada riwayat pesanan."}</div>}
+    {!loading && !error && visibleOrders.length === 0 && <div className="bg-white border border-gray-200 rounded-xl p-5 text-center text-sm text-gray-500"><p>{view === "active" ? "Belum ada pesanan aktif." : "Belum ada riwayat pesanan."}</p>{view === "active" && <button type="button" className="sules-primary mt-3" onClick={onGoToBooking}>Pesan Sekarang</button>}</div>}
     <div className="space-y-3">
       {visibleOrders.map(row => <article key={row.id} className="bg-white rounded-xl p-4 border border-gray-200 text-sm">
         <div className="flex items-start justify-between gap-2 mb-2"><strong>{SERVICE_LABEL[row.service_id] || row.service_id} · {row.jumlah_orang} orang</strong><StatusBadge status={row.status} /></div>
@@ -2042,12 +2145,17 @@ function SulesNavIcon({ name }) {
   if (name === "catalog") return <svg {...common}><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>;
   if (name === "book") return <svg {...common}><rect x="4" y="5" width="16" height="16" rx="2.5"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M8 17h6"/><path d="M18 14v5M15.5 16.5h5"/></svg>;
   if (name === "orders") return <svg {...common}><path d="M7 3.5h8l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 20V5a1.5 1.5 0 0 1 1.5-1.5Z"/><path d="M15 3.5V8h4M8 12h8M8 16h8"/></svg>;
-  return <svg {...common}><circle cx="12" cy="8" r="3.2"/><path d="M5 20.5a7 7 0 0 1 14 0M19 4.5h2M20 3.5v2"/></svg>;
+  if (name === "bell") return <svg {...common}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>;
+  if (name === "history") return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2M4 5v4h4"/></svg>;
+  if (name === "help") return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.4 2.4 0 1 1 4.2 1.6c-.9 1-1.9 1.3-1.9 2.9M12 17h.01"/></svg>;
+  if (name === "legal") return <svg {...common}><path d="M7 3.5h7l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 7 20V3.5Z"/><path d="M14 3.5V8h4M9.5 12h5M9.5 15.5h5"/></svg>;
+  if (name === "phone") return <svg {...common}><path d="M7.2 3.5h3l1.4 4-2 1.7a15 15 0 0 0 5.2 5.2l1.7-2 4 1.4v3c0 1.1-.9 2-2 2A15.5 15.5 0 0 1 5.2 5.5c0-1.1.9-2 2-2Z"/></svg>;
+  return <svg {...common}><circle cx="12" cy="8" r="3.2"/><path d="M5 20.5a7 7 0 0 1 14 0"/></svg>;
 }
 
 function ProfileMenuTab({ onOpenAdmin }) {
   return <div className="sules-menu-screen">
-    <div className="sules-page-heading"><div className="sules-eyebrow">SULES · Pijat Maduran</div><h2 className="text-2xl font-bold mt-1">Profil &amp; Menu</h2><p className="text-sm text-gray-500 mt-1">Akses dashboard dan informasi layanan.</p></div>
+    <div className="sules-page-heading"><div className="sules-eyebrow">SULES · Pijat Maduran</div><h1 className="text-2xl font-bold mt-1">Akun &amp; Menu</h1><p className="text-sm text-gray-500 mt-1">Akses dashboard Admin dan informasi layanan.</p></div>
     <section className="sules-menu-card">
       <div className="sules-eyebrow">OPERASIONAL</div><h3 className="text-lg font-bold mt-2 mb-3">Admin Dashboard</h3>
       <button type="button" className="sules-primary w-full" onClick={onOpenAdmin}>Masuk ke Admin <span aria-hidden="true">→</span></button>
@@ -2066,16 +2174,32 @@ function ProfileMenuTab({ onOpenAdmin }) {
 function AppTabs() {
   const [tab, setTab] = useState("home");
   const [menuView, setMenuView] = useState("menu");
+  const [bookingPackageId, setBookingPackageId] = useState(SERVICE_PACKAGES[0].id);
+  const [ordersView, setOrdersView] = useState("active");
 
   const navigate = (nextTab) => {
     setTab(nextTab);
-    if (nextTab === "menu") setMenuView("menu");
-    else if (nextTab !== "admin") setMenuView("menu");
-    const targetId = nextTab === "catalog" ? "katalog" : "booking-app";
+    if (nextTab === "account") setMenuView("menu");
+    else setMenuView("menu");
     window.setTimeout(() => {
-      const target = document.getElementById(targetId);
+      const target = document.getElementById("booking-app");
       if (target) target.scrollIntoView({ behavior:"smooth", block:"start" });
     }, 60);
+  };
+
+  const goToOrders = (view = "active") => {
+    setOrdersView(view === "history" ? "history" : "active");
+    navigate("orders");
+  };
+  const bookPackage = packageId => {
+    setBookingPackageId(SERVICE_PACKAGES.some(item => item.id === packageId) ? packageId : SERVICE_PACKAGES[0].id);
+    navigate("book");
+  };
+  const openPublicSection = sectionId => {
+    const allowedSections = ["faq","legalitas","syarat-ketentuan","kebijakan-privasi","kontak"];
+    if (!allowedSections.includes(sectionId)) return;
+    const target = document.getElementById(sectionId);
+    if (target) target.scrollIntoView({ behavior:"smooth", block:"start" });
   };
 
   useEffect(() => {
@@ -2083,7 +2207,9 @@ function AppTabs() {
       const link = event.target && event.target.closest && event.target.closest('a[href="#booking-app"]');
       if (!link) return;
       event.preventDefault();
-      navigate(link.dataset.appTab === "home" ? "home" : "book");
+      const destination = link.dataset.appTab;
+      if (["home","catalog","orders","notifications","account"].includes(destination)) navigate(destination);
+      else navigate("book");
     };
     document.addEventListener("click", handleBookingLink);
     return () => document.removeEventListener("click", handleBookingLink);
@@ -2092,24 +2218,27 @@ function AppTabs() {
   const navItems = [
     { id:"home", label:"Beranda", icon:"home" },
     { id:"catalog", label:"Katalog", icon:"catalog" },
-    { id:"book", label:"Pesan", icon:"book" },
     { id:"orders", label:"Pesanan", icon:"orders" },
-    { id:"menu", label:"Profil", icon:"profile", title:"Profil / Menu" }
+    { id:"notifications", label:"Notifikasi", icon:"bell" },
+    { id:"account", label:"Akun", icon:"account" }
   ];
+  const currentNavTab = tab === "book" ? "catalog" : tab;
 
   return (
     <div className="sules-app-shell">
       <div className="sules-app-content">
-        {tab === "home" && <CustomerOrdersTab mode="home" onGoToBooking={()=>navigate("book")} onGoToOrders={()=>navigate("orders")} />}
-        {tab === "book" && <BookingTab />}
-        {tab === "orders" && <CustomerOrdersTab onGoToBooking={()=>navigate("book")} />}
-        {tab === "menu" && (menuView === "admin"
-          ? <div><button type="button" className="mb-3" onClick={()=>setMenuView("menu")}>← Kembali ke Menu</button><AdminTab /></div>
+        {tab === "home" && <CustomerOrdersTab mode="home" onGoToBooking={()=>navigate("book")} onBookPackage={bookPackage} onGoToCatalog={()=>navigate("catalog")} onGoToOrders={goToOrders} onOpenPublicSection={openPublicSection} />}
+        {tab === "catalog" && <CatalogTab onBookPackage={bookPackage} />}
+        {tab === "book" && <BookingTab initialPackageId={bookingPackageId} />}
+        {tab === "orders" && <CustomerOrdersTab initialView={ordersView} onGoToBooking={()=>navigate("book")} />}
+        {tab === "notifications" && <NotificationsTab onGoToOrders={()=>goToOrders("active")} />}
+        {tab === "account" && (menuView === "admin"
+          ? <div><button type="button" className="mb-3" onClick={()=>setMenuView("menu")}>← Kembali ke Akun</button><AdminTab /></div>
           : <ProfileMenuTab onOpenAdmin={()=>setMenuView("admin")} />)}
       </div>
       <nav className="sules-bottom-nav" aria-label="Navigasi aplikasi">
         {navItems.map(item => <button key={item.id} type="button" title={item.title || item.label} aria-label={item.title || item.label}
-          aria-current={tab === item.id ? "page" : undefined} onClick={()=>navigate(item.id)}>
+          aria-current={currentNavTab === item.id ? "page" : undefined} onClick={()=>navigate(item.id)}>
           <SulesNavIcon name={item.icon} /><span>{item.label}</span>
         </button>)}
       </nav>
