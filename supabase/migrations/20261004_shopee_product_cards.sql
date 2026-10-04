@@ -11,21 +11,6 @@ BEGIN
   IF v_slot_count <> 6 THEN
     RAISE EXCEPTION 'Jumlah slot affiliate harus tetap tepat 6';
   END IF;
-  IF NOT EXISTS (
-    SELECT 1 FROM public.shopee_affiliate_slots WHERE slot = 5 LIMIT 1
-  ) THEN
-    RAISE EXCEPTION 'Slot 5 tidak ditemukan';
-  END IF;
-  IF EXISTS (
-    SELECT 1
-    FROM public.shopee_affiliate_slots
-    WHERE slot = 5
-      AND btrim(coalesce(affiliate_url, '')) <> ''
-      AND btrim(affiliate_url) <> 'https://s.shopee.co.id/6fhmVPAiYt'
-    LIMIT 1
-  ) THEN
-    RAISE EXCEPTION 'Slot 5 sudah memiliki URL berbeda; periksa data sebelum migrasi';
-  END IF;
 END;
 $precheck$;
 

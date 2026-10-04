@@ -150,66 +150,32 @@
     if (error) throw error;
     return data;
   }
-  async function getShopeeAffiliateSlots() {
-    const { data, error } = await supabaseClient.rpc("admin_get_shopee_affiliate_slots");
+  async function getAdminShopeeProducts() {
+    const { data, error } = await supabaseClient.rpc("admin_list_shopee_products");
     if (error) throw error;
-    return Array.isArray(data) ? data : [];
+    if (!Array.isArray(data)) throw new Error("Supabase mengembalikan daftar produk Admin yang tidak valid.");
+    return data;
   }
-  async function saveShopeeAffiliateSlot(slot) {
-    const { data, error } = await supabaseClient.rpc("admin_save_shopee_affiliate_slot", {
-      p_slot: slot.slot,
-      p_nama_produk: slot.nama_produk,
-      p_gambar_url: slot.gambar_url,
-      p_harga_display: slot.harga_display,
-      p_deskripsi_singkat: slot.deskripsi_singkat,
-      p_affiliate_url: slot.affiliate_url,
-      p_aktif: slot.aktif
+  async function saveShopeeProduct(product) {
+    const { data, error } = await supabaseClient.rpc("admin_save_shopee_product", {
+      p_id: product.id,
+      p_affiliate_url: product.affiliate_url,
+      p_product_name: product.product_name,
+      p_product_image: product.product_image,
+      p_product_price: product.product_price,
+      p_product_original_price: product.product_original_price,
+      p_aktif: product.aktif
     });
     if (error) throw error;
     return Array.isArray(data) ? (data[0] || null) : data;
   }
-  async function getAdminShopeeAffiliateLinks() {
-    const { data, error } = await supabaseClient.rpc("admin_get_shopee_affiliate_links");
+  async function deleteShopeeProduct(id) {
+    const { error } = await supabaseClient.rpc("admin_delete_shopee_product", { p_id: id });
     if (error) throw error;
-    if (!Array.isArray(data)) throw new Error("Supabase mengembalikan data slot yang tidak valid.");
-    return data;
+    return true;
   }
-  async function saveShopeeAffiliateLink({ slot, affiliate_url, aktif }) {
-    const { data, error } = await supabaseClient.rpc("admin_save_shopee_affiliate_link", {
-      p_slot: slot,
-      p_affiliate_url: affiliate_url,
-      p_aktif: aktif
-    });
-    if (error) throw error;
-    return Array.isArray(data) ? (data[0] || null) : data;
-  }
-  async function getActiveShopeeAffiliateLinks() {
-    const { data, error } = await supabaseClient.rpc("get_active_shopee_affiliate_links");
-    if (error) throw error;
-    if (!Array.isArray(data)) throw new Error("Supabase mengembalikan daftar rekomendasi yang tidak valid.");
-    return data;
-  }
-  async function getAdminShopeeProductSlots() {
-    const { data, error } = await supabaseClient.rpc("admin_get_shopee_product_slots_v2");
-    if (error) throw error;
-    if (!Array.isArray(data)) throw new Error("Supabase mengembalikan data slot Admin yang tidak valid.");
-    return data;
-  }
-  async function saveShopeeProductSlot(slot) {
-    const { data, error } = await supabaseClient.rpc("admin_save_shopee_product_slot_v2", {
-      p_slot: slot.slot,
-      p_product_name: slot.product_name,
-      p_product_image: slot.product_image,
-      p_product_price: slot.product_price,
-      p_product_original_price: slot.product_original_price,
-      p_affiliate_url: slot.affiliate_url,
-      p_aktif: slot.aktif
-    });
-    if (error) throw error;
-    return Array.isArray(data) ? (data[0] || null) : data;
-  }
-  async function getActiveShopeeProductCards() {
-    const { data, error } = await supabaseClient.rpc("get_active_shopee_product_cards_v2");
+  async function getActiveShopeeProducts() {
+    const { data, error } = await supabaseClient.rpc("get_active_shopee_products");
     if (error) throw error;
     if (!Array.isArray(data)) throw new Error("Supabase mengembalikan daftar produk affiliate yang tidak valid.");
     return data;
@@ -367,13 +333,7 @@
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { createBooking, getMyBooking, getCustomerBookings, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, getShopeeAffiliateSlots, saveShopeeAffiliateSlot, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
-  window.bookingService.getAdminShopeeAffiliateLinks = getAdminShopeeAffiliateLinks;
-  window.bookingService.saveShopeeAffiliateLink = saveShopeeAffiliateLink;
-  window.bookingService.getActiveShopeeAffiliateLinks = getActiveShopeeAffiliateLinks;
-  window.bookingService.getAdminShopeeProductSlots = getAdminShopeeProductSlots;
-  window.bookingService.saveShopeeProductSlot = saveShopeeProductSlot;
-  window.bookingService.getActiveShopeeProductCards = getActiveShopeeProductCards;
+  window.bookingService = { createBooking, getMyBooking, getCustomerBookings, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, getAdminShopeeProducts, saveShopeeProduct, deleteShopeeProduct, getActiveShopeeProducts, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -539,6 +499,7 @@
   .sules-affiliate-actions a,.sules-affiliate-actions button { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:8px 10px; border:1px solid #C9D8E5; border-radius:12px; background:#fff; color:var(--sules-navy); font-size:12px; font-weight:750; text-decoration:none; text-align:center; }
   .sules-affiliate-actions a { border-color:#2F6F9F; background:#2F6F9F; color:#fff; }
   .sules-affiliate-actions button:disabled { opacity:.55; cursor:not-allowed; }
+  .sules-affiliate-actions button.sules-danger { border-color:#E3B1B1; color:#9B1C1C; }
   .sules-shopee-recommendations { margin:18px 0 20px; padding:18px; border:1px solid var(--sules-line); border-radius:20px; background:linear-gradient(145deg,#fff 0%,#F2F8FC 100%); box-shadow:0 8px 20px rgba(24,50,75,.055); }
   .sules-shopee-product-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px; margin-top:12px; }
   #root a.sules-shopee-product-card { display:flex; flex-direction:column; min-width:0; overflow:hidden; border:1px solid var(--sules-line); border-radius:16px; background:#FFFFFF; color:var(--sules-navy); text-decoration:none; box-shadow:0 7px 17px rgba(24,50,75,.06); transition:transform .16s ease,box-shadow .16s ease; }
@@ -2040,17 +2001,6 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
   </div>;
 }
 
-const EMPTY_AFFILIATE_SLOT = slot => ({
-  slot,
-  affiliate_url: "",
-  aktif: false,
-  product_name: "",
-  product_image: "",
-  product_price: "",
-  product_original_price: "",
-  deskripsi_singkat: ""
-});
-
 const SHOPEE_AFFILIATE_URL_RE = /^https:\/\/((?:[a-z0-9-]+\.)*shopee\.co\.id|shopee\.ee)(?:[/?#][^\s]*)?$/i;
 
 function safeShopeeAffiliateUrl(raw) {
@@ -2133,20 +2083,14 @@ function ShopeeRecommendations() {
     setLoading(true);
     setFailed(false);
     try {
-      const rows = await window.bookingService.getActiveShopeeProductCards();
+      const rows = await window.bookingService.getActiveShopeeProducts();
       const safeProducts = rows.map(row => {
-        const slot = Number(row && row.slot);
+        const id = typeof (row && row.id) === "string" ? row.id : "";
         const url = safeShopeeAffiliateUrl(row && row.affiliate_url);
-        const name = typeof (row && row.product_name) === "string" ? row.product_name.trim() : "";
-        const rawImage = typeof (row && row.product_image) === "string" ? row.product_image.trim() : "";
-        const image = rawImage ? safeAffiliateImageUrl(rawImage) : "";
-        const price = parseShopeePrice(row && row.product_price);
-        const originalPrice = parseShopeePrice(row && row.product_original_price);
-        if (!Number.isInteger(slot) || slot < 1 || slot > 6 || !url || !name || name.length > 200) return null;
-        if (rawImage && !image) return null;
-        if (row && row.product_price !== null && row.product_price !== undefined && price === null) return null;
-        if (row && row.product_original_price !== null && row.product_original_price !== undefined && originalPrice === null) return null;
-        return { slot, url, name, image, price, originalPrice };
+        if (!id || !url) return null;
+        const name = typeof row.product_name === "string" ? row.product_name.trim().slice(0, 200) : "";
+        const image = typeof row.product_image === "string" ? safeAffiliateImageUrl(row.product_image) : "";
+        return { id, url, name, image, price: parseShopeePrice(row.product_price), originalPrice: parseShopeePrice(row.product_original_price) };
       }).filter(Boolean);
       if (!mounted.current || requestId !== requestSequence.current) return;
       setProducts(safeProducts);
@@ -2178,10 +2122,10 @@ function ShopeeRecommendations() {
   return <section className="sules-shopee-recommendations" aria-labelledby="shopee-recommendations-heading">
     <h2 id="shopee-recommendations-heading" className="sules-section-title">Rekomendasi Shopee</h2>
     <div className="sules-shopee-product-grid">
-      {products.map(product => <a key={product.slot} className="sules-shopee-product-card" href={product.url} target="_blank" rel="nofollow sponsored noopener" aria-label={`Cek ${product.name} di Shopee`}>
+      {products.map(product => <a key={product.id} className="sules-shopee-product-card" href={product.url} target="_blank" rel="nofollow sponsored noopener" aria-label={`Cek ${product.name || "produk"} di Shopee`}>
         <div className="sules-shopee-product-media"><ShopeeProductImage src={product.image} alt={product.image ? product.name : ""} /></div>
         <div className="sules-shopee-product-body">
-          <h3 className="sules-shopee-product-name">{product.name}</h3>
+          <h3 className="sules-shopee-product-name">{product.name || "Lihat produk di Shopee"}</h3>
           {product.originalPrice !== null && <p className="sules-shopee-product-price-original"><del>{formatShopeePrice(product.originalPrice)}</del></p>}
           {product.price !== null && <p className="sules-shopee-product-price">{formatShopeePrice(product.price)}</p>}
           <span className="sules-shopee-card-cta">Cek Harga di Shopee</span>
@@ -2191,46 +2135,49 @@ function ShopeeRecommendations() {
   </section>;
 }
 
-function normalizeAffiliateSlots(rows) {
-  const bySlot = new Map();
-  if (Array.isArray(rows)) rows.forEach(row => {
-    const slot = Number(row && row.slot);
-    if (!Number.isInteger(slot) || slot < 1 || slot > 6 || bySlot.has(slot)) return;
-    bySlot.set(slot, {
-      slot,
-      affiliate_url: typeof row.affiliate_url === "string" ? row.affiliate_url : "",
-      aktif: row.aktif === true,
-      product_name: typeof row.product_name === "string" ? row.product_name : (typeof row.nama_produk === "string" ? row.nama_produk : ""),
-      product_image: typeof row.product_image === "string" ? row.product_image : (typeof row.gambar_url === "string" ? row.gambar_url : ""),
-      product_price: normalizePriceDraft(row.product_price !== undefined ? row.product_price : row.harga_display),
-      product_original_price: normalizePriceDraft(row.product_original_price !== undefined ? row.product_original_price : row.harga_display_asli),
-      deskripsi_singkat: typeof row.deskripsi_singkat === "string" ? row.deskripsi_singkat : ""
-    });
-  });
-  return Array.from({ length: 6 }, (_, index) => bySlot.get(index + 1) || EMPTY_AFFILIATE_SLOT(index + 1));
+const EMPTY_SHOPEE_PRODUCT = () => ({
+  id: null,
+  affiliate_url: "",
+  aktif: true,
+  product_name: "",
+  product_image: "",
+  product_price: "",
+  product_original_price: ""
+});
+
+function normalizeShopeeProducts(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows.filter(row => row && typeof row.id === "string" && row.id).map(row => ({
+    id: row.id,
+    affiliate_url: typeof row.affiliate_url === "string" ? row.affiliate_url : "",
+    aktif: row.aktif === true,
+    product_name: typeof row.product_name === "string" ? row.product_name : "",
+    product_image: typeof row.product_image === "string" ? row.product_image : "",
+    product_price: normalizePriceDraft(row.product_price),
+    product_original_price: normalizePriceDraft(row.product_original_price)
+  }));
 }
 
 function ShopeeAffiliateAdmin() {
-  const initialSlots = Array.from({ length: 6 }, (_, index) => EMPTY_AFFILIATE_SLOT(index + 1));
-  const [slots, setSlots] = useState(initialSlots);
-  const [drafts, setDrafts] = useState(Object.fromEntries(initialSlots.map(slot => [slot.slot, slot])));
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [savingSlot, setSavingSlot] = useState(null);
+  const [busyKey, setBusyKey] = useState(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const mounted = useRef(false);
+  const counter = useRef(0);
 
-  const loadSlots = async () => {
+  const toItem = row => ({ key: row.id, saved: row, draft: row });
+
+  const loadProducts = async () => {
     setLoading(true);
     setError("");
     try {
-      const rows = await window.bookingService.getAdminShopeeProductSlots();
+      const rows = await window.bookingService.getAdminShopeeProducts();
       if (!mounted.current) return;
-      const normalized = normalizeAffiliateSlots(rows);
-      setSlots(normalized);
-      setDrafts(Object.fromEntries(normalized.map(slot => [slot.slot, slot])));
+      setItems(normalizeShopeeProducts(rows).map(toItem));
     } catch (e) {
-      if (mounted.current) setError((e && e.message) || "Gagal memuat slot Affiliate dari Supabase.");
+      if (mounted.current) setError((e && e.message) || "Gagal memuat produk Affiliate dari Supabase.");
     } finally {
       if (mounted.current) setLoading(false);
     }
@@ -2238,22 +2185,27 @@ function ShopeeAffiliateAdmin() {
 
   useEffect(() => {
     mounted.current = true;
-    void loadSlots();
+    void loadProducts();
     return () => { mounted.current = false; };
   }, []);
 
-  const updateDraft = (slot, field, value) => {
-    if (slot === 5 && field === "affiliate_url") return;
+  const addProduct = () => {
     setError("");
     setNotice("");
-    setDrafts(previous => ({
-      ...previous,
-      [slot]: { ...(previous[slot] || EMPTY_AFFILIATE_SLOT(slot)), [field]: value }
-    }));
+    counter.current += 1;
+    setItems(previous => [{ key: `new-${counter.current}`, saved: null, draft: EMPTY_SHOPEE_PRODUCT() }, ...previous]);
   };
 
-  const saveSlot = async slotNumber => {
-    const draft = drafts[slotNumber] || EMPTY_AFFILIATE_SLOT(slotNumber);
+  const updateDraft = (key, field, value) => {
+    setError("");
+    setNotice("");
+    setItems(previous => previous.map(item => item.key === key ? { ...item, draft: { ...item.draft, [field]: value } } : item));
+  };
+
+  const saveItem = async key => {
+    const item = items.find(entry => entry.key === key);
+    if (!item) return;
+    const draft = item.draft;
     const productName = String(draft.product_name || "").trim();
     const rawImage = String(draft.product_image || "").trim();
     const productImage = rawImage ? safeAffiliateImageUrl(rawImage) : "";
@@ -2263,61 +2215,62 @@ function ShopeeAffiliateAdmin() {
     const productOriginalPrice = rawOriginalPrice ? parseShopeePrice(rawOriginalPrice) : null;
     const affiliateUrl = typeof draft.affiliate_url === "string" ? draft.affiliate_url.trim() : "";
     const validAffiliateUrl = affiliateUrl ? safeShopeeAffiliateUrl(affiliateUrl) : null;
+    const fail = message => { setError(message); setNotice(""); };
 
-    if (productName.length > 200) {
-      setError(`Slot ${slotNumber}: nama produk maksimal 200 karakter.`);
-      setNotice("");
-      return;
-    }
-    if (rawImage && !productImage) {
-      setError(`Slot ${slotNumber}: URL foto harus HTTPS dengan host domain yang valid.`);
-      setNotice("");
-      return;
-    }
-    if (rawPrice && productPrice === null) {
-      setError(`Slot ${slotNumber}: harga harus angka Rupiah bulat dan tidak negatif.`);
-      setNotice("");
-      return;
-    }
-    if (rawOriginalPrice && productOriginalPrice === null) {
-      setError(`Slot ${slotNumber}: harga awal harus angka Rupiah bulat dan tidak negatif.`);
-      setNotice("");
-      return;
-    }
-    if (affiliateUrl && !validAffiliateUrl) {
-      setError(`Slot ${slotNumber}: URL harus HTTPS pada domain resmi Shopee.`);
-      setNotice("");
-      return;
-    }
-    if (draft.aktif && !validAffiliateUrl) {
-      setError(`Slot ${slotNumber}: isi Affiliate URL Shopee yang valid sebelum mengaktifkan.`);
-      setNotice("");
-      return;
-    }
+    if (!affiliateUrl) return fail("Tempel link Shopee terlebih dahulu.");
+    if (!validAffiliateUrl) return fail("Link harus HTTPS pada domain resmi Shopee.");
+    if (productName.length > 200) return fail("Nama produk maksimal 200 karakter.");
+    if (rawImage && !productImage) return fail("URL foto harus HTTPS dengan host domain yang valid.");
+    if (rawPrice && productPrice === null) return fail("Harga harus angka Rupiah bulat dan tidak negatif.");
+    if (rawOriginalPrice && productOriginalPrice === null) return fail("Harga awal harus angka Rupiah bulat dan tidak negatif.");
 
-    setSavingSlot(slotNumber);
+    setBusyKey(key);
     setError("");
     setNotice("");
     try {
-      const saved = await window.bookingService.saveShopeeProductSlot({
-        slot: slotNumber,
+      const saved = await window.bookingService.saveShopeeProduct({
+        id: item.saved ? item.saved.id : null,
+        affiliate_url: validAffiliateUrl,
         product_name: productName,
         product_image: productImage,
         product_price: productPrice,
         product_original_price: productOriginalPrice,
-        affiliate_url: affiliateUrl,
         aktif: draft.aktif === true
       });
-      if (!saved) throw new Error("Supabase tidak mengembalikan slot yang tersimpan.");
+      if (!saved) throw new Error("Supabase tidak mengembalikan produk yang tersimpan.");
       if (!mounted.current) return;
-      const normalized = normalizeAffiliateSlots([...slots.filter(item => item.slot !== slotNumber), saved]);
-      setSlots(normalized);
-      setDrafts(previous => ({ ...previous, [slotNumber]: normalized[slotNumber - 1] }));
-      setNotice(`Slot ${slotNumber} tersimpan di Supabase.`);
+      const normalized = normalizeShopeeProducts([saved])[0];
+      if (!normalized) throw new Error("Supabase mengembalikan produk yang tidak valid.");
+      setItems(previous => previous.map(entry => entry.key === key ? toItem(normalized) : entry));
+      setNotice("Produk tersimpan di Supabase.");
     } catch (e) {
-      if (mounted.current) setError((e && e.message) || `Gagal menyimpan Slot ${slotNumber}.`);
+      if (mounted.current) setError((e && e.message) || "Gagal menyimpan produk.");
     } finally {
-      if (mounted.current) setSavingSlot(null);
+      if (mounted.current) setBusyKey(null);
+    }
+  };
+
+  const deleteItem = async key => {
+    const item = items.find(entry => entry.key === key);
+    if (!item) return;
+    if (!item.saved) {
+      setItems(previous => previous.filter(entry => entry.key !== key));
+      return;
+    }
+    const label = String(item.saved.product_name || "").trim() || "produk ini";
+    if (!window.confirm(`Hapus ${label} secara permanen?`)) return;
+    setBusyKey(key);
+    setError("");
+    setNotice("");
+    try {
+      await window.bookingService.deleteShopeeProduct(item.saved.id);
+      if (!mounted.current) return;
+      setItems(previous => previous.filter(entry => entry.key !== key));
+      setNotice("Produk dihapus.");
+    } catch (e) {
+      if (mounted.current) setError((e && e.message) || "Gagal menghapus produk.");
+    } finally {
+      if (mounted.current) setBusyKey(null);
     }
   };
 
@@ -2325,55 +2278,60 @@ function ShopeeAffiliateAdmin() {
     <section className="sules-affiliate-section" aria-labelledby="shopee-affiliate-heading">
       <div>
         <div className="sules-eyebrow">KONTEN ADMIN</div>
-        <h2 id="shopee-affiliate-heading" className="text-lg font-bold mt-1">SHOPEE AFFILIATE — 6 SLOT</h2>
-        <p className="text-sm text-gray-500 mt-1">Enam posisi tetap. Kelola URL affiliate, nama, foto, harga, harga awal, dan status; slot tidak dapat ditambah atau dihapus.</p>
+        <h2 id="shopee-affiliate-heading" className="text-lg font-bold mt-1">PRODUK SHOPEE AFFILIATE</h2>
+        <p className="text-sm text-gray-500 mt-1">Tempel link affiliate Shopee, lalu isi nama, foto, dan harga jika ingin. Hanya link yang wajib. Produk bebas ditambah, diubah, dan dihapus.</p>
       </div>
-      {loading && <div role="status" className="text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">Memuat enam slot dari Supabase…</div>}
+      <div className="sules-affiliate-actions mt-3">
+        <button type="button" className="sules-primary" disabled={loading} onClick={addProduct}>+ Tambah Produk</button>
+      </div>
+      {loading && <div role="status" className="text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">Memuat produk dari Supabase…</div>}
       {error && <div role="alert" className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg p-3 mt-3">{error}</div>}
       {notice && <div role="status" className="text-sm text-green-800 bg-green-50 border border-green-200 rounded-lg p-3 mt-3">{notice}</div>}
+      {!loading && items.length === 0 && !error && <p className="text-sm text-gray-500 mt-3">Belum ada produk. Tekan “Tambah Produk” lalu tempel link Shopee.</p>}
       <div className="sules-affiliate-grid">
-        {slots.map(slot => {
-          const draft = drafts[slot.slot] || slot;
-          const savedUrl = safeShopeeAffiliateUrl(slot.affiliate_url);
-          const canOpenSavedLink = slot.aktif === true && Boolean(savedUrl);
+        {items.map((item, index) => {
+          const draft = item.draft;
+          const saved = item.saved;
+          const savedUrl = saved ? safeShopeeAffiliateUrl(saved.affiliate_url) : null;
+          const canOpenSavedLink = Boolean(saved && saved.aktif === true && savedUrl);
           const draftUrlIsInvalid = Boolean(String(draft.affiliate_url || "").trim()) && !safeShopeeAffiliateUrl(draft.affiliate_url);
           const rawDraftImage = String(draft.product_image || "").trim();
           const draftImageIsInvalid = Boolean(rawDraftImage) && !safeAffiliateImageUrl(rawDraftImage);
+          const busy = busyKey === item.key;
           return (
-            <article className="sules-affiliate-card" key={slot.slot} aria-label={`Slot ${slot.slot}`}>
+            <article className="sules-affiliate-card" key={item.key} aria-label={`Produk ${index + 1}`}>
               <div className="flex items-center justify-between gap-2">
-                <h3 className="font-bold text-base">Slot {slot.slot}</h3>
-                <span className={`text-xs font-bold ${slot.aktif ? "text-green-800" : "text-gray-500"}`}>{slot.aktif ? "Tersimpan · Aktif" : "Tersimpan · Tidak aktif"}</span>
+                <h3 className="font-bold text-base">{saved ? `Produk ${index + 1}` : "Produk baru"}</h3>
+                <span className={`text-xs font-bold ${saved && saved.aktif ? "text-green-800" : "text-gray-500"}`}>{!saved ? "Belum disimpan" : (saved.aktif ? "Tersimpan · Aktif" : "Tersimpan · Tidak aktif")}</span>
               </div>
-              <label className="sules-affiliate-field">Nama Produk
-                <input type="text" maxLength="200" value={draft.product_name} onChange={e => updateDraft(slot.slot, "product_name", e.target.value)} autoComplete="off" />
+              <label className="sules-affiliate-field">Link Shopee Affiliate (wajib)
+                <input type="url" value={draft.affiliate_url} onChange={e => updateDraft(item.key, "affiliate_url", e.target.value)} autoComplete="off" placeholder="https://s.shopee.co.id/…" aria-invalid={draftUrlIsInvalid || undefined} />
+              </label>
+              {draftUrlIsInvalid && <div className="text-xs text-red-700 mt-1">URL INVALID — tautan hanya aktif jika HTTPS dan domain Shopee resmi.</div>}
+              <label className="sules-affiliate-field">Nama Produk (opsional)
+                <input type="text" maxLength="200" value={draft.product_name} onChange={e => updateDraft(item.key, "product_name", e.target.value)} autoComplete="off" />
               </label>
               <label className="sules-affiliate-field">URL Foto Produk (HTTPS, opsional)
-                <input type="url" value={draft.product_image} onChange={e => updateDraft(slot.slot, "product_image", e.target.value)} autoComplete="off" aria-invalid={draftImageIsInvalid || undefined} />
+                <input type="url" value={draft.product_image} onChange={e => updateDraft(item.key, "product_image", e.target.value)} autoComplete="off" aria-invalid={draftImageIsInvalid || undefined} />
               </label>
               {draftImageIsInvalid && <div className="text-xs text-red-700 mt-1">Foto harus memakai HTTPS dan host domain yang valid.</div>}
-              <div className="sules-affiliate-preview"><ShopeeProductImage src={draft.product_image} alt={draft.product_name || `Foto produk slot ${slot.slot}`} /></div>
+              <div className="sules-affiliate-preview"><ShopeeProductImage src={draft.product_image} alt={draft.product_name || "Foto produk"} /></div>
               <label className="sules-affiliate-field">Harga Produk (Rupiah, opsional)
-                <input type="number" min="0" step="1" inputMode="numeric" value={draft.product_price} onChange={e => updateDraft(slot.slot, "product_price", e.target.value)} autoComplete="off" />
+                <input type="number" min="0" step="1" inputMode="numeric" value={draft.product_price} onChange={e => updateDraft(item.key, "product_price", e.target.value)} autoComplete="off" />
               </label>
               <label className="sules-affiliate-field">Harga Awal (Rupiah, opsional)
-                <input type="number" min="0" step="1" inputMode="numeric" value={draft.product_original_price} onChange={e => updateDraft(slot.slot, "product_original_price", e.target.value)} autoComplete="off" />
+                <input type="number" min="0" step="1" inputMode="numeric" value={draft.product_original_price} onChange={e => updateDraft(item.key, "product_original_price", e.target.value)} autoComplete="off" />
               </label>
-              <label className="sules-affiliate-field">Affiliate URL Shopee
-                <input type="url" value={draft.affiliate_url} onChange={e => updateDraft(slot.slot, "affiliate_url", e.target.value)} autoComplete="off" readOnly={slot.slot === 5} aria-readonly={slot.slot === 5 || undefined} aria-invalid={draftUrlIsInvalid || undefined} />
-              </label>
-              {slot.slot === 5 && <p className="text-xs text-gray-500 mt-1">URL affiliate slot 5 dikunci sesuai ketetapan.</p>}
-              {draftUrlIsInvalid && <div className="text-xs text-red-700 mt-1">URL INVALID — tautan hanya aktif jika HTTPS dan domain Shopee resmi.</div>}
               <label className="sules-affiliate-toggle">
-                <input type="checkbox" checked={draft.aktif === true} onChange={e => updateDraft(slot.slot, "aktif", e.target.checked)} />
-                Aktif
+                <input type="checkbox" checked={draft.aktif === true} onChange={e => updateDraft(item.key, "aktif", e.target.checked)} />
+                Aktif (tampil di Beranda)
               </label>
-              {draft.aktif && !String(draft.product_name || "").trim() && <p className="text-xs text-amber-800 mt-2">Isi nama produk agar kartu dapat tampil di Beranda.</p>}
               <div className="sules-affiliate-actions">
                 {canOpenSavedLink
-                  ? <a href={savedUrl} target="_blank" rel="noopener noreferrer">Bagikan / Buka Shopee</a>
-                  : <button type="button" disabled aria-disabled="true">Bagikan / Buka Shopee</button>}
-                <button type="button" className="sules-primary" disabled={loading || savingSlot !== null} onClick={() => void saveSlot(slot.slot)}>{savingSlot === slot.slot ? "Menyimpan…" : "Simpan"}</button>
+                  ? <a href={savedUrl} target="_blank" rel="noopener noreferrer">Buka Shopee</a>
+                  : <button type="button" disabled aria-disabled="true">Buka Shopee</button>}
+                <button type="button" className="sules-primary" disabled={loading || busyKey !== null} onClick={() => void saveItem(item.key)}>{busy ? "Memproses…" : "Simpan"}</button>
+                <button type="button" className="sules-danger" disabled={loading || busyKey !== null} onClick={() => void deleteItem(item.key)}>Hapus</button>
               </div>
             </article>
           );
