@@ -384,6 +384,23 @@
     .public-data { grid-template-columns:1fr; gap:2px; }
     .public-data dd { margin-bottom:8px; }
   }
+  #kontak .contact-layout { align-items:center; }
+  #kontak .contact-person { display:flex; align-items:center; gap:16px; min-width:0; }
+  #kontak .contact-person-details { min-width:0; }
+  #kontak .contact-person-details .public-muted:first-child { margin-top:0; }
+  #kontak .contact-person-details .public-muted:last-child { margin-bottom:0; }
+  #kontak .contact-profile-photo {
+    display:block; width:128px; height:129px; flex:0 0 128px;
+    object-fit:cover; object-position:center 44%; border-radius:22px;
+    border:1px solid var(--sules-line); box-shadow:0 9px 24px rgba(24,50,75,.12);
+  }
+  @media (max-width:760px) {
+    #kontak .contact-person { align-items:flex-start; gap:12px; }
+    #kontak .contact-profile-photo { width:104px; height:105px; flex-basis:104px; border-radius:18px; }
+  }
+  @media (max-width:360px) {
+    #kontak .contact-profile-photo { width:88px; height:89px; flex-basis:88px; border-radius:16px; }
+  }
 </style>
 <style>
 :root {
@@ -783,7 +800,16 @@
 
   <section id="kontak" class="public-section public-card">
     <p class="public-eyebrow">Kontak</p><h2>Hubungi Sules Pijat Maduran</h2>
-    <div class="public-two-col"><div><p class="public-muted"><strong>Alamat</strong><br />Jl. Karya Bangun RT.06/RW.02, Maduran, Lamongan 62261</p><p class="public-muted"><strong>WhatsApp</strong><br /><a href="https://wa.me/6285855603240" rel="noopener noreferrer">085855603240</a></p></div><div><p class="public-muted"><strong>Email</strong><br /><a href="mailto:srawungjagad3714@gmail.com">srawungjagad3714@gmail.com</a></p><a class="public-button" href="https://wa.me/6285855603240" rel="noopener noreferrer">Hubungi via WhatsApp</a></div></div>
+    <div class="public-two-col contact-layout">
+      <div class="contact-person">
+        <img class="contact-profile-photo" src="./assets/contact-profile.webp" alt="Foto profil Sules Pijat Maduran" width="476" height="480" loading="lazy" decoding="async" />
+        <div class="contact-person-details">
+          <p class="public-muted"><strong>Alamat</strong><br />Jl. Karya Bangun RT.06/RW.02, Maduran, Lamongan 62261</p>
+          <p class="public-muted"><strong>WhatsApp</strong><br /><a href="https://wa.me/6285855603240" rel="noopener noreferrer">085855603240</a></p>
+        </div>
+      </div>
+      <div><p class="public-muted"><strong>Email</strong><br /><a href="mailto:srawungjagad3714@gmail.com">srawungjagad3714@gmail.com</a></p><a class="public-button" href="https://wa.me/6285855603240" rel="noopener noreferrer">Hubungi via WhatsApp</a></div>
+    </div>
   </section>
 </main>
 <footer class="public-footer">© SULES PIJAT MADURAN · <a href="#syarat-ketentuan">Syarat</a> · <a href="#kebijakan-privasi">Privasi</a> · <a href="#kontak">Kontak</a></footer>
