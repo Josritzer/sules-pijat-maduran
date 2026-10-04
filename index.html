@@ -1023,8 +1023,11 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id } = {}) {
     if (/(rate.?limit|too many requests|429|over_email_send_rate_limit)/.test(detail)) {
       return "Kode terlalu sering diminta. Tunggu sekitar 1 menit sebelum mencoba lagi.";
     }
+    if (/(smtp|could not send email|email provider|unexpected_failure|unverified domain)/.test(detail)) {
+      return "Email belum dapat dikirim saat ini. Coba lagi nanti atau hubungi Admin.";
+    }
     if (/(network|fetch|timeout|connection|offline|load failed)/.test(detail)) {
-      return "Koneksi sedang bermasalah. Periksa internet Anda lalu coba lagi.";
+      return "Kode belum dapat dikirim. Periksa koneksi atau coba lagi beberapa saat.";
     }
     if (/(invalid.*email|email.*invalid|valid.*email)/.test(detail)) {
       return "Alamat email belum valid. Periksa kembali penulisannya.";
