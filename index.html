@@ -62,10 +62,23 @@
     if (error) throw await getFunctionError(error);
     return data;
   }
-  async function getMyBooking(accessToken) {
-    const { data, error } = await supabaseClient.rpc("get_booking_by_token", { p_access_token: accessToken });
+  async function getCustomerBookingById(bookingId) {
+    const id = String(bookingId || "");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      throw new Error("ID pesanan tidak valid.");
+    }
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+    const customerId = sessionData && sessionData.session && sessionData.session.user && sessionData.session.user.id;
+    if (!customerId) return null;
+    const { data, error } = await supabaseClient.from("bookings")
+      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
+      .eq("id", id)
+      .eq("customer_id", customerId)
+      .is("disembunyikan_pelanggan_at", null)
+      .maybeSingle();
     if (error) throw error;
-    return data && data[0] ? data[0] : null;
+    return data || null;
   }
   const CUSTOMER_ORDER_PAGE_SIZE = 50;
   async function getCustomerBookings(customerId, offset = 0) {
@@ -333,7 +346,7 @@
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { createBooking, getMyBooking, getCustomerBookings, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+  window.bookingService = { createBooking, getCustomerBookingById, getCustomerBookings, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -832,7 +845,8 @@ const SERVICE_PACKAGES = [
   { id: "home-120m-1", label: "Pijat 2 Jam ke Rumah", location: "ke Rumah", serviceId: "120m", people: 1, type: "HOME_SERVICE", price: 80000 },
   { id: "home-90m-2", label: "Pijat 2 Orang ke Rumah – 90 Menit", location: "ke Rumah", serviceId: "90m", people: 2, type: "HOME_SERVICE", price: 120000 }
 ];
-const LAST_TOKEN_KEY = "sules_last_booking_token"; // hanya pointer, bukan source of truth
+const LAST_BOOKING_ID_KEY = "sules_last_booking_id"; // pointer nonrahasia; otorisasi tetap melalui session Supabase/RLS
+try { localStorage.removeItem("sules_last_booking_token"); } catch (_) {} // hapus token booking lama dari browser yang sudah pernah menyimpannya
 
 const MORNING_SLOTS = ["08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30","15:00"];
 const EVENING_SLOTS = ["19:00","19:30","20:00","20:30","21:00","21:30","22:00","22:30"];
@@ -1204,7 +1218,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
 
   const customerDoLogout = async () => {
     try { await window.bookingService.customerLogout(); }
-    finally { localStorage.removeItem(LAST_TOKEN_KEY); } // jangan bawa token booking customer sebelumnya, walau signOut gagal
+    finally { localStorage.removeItem(LAST_BOOKING_ID_KEY); } // jangan tampilkan booking customer sebelumnya setelah keluar
     setCurrentBooking(null);
     setCustomerSession(null);
     setCustomerProfile(null);
@@ -1217,23 +1231,34 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
     setCustEmail("");
   };
 
-  // Pulihkan "Lihat Pesanan Saya" dari token tersimpan (kalau reload halaman)
+  // Pulihkan booking hanya setelah session Supabase customer siap; ID lokal bukan kredensial.
   useEffect(() => {
-    if (authOnly) return;
-    const token = localStorage.getItem(LAST_TOKEN_KEY);
-    if (!token) return;
-    window.bookingService.getMyBooking(token).then(b => {
-      if (b) {
-        setCurrentBooking({
-          booking_id: b.id, access_token: token, layanan: b.service_id, orang: b.jumlah_orang,
-          tanggal: b.tanggal, jam: b.jam_mulai, tipeLokasi: b.tipe_lokasi, alamat: b.alamat,
-          service_price: b.service_price, travel_fee: b.travel_fee,
-          grand_total: b.grand_total, status: b.status
-        });
-        setScreen("status");
+    if (authOnly || checkingSession) return;
+    const bookingId = localStorage.getItem(LAST_BOOKING_ID_KEY);
+    const customerUserId = customerSession && customerSession.user && customerSession.user.id;
+    if (!bookingId || !customerUserId) return;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingId)) {
+      localStorage.removeItem(LAST_BOOKING_ID_KEY);
+      return;
+    }
+    let active = true;
+    window.bookingService.getCustomerBookingById(bookingId).then(b => {
+      if (!active) return;
+      if (!b) {
+        if (localStorage.getItem(LAST_BOOKING_ID_KEY) === bookingId) localStorage.removeItem(LAST_BOOKING_ID_KEY);
+        setCurrentBooking(previous => previous && previous.booking_id === bookingId ? null : previous);
+        return;
       }
+      setCurrentBooking({
+        booking_id: b.id, layanan: b.service_id, orang: b.jumlah_orang,
+        tanggal: b.tanggal, jam: b.jam_mulai, tipeLokasi: b.tipe_lokasi, alamat: b.alamat,
+        service_price: b.service_price, travel_fee: b.travel_fee,
+        grand_total: b.grand_total, status: b.status
+      });
+      setScreen("status");
     }).catch(() => {});
-  }, [authOnly]);
+    return () => { active = false; };
+  }, [authOnly, checkingSession, customerSession && customerSession.user && customerSession.user.id]);
 
   const durasiMenit = DURASI[layanan];
   const { pagi, malam } = generateSlotsForDurasi(durasiMenit);
@@ -1360,10 +1385,9 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
         serviceId: layanan, jumlahOrang: orang, tanggal, jamMulai: jam,
         tipeLokasi, alamat: alamatText || null, lat, lng, jarakMeter: jarak
       });
-      localStorage.setItem(LAST_TOKEN_KEY, result.access_token);
+      localStorage.setItem(LAST_BOOKING_ID_KEY, result.booking_id);
       setCurrentBooking({
         booking_id: result.booking_id,
-        access_token: result.access_token,
         layanan, orang, tanggal, jam, tipeLokasi, alamat: alamatText,
         service_price: result.service_price, travel_fee: result.travel_fee,
         grand_total: result.grand_total, status: result.status
@@ -1383,20 +1407,24 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   };
 
   const refreshStatus = async () => {
-    if (!currentBooking) return;
+    if (!currentBooking || !currentBooking.booking_id || !(customerSession && customerSession.user && customerSession.user.id)) return;
     setLoadingStatus(true);
     try {
-      const b = await window.bookingService.getMyBooking(currentBooking.access_token);
+      const b = await window.bookingService.getCustomerBookingById(currentBooking.booking_id);
       if (b) setCurrentBooking(prev => ({ ...prev, status: b.status, grand_total: b.grand_total }));
+      else {
+        if (localStorage.getItem(LAST_BOOKING_ID_KEY) === currentBooking.booking_id) localStorage.removeItem(LAST_BOOKING_ID_KEY);
+        setCurrentBooking(prev => prev && prev.booking_id === currentBooking.booking_id ? null : prev);
+        setScreen("form");
+      }
     } catch (e) { /* biarkan status lama tampil kalau gagal refresh */ }
     setLoadingStatus(false);
   };
 
   useEffect(() => {
     const bookingId = currentBooking && currentBooking.booking_id;
-    const accessToken = currentBooking && currentBooking.access_token;
     const customerUserId = customerSession && customerSession.user && customerSession.user.id;
-    if (screen !== "status" || !bookingId || !accessToken || !customerUserId) return;
+    if (screen !== "status" || !bookingId || !customerUserId) return;
 
     let active = true;
     let refreshInFlight = false;
@@ -1407,8 +1435,14 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
         return;
       }
       refreshInFlight = true;
-      window.bookingService.getMyBooking(accessToken).then(b => {
-        if (!active || !b) return;
+      window.bookingService.getCustomerBookingById(bookingId).then(b => {
+        if (!active) return;
+        if (!b) {
+          if (localStorage.getItem(LAST_BOOKING_ID_KEY) === bookingId) localStorage.removeItem(LAST_BOOKING_ID_KEY);
+          setCurrentBooking(prev => prev && prev.booking_id === bookingId ? null : prev);
+          setScreen("form");
+          return;
+        }
         const previousSnapshot = customerStatusSnapshotRef.current;
         if (previousSnapshot && previousSnapshot.bookingId === bookingId) {
           try {
@@ -1432,7 +1466,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       active = false;
       void window.bookingService.removeRealtimeChannel(channel);
     };
-  }, [screen, currentBooking && currentBooking.booking_id, currentBooking && currentBooking.access_token, customerSession && customerSession.user && customerSession.user.id]);
+  }, [screen, currentBooking && currentBooking.booking_id, customerSession && customerSession.user && customerSession.user.id]);
 
   const renderSlotGrup = (judul, slots) => (
     <div className="mb-3">
@@ -1604,7 +1638,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
         <button onClick={refreshStatus} disabled={loadingStatus}
           style={{ backgroundColor:"#18324B", color:"white", fontWeight:"bold", padding:"14px", borderRadius:"14px", width:"100%" }}
           className="mb-2">{loadingStatus ? "Memuat..." : "🔄 Cek Status Terbaru"}</button>
-        <button onClick={()=>{ localStorage.removeItem(LAST_TOKEN_KEY); setCurrentBooking(null); setScreen("form"); }}
+        <button onClick={()=>{ localStorage.removeItem(LAST_BOOKING_ID_KEY); setCurrentBooking(null); setScreen("form"); }}
           style={{ backgroundColor:"white", border:"1px solid #18324B", color:"#18324B", padding:"14px", borderRadius:"14px", width:"100%" }}>
           Kembali ke Beranda
         </button>
