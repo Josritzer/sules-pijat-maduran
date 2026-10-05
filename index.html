@@ -1547,7 +1547,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
               {authNotice && <div role="status" className="text-xs text-green-700 mb-3">{authNotice}</div>}
               {authMsg && <div role="alert" className="text-xs text-red-600 mb-3">{authMsg}</div>}
               <label className="text-sm font-semibold block mb-1">Kode dari Email</label>
-              <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
+              <input type="text" inputMode="numeric" autoComplete="off" maxLength={6}
                 pattern="[0-9]{6}" aria-label="Kode OTP enam digit"
                 value={otpCode} onChange={e=>{setOtpCode(e.target.value.replace(/\D/g,"").slice(0,6));setAuthMsg("");}}
                 placeholder="123456"
