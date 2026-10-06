@@ -405,6 +405,9 @@
   .public-data dt { color:#698198; }
   .public-data dd { margin:0; color:#18324B; font-weight:600; overflow-wrap:anywhere; }
   .public-footer { border-top:1px solid var(--sules-line); padding:22px 18px 34px; color:#627B90; font-size:13px; text-align:center; }
+  .public-social-links { display:inline-flex; align-items:center; gap:10px; margin-left:12px; vertical-align:middle; }
+  .public-social-link { display:inline-flex; align-items:center; justify-content:center; color:inherit; text-decoration:none; }
+  .public-social-link svg { display:block; width:20px; height:20px; }
   .app-host { max-width:1120px; margin:0 auto; padding:0 0 36px; }
   @media (max-width:760px) {
     .site-nav { flex-wrap:wrap; gap:10px; padding:10px 14px; }
@@ -861,7 +864,7 @@
     </div>
   </section>
 </main>
-<footer class="public-footer">© SULES PIJAT MADURAN · <a href="#syarat-ketentuan">Syarat</a> · <a href="#kebijakan-privasi">Privasi</a> · <a href="#kontak">Kontak</a></footer>
+<footer class="public-footer">© SULES PIJAT MADURAN · <a href="#syarat-ketentuan">Syarat</a> · <a href="#kebijakan-privasi">Privasi</a> · <a href="#kontak">Kontak</a><span class="public-social-links"><a class="public-social-link" href="https://www.facebook.com/share/1DHCpxtGmC/" target="_blank" rel="noopener noreferrer" aria-label="Facebook SULES PIJAT MADURAN"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073c0 6.019 4.388 11.019 10.125 11.926v-8.437H7.078v-3.489h3.047V9.414c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.953h-1.513c-1.491 0-1.956.93-1.956 1.885v2.262h3.328l-.532 3.489h-2.796v8.437C19.612 23.092 24 18.092 24 12.073z"/></svg></a><a class="public-social-link" href="https://www.instagram.com/sulesmaduran/" target="_blank" rel="noopener noreferrer" aria-label="Instagram SULES PIJAT MADURAN"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></svg></a></span></footer>
 
 <script type="text/babel">
 const { useState, useEffect, useLayoutEffect, useRef } = React;
