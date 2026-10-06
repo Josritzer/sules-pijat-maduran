@@ -1379,7 +1379,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
 
   const ambilLokasiGPS = () => {
     if (!navigator.geolocation) {
-      setGpsMsg("Perangkat tidak mendukung GPS.");
+      setGpsMsg("Perangkat atau browser ini tidak mendukung lokasi akurat.");
       return;
     }
     setLoadingGPS(true);
@@ -1397,9 +1397,11 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       (err) => {
         setLoadingGPS(false);
         if (err.code === 1) {
-          setGpsMsg("Izin Ditolak - Tap icon gembok 🔒 di address bar > Izin Lokasi > Izinkan > Refresh. Di iPhone: Settings > Privacy > Location Services > Safari > Allow");
+          setGpsMsg("Izin lokasi ditolak. Izinkan akses lokasi untuk situs ini, lalu coba lagi.");
+        } else if (err.code === 3) {
+          setGpsMsg("Lokasi akurat tidak merespons sebelum batas waktu. Pastikan GPS aktif, lalu coba lagi.");
         } else {
-          setGpsMsg("Gagal mengambil lokasi. Coba lagi atau tempel alamat/link manual.");
+          setGpsMsg("Lokasi akurat gagal diperoleh. Pastikan layanan lokasi aktif, lalu coba lagi.");
         }
       },
       { enableHighAccuracy: true, timeout: 15000 }
@@ -1427,7 +1429,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
     const la = laArg !== undefined ? laArg : latRef.current;
     const ln = lnArg !== undefined ? lnArg : lngRef.current;
     if (la === null || la === undefined || ln === null || ln === undefined) {
-      setJarakError("Bagikan lokasi dulu via GPS atau tempel koordinat");
+      setJarakError("Bagikan lokasi akurat melalui GPS terlebih dahulu.");
       return;
     }
     setLoadingJarak(true);
@@ -1460,8 +1462,8 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   const total = biayaLayanan + transport;
   const detailBookingSiap = tipeLokasi !== "HOME_SERVICE" || (lat !== null && lng !== null && jarak !== null && sumberJarak === "road");
   const bookingJourneyStep = !tanggal ? 2 : !jam ? 3 : !detailBookingSiap ? 4 : 5;
-  const bookingJourneyLabels = ["Layanan", "Tanggal", "Waktu", "Data", "Kirim"];
-  const bookingJourneyHint = bookingJourneyStep === 2 ? "Pilih tanggal layanan." : bookingJourneyStep === 3 ? "Pilih waktu yang tersedia." : bookingJourneyStep === 4 ? "Lengkapi lokasi dan hitung jarak jalan." : "Tinjau ringkasan booking sebelum mengirim.";
+  const bookingJourneyLabels = ["Layanan", "Tanggal", "Waktu", "Lokasi", "Kirim"];
+  const bookingJourneyHint = bookingJourneyStep === 2 ? "Pilih tanggal layanan." : bookingJourneyStep === 3 ? "Pilih waktu yang tersedia." : bookingJourneyStep === 4 ? "Bagikan lokasi akurat dan hitung jarak jalan." : "Tinjau ringkasan booking sebelum mengirim.";
 
   const konfirmasiBooking = async () => {
     if (bookingSubmitLockRef.current || bookingOutcomeUncertain) return;
@@ -1476,7 +1478,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
     if (!tanggal) { setFormError("Pilih tanggal dulu."); return; }
     if (!jam) { setFormError("Pilih jam dulu."); return; }
     if (tipeLokasi === "HOME_SERVICE" && (lat === null || lng === null)) {
-      setFormError("Untuk paket ke Rumah, lokasi wajib diisi (GPS atau koordinat Google Maps).");
+      setFormError("Untuk paket ke Rumah, bagikan lokasi akurat melalui GPS terlebih dahulu.");
       return;
     }
     if (tipeLokasi === "HOME_SERVICE" && (jarak === null || sumberJarak !== "road")) {
@@ -1896,19 +1898,12 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
             <button onClick={ambilLokasiGPS} disabled={loadingGPS}
               style={{ backgroundColor:"#2F6F9F", color:"white", borderRadius:"999px", padding:"14px", width:"100%", fontWeight:"bold" }}
               className="mb-2 sules-location-share">
-              {loadingGPS ? "📡 Mencari Lokasi..." : "📍 Bagikan Lokasi Saya"}
+              {loadingGPS ? "📡 Mencari lokasi akurat..." : "📍 Lokasi akurat"}
             </button>
-            {gpsMsg && <div className="text-xs text-red-600 mb-3">{gpsMsg}</div>}
-
-            <div className="text-center text-xs text-gray-400 my-2">atau</div>
-
-            <textarea value={alamatText} onChange={e=>{ setAlamatText(e.target.value); setLatLng(null, null); }}
-              placeholder="Tempel link Google Maps atau ketik alamat. Contoh link pendek: https://maps.app.goo.gl/xxx atau tempel langsung koordinat -7.xxx,112.xxx"
-              className="w-full border border-gray-300 rounded-xl p-3 mb-2 text-sm" rows="3"></textarea>
-            <button onClick={parseAlamat}
-              style={{ backgroundColor:"white", border:"1px solid #18324B", color:"#18324B", borderRadius:"12px", padding:"12px", width:"100%" }}
-              className="mb-2">📋 Parse Alamat / Link</button>
-            {parseMsg && <div className="text-xs text-red-600 mb-3">{parseMsg}</div>}
+            {gpsMsg && <div className="text-xs text-red-600 mb-3" role="alert">
+              {gpsMsg}
+              <button type="button" onClick={ambilLokasiGPS} disabled={loadingGPS} className="underline font-semibold ml-2 disabled:opacity-60">Coba lagi</button>
+            </div>}
 
             <div className="grid grid-cols-2 gap-2 mb-3">
               <div style={{ border: lat!==null ? "1px solid #10B981" : "1px solid #D1D5DB", backgroundColor: lat!==null ? "#ECFDF5" : "#F9FAFB", color: lat!==null ? "#065F46" : "#6B7280" }} className="rounded-xl p-2 text-xs">
