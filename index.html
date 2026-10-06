@@ -60,20 +60,29 @@
 
   async function getFunctionError(error) {
     let payload = null;
+    const response = error && error.context;
     try {
-      const response = error && error.context;
       if (response && typeof response.clone === "function") payload = await response.clone().json();
     } catch (_) {}
     const wrapped = new Error(payload && payload.error || error && error.message || "Permintaan ke layanan server gagal.");
     if (payload && typeof payload.code === "string") wrapped.code = payload.code;
+    if (response && Number.isInteger(response.status)) wrapped.status = response.status;
     return wrapped;
   }
 
   async function createBooking({ serviceId, jumlahOrang, tanggal, jamMulai, tipeLokasi, alamat, lat, lng }) {
     const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
-    if (sessionError) throw sessionError;
+    if (sessionError) {
+      const error = new Error("Sesi pelanggan belum dapat diperiksa. Periksa koneksi, lalu coba lagi.");
+      error.bookingRequestNotSent = true;
+      throw error;
+    }
     const accessToken = sessionData && sessionData.session && sessionData.session.access_token;
-    if (!accessToken) throw new Error("Silakan masuk sebelum membuat booking.");
+    if (!accessToken) {
+      const error = new Error("Silakan masuk sebelum membuat booking.");
+      error.bookingRequestNotSent = true;
+      throw error;
+    }
     const { data, error } = await supabaseClient.functions.invoke("create-booking", {
       body: { serviceId, jumlahOrang, tanggal, jamMulai, tipeLokasi, alamat: alamat ?? null, lat: lat ?? null, lng: lng ?? null },
       headers: { Authorization: `Bearer ${accessToken}`, apikey: SUPABASE_ANON_KEY }
@@ -1044,6 +1053,9 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   const [submitting, setSubmitting] = useState(false);
   const bookingSubmitLockRef = useRef(false);
   const [loadingStatus, setLoadingStatus] = useState(false);
+  const [statusError, setStatusError] = useState("");
+  const [bookingOutcomeUncertain, setBookingOutcomeUncertain] = useState(false);
+  const [bookingRetrySafe, setBookingRetrySafe] = useState(false);
   const [formError, setFormError] = useState("");
   const [jarakError, setJarakError] = useState("");
 
@@ -1086,6 +1098,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       return "Email belum dapat dikirim saat ini. Coba lagi nanti atau hubungi Admin.";
     }
     if (/(network|fetch|timeout|connection|offline|load failed)/.test(detail)) {
+      if (stage === "verify") return "Verifikasi belum dapat dipastikan karena koneksi terganggu. Kode tetap tersimpan; jika belum masuk, periksa koneksi lalu coba lagi.";
       return "Kode belum dapat dikirim. Periksa koneksi atau coba lagi beberapa saat.";
     }
     if (/(invalid.*email|email.*invalid|valid.*email)/.test(detail)) {
@@ -1142,7 +1155,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       if (!active) return;
       setCustomerProfile(null);
       setProfileStatus("error");
-      setProfileError((e && e.message) || "Profil pelanggan tidak dapat dimuat. Coba lagi.");
+      setProfileError("Profil pelanggan belum dapat dimuat. Periksa koneksi lalu coba lagi.");
     });
     return () => { active = false; };
   }, [customerSession && customerSession.user && customerSession.user.id, profileReloadKey]);
@@ -1406,8 +1419,10 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   const bookingJourneyHint = bookingJourneyStep === 2 ? "Pilih tanggal layanan." : bookingJourneyStep === 3 ? "Pilih waktu yang tersedia." : bookingJourneyStep === 4 ? "Lengkapi lokasi dan hitung jarak jalan." : "Tinjau ringkasan booking sebelum mengirim.";
 
   const konfirmasiBooking = async () => {
-    if (bookingSubmitLockRef.current) return;
+    if (bookingSubmitLockRef.current || bookingOutcomeUncertain) return;
     setFormError("");
+    setStatusError("");
+    setBookingRetrySafe(false);
     if (!isCustomerProfileComplete(customerProfile) || profileStatus !== "complete") {
       setProfileStatus("incomplete");
       setProfileError("Lengkapi profil Nama dan nomor WhatsApp yang valid sebelum membuat booking.");
@@ -1440,12 +1455,27 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       setScreen("status");
       setTanggal(""); setJam("");
       resetLokasi();
+      setBookingOutcomeUncertain(false);
     } catch (e) {
       if (e && e.code === "PROFIL_BELUM_LENGKAP") {
+        setBookingOutcomeUncertain(false);
+        setBookingRetrySafe(false);
         setProfileError(e.message || "Lengkapi profil Nama dan nomor WhatsApp yang valid sebelum membuat booking.");
         setProfileReloadKey(key => key + 1);
+      } else if (e && e.bookingRequestNotSent) {
+        setBookingOutcomeUncertain(false);
+        setBookingRetrySafe(true);
+        setFormError(e.message || "Booking belum terkirim. Periksa koneksi lalu coba lagi.");
+      } else if (e && Number.isInteger(e.status) && e.status >= 400 && e.status < 500) {
+        setBookingOutcomeUncertain(false);
+        setBookingRetrySafe(e.status !== 401);
+        setFormError(e.status === 401
+          ? "Sesi pelanggan tidak valid atau telah berakhir. Masuk kembali sebelum membuat booking."
+          : (e.message || "Booking belum dapat diproses. Periksa tanggal, waktu, dan data lokasi."));
       } else {
-        setFormError(e.message || "Terjadi kesalahan saat menyimpan booking, coba lagi.");
+        setBookingOutcomeUncertain(true);
+        setBookingRetrySafe(false);
+        setFormError("Koneksi atau layanan terputus sebelum hasil booking dapat dipastikan. Jangan kirim ulang dulu; periksa Pesanan Aktif.");
       }
     } finally {
       bookingSubmitLockRef.current = false;
@@ -1455,17 +1485,24 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
 
   const refreshStatus = async () => {
     if (!currentBooking || !currentBooking.booking_id || !(customerSession && customerSession.user && customerSession.user.id)) return;
+    setStatusError("");
     setLoadingStatus(true);
     try {
       const b = await window.bookingService.getCustomerBookingById(currentBooking.booking_id);
-      if (b) setCurrentBooking(prev => ({ ...prev, status: b.status, grand_total: b.grand_total }));
+      if (b) {
+        setCurrentBooking(prev => ({ ...prev, status: b.status, grand_total: b.grand_total }));
+        setStatusError("");
+      }
       else {
         if (localStorage.getItem(LAST_BOOKING_ID_KEY) === currentBooking.booking_id) localStorage.removeItem(LAST_BOOKING_ID_KEY);
         setCurrentBooking(prev => prev && prev.booking_id === currentBooking.booking_id ? null : prev);
         setScreen("form");
       }
-    } catch (e) { /* biarkan status lama tampil kalau gagal refresh */ }
-    setLoadingStatus(false);
+    } catch (e) {
+      setStatusError("Status belum dapat diperbarui. Informasi terakhir tetap ditampilkan; coba lagi.");
+    } finally {
+      setLoadingStatus(false);
+    }
   };
 
   useEffect(() => {
@@ -1491,6 +1528,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
           return;
         }
         const previousSnapshot = customerStatusSnapshotRef.current;
+        setStatusError("");
         if (previousSnapshot && previousSnapshot.bookingId === bookingId) {
           try {
             window.bookingService.notifyCustomerBookingStatusChanged(bookingId, previousSnapshot.status, b.status);
@@ -1500,7 +1538,9 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
         setCurrentBooking(prev => prev && prev.booking_id === bookingId
           ? { ...prev, status: b.status, grand_total: b.grand_total }
           : prev);
-      }).catch(() => {}).finally(() => {
+      }).catch(() => {
+        if (active) setStatusError("Pembaruan status belum dapat diterima. Status terakhir tetap ditampilkan; coba cek manual.");
+      }).finally(() => {
         refreshInFlight = false;
         if (active && refreshQueued) {
           refreshQueued = false;
@@ -1686,9 +1726,10 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
         {typeof onGoToOrders === "function" && <button type="button" onClick={onGoToOrders}
           style={{ backgroundColor:"#18324B", color:"white", fontWeight:"bold", padding:"14px", borderRadius:"14px", width:"100%" }}
           className="mb-3">Lihat Pesanan Aktif <span aria-hidden="true">→</span></button>}
+        {statusError && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert">{statusError}</div>}
         <button onClick={refreshStatus} disabled={loadingStatus}
           style={{ backgroundColor:"#18324B", color:"white", fontWeight:"bold", padding:"14px", borderRadius:"14px", width:"100%" }}
-          className="mb-2">{loadingStatus ? "Memuat..." : "🔄 Cek Status Terbaru"}</button>
+          className="mb-2">{loadingStatus ? "Memuat..." : statusError ? "Coba Lagi Periksa Status" : "🔄 Cek Status Terbaru"}</button>
         <button onClick={()=>{ localStorage.removeItem(LAST_BOOKING_ID_KEY); setCurrentBooking(null); setScreen("form"); }}
           style={{ backgroundColor:"white", border:"1px solid #18324B", color:"#18324B", padding:"14px", borderRadius:"14px", width:"100%" }}>
           Buat Booking Baru
@@ -1878,13 +1919,15 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       </div>
 
       {formError && (
-        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3">
-          ⚠️ {formError}
+        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert">
+          <div>⚠️ {formError}</div>
+          {bookingRetrySafe && <button type="button" disabled={submitting} onClick={()=>void konfirmasiBooking()} className="underline font-semibold mt-2 disabled:opacity-60">{submitting ? "Mengirim..." : "Coba Lagi"}</button>}
+          {bookingOutcomeUncertain && typeof onGoToOrders === "function" && <button type="button" onClick={onGoToOrders} className="underline font-semibold mt-2 block">Periksa Pesanan Aktif</button>}
         </div>
       )}
-      <button onClick={konfirmasiBooking} disabled={submitting}
-        style={{ backgroundColor:"#047857", color:"white", fontWeight:"bold", padding:"16px", borderRadius:"16px", width:"100%", boxShadow:"0 4px 12px rgba(0,0,0,0.15)", opacity: submitting?0.7:1 }} className="sules-primary">
-        {submitting ? "Mengirim..." : "Kirim Pesanan"}
+      <button onClick={konfirmasiBooking} disabled={submitting || bookingOutcomeUncertain}
+        style={{ backgroundColor:"#047857", color:"white", fontWeight:"bold", padding:"16px", borderRadius:"16px", width:"100%", boxShadow:"0 4px 12px rgba(0,0,0,0.15)", opacity: submitting || bookingOutcomeUncertain?0.7:1 }} className="sules-primary">
+        {submitting ? "Mengirim..." : bookingOutcomeUncertain ? "Periksa Pesanan Aktif dahulu" : "Kirim Pesanan"}
       </button>
     </div>
   );
@@ -2087,6 +2130,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
   const [session, setSession] = useState(null);
   const [checkingSession, setCheckingSession] = useState(true);
   const [sessionError, setSessionError] = useState("");
+  const [sessionRetryKey, setSessionRetryKey] = useState(0);
   const [view, setView] = useState(initialView === "history" ? "history" : "active");
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -2106,6 +2150,12 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
   const reloadRef = useRef(null);
   const currentCustomerIdRef = useRef("");
   const customerId = session && session.user ? session.user.id : "";
+
+  function retryCustomerSessionCheck() {
+    setCheckingSession(true);
+    setSessionError("");
+    setSessionRetryKey(key => key + 1);
+  }
 
   function applyCustomerSession(nextSession) {
     const nextCustomerId = nextSession && nextSession.user ? nextSession.user.id : "";
@@ -2131,6 +2181,8 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
 
   useEffect(() => {
     let mounted = true;
+    setCheckingSession(true);
+    setSessionError("");
     const authSubscription = window.bookingService.subscribeCustomerAuthChanges((_event, nextSession) => {
       if (!mounted) return;
       applyCustomerSession(nextSession);
@@ -2139,8 +2191,8 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
     });
     window.bookingService.getCustomerSession().then(currentSession => {
       if (mounted) applyCustomerSession(currentSession);
-    }).catch(e => {
-      if (mounted) setSessionError((e && e.message) || "Gagal memeriksa sesi pelanggan.");
+    }).catch(() => {
+      if (mounted) setSessionError("Sesi pelanggan belum dapat diperiksa. Periksa koneksi lalu coba lagi.");
     }).finally(() => {
       if (mounted) setCheckingSession(false);
     });
@@ -2148,7 +2200,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
       mounted = false;
       window.bookingService.removeCustomerAuthSubscription(authSubscription);
     };
-  }, []);
+  }, [sessionRetryKey]);
 
   useEffect(() => () => {
     aliveRef.current = false;
@@ -2295,6 +2347,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
         <div className="sules-eyebrow">BOOKING ANDA</div>
         <h2 className="text-lg font-bold mt-2">Masuk untuk melihat pesanan aktif</h2>
         <p className="text-sm text-gray-500 mt-1 mb-4">Status dan riwayat hanya ditampilkan untuk akun pelanggan Anda.</p>
+        {sessionError && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert"><div>{sessionError}</div><button type="button" onClick={retryCustomerSessionCheck} className="underline font-semibold mt-1">Coba lagi</button></div>}
         <button type="button" className="sules-primary" onClick={onGoToBooking}>Masuk &amp; Pesan</button>
       </section>
       <div className="grid grid-cols-2 gap-3 mt-3">
@@ -2306,7 +2359,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
     return <div className="max-w-md mx-auto px-4 py-12"><div className="bg-white rounded-2xl p-6 border border-gray-200">
       <h2 className="text-lg font-bold mb-2">Pesanan Aktif &amp; Riwayat</h2>
       <p className="text-sm text-gray-600 mb-4">Masuk dengan akun pelanggan yang digunakan saat booking untuk melihat pesanan milik Anda.</p>
-      {sessionError && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert">{sessionError}</div>}
+      {sessionError && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert"><div>{sessionError}</div><button type="button" onClick={retryCustomerSessionCheck} className="underline font-semibold mt-1">Coba lagi</button></div>}
       <button onClick={onGoToBooking} className="sules-primary w-full rounded-xl px-4 py-3 font-bold text-white" style={{backgroundColor:"#18324B"}}>Buka Booking &amp; Masuk</button>
     </div></div>;
   }
@@ -2329,7 +2382,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
       </section>
       <section className="sules-active-card" aria-label="Ringkasan booking aktif">
         <div className="flex items-center justify-between gap-2 mb-3"><div className="sules-eyebrow">BOOKING ANDA</div><span className="text-xs text-gray-500">DARI SUPABASE</span></div>
-        {error && <div className="text-sm text-red-700 mb-3" role="alert">{error}</div>}
+        {error && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert"><div>{error}</div><button type="button" disabled={loading || refreshing} onClick={()=>void fetchFirstPage(false)} className="underline font-semibold mt-1 disabled:opacity-60">{loading || refreshing ? "Memuat…" : "Coba lagi"}</button></div>}
         {(loading || checkingSession) && <div className="text-sm text-gray-500 py-3" role="status">Memuat booking aktif…</div>}
         {!loading && !error && !booking && <div><h2 className="text-lg font-bold">Belum ada pesanan aktif</h2><p className="text-sm text-gray-500 mt-1">Pilih layanan dan jadwalkan sesi pijat Anda.</p></div>}
         {!loading && !error && booking && <div className="sules-order-card p-4">
@@ -2338,7 +2391,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
           <div className="text-sm text-gray-500 mt-3">{booking.tipe_lokasi === "HOME_SERVICE" ? "Ke Rumah" : "Di Sules"}</div>
           <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-gray-200"><span className="text-xs text-gray-500">TOTAL</span><strong className="sules-price">{formatRupiah(booking.grand_total)}</strong></div>
         </div>}
-        {sessionError && <p className="text-xs text-red-600 mt-2">{sessionError}</p>}
+        {sessionError && <div className="text-xs text-red-700 mt-2" role="alert"><div>{sessionError}</div><button type="button" onClick={retryCustomerSessionCheck} className="underline font-semibold mt-1">Coba lagi</button></div>}
         <button type="button" className="w-full mt-4" onClick={onGoToOrders}>Lihat semua pesanan <span aria-hidden="true">→</span></button>
       </section>
       <div className="grid grid-cols-2 gap-3 mt-3">
