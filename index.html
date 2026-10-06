@@ -1042,6 +1042,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   const [currentBooking, setCurrentBooking] = useState(null);
   const customerStatusSnapshotRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
+  const bookingSubmitLockRef = useRef(false);
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [formError, setFormError] = useState("");
   const [jarakError, setJarakError] = useState("");
@@ -1401,6 +1402,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   const total = biayaLayanan + transport;
 
   const konfirmasiBooking = async () => {
+    if (bookingSubmitLockRef.current) return;
     setFormError("");
     if (!isCustomerProfileComplete(customerProfile) || profileStatus !== "complete") {
       setProfileStatus("incomplete");
@@ -1417,6 +1419,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       setFormError("Jarak jalan belum tersedia. Hitung ulang jarak Google Routes lalu coba booking lagi.");
       return;
     }
+    bookingSubmitLockRef.current = true;
     setSubmitting(true);
     try {
       const result = await window.bookingService.createBooking({
@@ -1440,8 +1443,10 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       } else {
         setFormError(e.message || "Terjadi kesalahan saat menyimpan booking, coba lagi.");
       }
+    } finally {
+      bookingSubmitLockRef.current = false;
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   const refreshStatus = async () => {
@@ -1567,7 +1572,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
                 {authMode === "login" ? "Masuk dengan email yang sudah terdaftar." : "Buat akun pelanggan baru menggunakan email."}
               </div>
               <label className="text-sm font-semibold block mb-1">Email</label>
-              <input type="email" autoComplete="email" autoCapitalize="none" spellCheck={false}
+              <input type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} disabled={authLoading}
                 value={custEmail} onChange={e=>{setCustEmail(e.target.value);setAuthMsg("");setAuthNotice("");}}
                 placeholder="nama@email.com"
                 className="w-full border border-gray-300 rounded-xl p-3 mb-3"
@@ -1585,7 +1590,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
               {authNotice && <div role="status" className="text-xs text-green-700 mb-3">{authNotice}</div>}
               {authMsg && <div role="alert" className="text-xs text-red-600 mb-3">{authMsg}</div>}
               <label className="text-sm font-semibold block mb-1">Kode dari Email</label>
-              <input type="text" inputMode="numeric" autoComplete="off" maxLength={8}
+              <input type="text" inputMode="numeric" autoComplete="off" maxLength={8} disabled={authLoading}
                 pattern="[0-9]{8}" aria-label="Kode OTP delapan digit"
                 value={otpCode} onChange={e=>{setOtpCode(e.target.value.replace(/\D/g,"").slice(0,8));setAuthMsg("");}}
                 placeholder="12345678"
@@ -1602,12 +1607,13 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
                 {authLoading ? "Mengirim ulang..." : otpCooldownRemaining > 0 ? `Kirim ulang dalam ${otpCooldownRemaining} detik` : "Kirim Ulang OTP"}
               </button>
               <button type="button" onClick={()=>{ setOtpSent(false); setOtpCode(""); setAuthMsg(""); setAuthNotice(""); }}
+                disabled={authLoading}
                 style={{ backgroundColor:"white", border:"1px solid #18324B", color:"#18324B", borderRadius:"12px", padding:"10px", width:"100%" }}>
                 Ganti Email / Mode
               </button>
             </React.Fragment>
           )}
-          {authOnly && <button type="button" onClick={onAuthCancel} className="w-full mt-2">Kembali ke Akun</button>}
+          {authOnly && <button type="button" onClick={onAuthCancel} disabled={authLoading} className="w-full mt-2">Kembali ke Akun</button>}
         </div>
       </div>
     );
@@ -2058,7 +2064,11 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState("");
   const [hideError, setHideError] = useState("");
+  const [hideErrorBookingId, setHideErrorBookingId] = useState("");
   const [hidingBookingId, setHidingBookingId] = useState("");
+  const loadingMoreLockRef = useRef(null);
+  const retryMoreRef = useRef(false);
+  const hideHistoryLockRef = useRef(null);
   const aliveRef = useRef(true);
   const fetchSequenceRef = useRef(0);
   const statusByIdRef = useRef(new Map());
@@ -2075,11 +2085,15 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
       setOrders([]);
       setHasMore(false);
       setError("");
-      setLoading(false);
+      setLoading(Boolean(nextCustomerId));
       setRefreshing(false);
       setLoadingMore(false);
       setHideError("");
+      setHideErrorBookingId("");
       setHidingBookingId("");
+      loadingMoreLockRef.current = null;
+      retryMoreRef.current = false;
+      hideHistoryLockRef.current = null;
     }
     setSession(nextSession || null);
   }
@@ -2131,8 +2145,12 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
       });
       setHasMore(page.length === window.bookingService.customerOrderPageSize);
       setError("");
+      retryMoreRef.current = false;
     } catch (e) {
-      if (aliveRef.current && requestId === fetchSequenceRef.current) setError((e && e.message) || "Gagal memuat pesanan. Coba lagi.");
+      if (aliveRef.current && requestId === fetchSequenceRef.current) {
+        retryMoreRef.current = false;
+        setError("Pesanan belum dapat dimuat saat ini. Silakan coba lagi.");
+      }
     } finally {
       if (aliveRef.current && requestId === fetchSequenceRef.current) {
         setLoading(false);
@@ -2171,12 +2189,15 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
   }, [customerId]);
 
   async function loadMore() {
-    if (!customerId || currentCustomerIdRef.current !== customerId || loadingMore || !hasMore) return;
+    if (!customerId || currentCustomerIdRef.current !== customerId || loadingMoreLockRef.current || !hasMore) return;
+    const requestCustomerId = customerId;
+    const requestToken = {};
+    loadingMoreLockRef.current = requestToken;
     setLoadingMore(true);
     setError("");
     try {
-      const page = await window.bookingService.getCustomerBookings(customerId, orders.length);
-      if (!aliveRef.current || currentCustomerIdRef.current !== customerId) return;
+      const page = await window.bookingService.getCustomerBookings(requestCustomerId, orders.length);
+      if (!aliveRef.current || currentCustomerIdRef.current !== requestCustomerId) return;
       page.forEach(row => statusByIdRef.current.set(row.id, row.status));
       setOrders(previous => {
         const merged = new Map(previous.map(row => [row.id, row]));
@@ -2184,30 +2205,49 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
         return Array.from(merged.values());
       });
       setHasMore(page.length === window.bookingService.customerOrderPageSize);
+      setError("");
+      retryMoreRef.current = false;
     } catch (e) {
-      setError((e && e.message) || "Gagal memuat riwayat berikutnya.");
+      if (aliveRef.current && currentCustomerIdRef.current === requestCustomerId) {
+        retryMoreRef.current = true;
+        setError("Halaman pesanan berikutnya belum dapat dimuat. Silakan coba lagi.");
+      }
     } finally {
-      if (aliveRef.current) setLoadingMore(false);
+      if (loadingMoreLockRef.current === requestToken) {
+        loadingMoreLockRef.current = null;
+        if (aliveRef.current) setLoadingMore(false);
+      }
     }
   }
 
   async function hideHistoryBooking(row) {
     if (!row || view !== "history" || !customerId ||
-        (row.status !== "SELESAI" && row.status !== "DITOLAK")) return;
+        (row.status !== "SELESAI" && row.status !== "DITOLAK") || hideHistoryLockRef.current) return;
     const requestCustomerId = customerId;
+    const requestToken = {};
+    hideHistoryLockRef.current = requestToken;
     setHideError("");
+    setHideErrorBookingId("");
     setHidingBookingId(row.id);
     try {
       const hidden = await window.bookingService.hideCustomerBooking(row.id);
       if (hidden !== true) throw new Error("Pesanan ini tidak dapat disembunyikan dari riwayat.");
       if (!aliveRef.current || currentCustomerIdRef.current !== requestCustomerId) return;
+      setHideError("");
+      setHideErrorBookingId("");
       statusByIdRef.current.delete(row.id);
       setOrders(previous => previous.filter(item => item.id !== row.id));
       await fetchFirstPage(true);
     } catch (e) {
-      if (aliveRef.current && currentCustomerIdRef.current === requestCustomerId) setHideError((e && e.message) || "Riwayat belum dapat disembunyikan. Coba lagi.");
+      if (aliveRef.current && currentCustomerIdRef.current === requestCustomerId) {
+        setHideError("Riwayat belum dapat disembunyikan. Silakan coba lagi.");
+        setHideErrorBookingId(row.id);
+      }
     } finally {
-      if (aliveRef.current && currentCustomerIdRef.current === requestCustomerId) setHidingBookingId("");
+      if (hideHistoryLockRef.current === requestToken) {
+        hideHistoryLockRef.current = null;
+        if (aliveRef.current && currentCustomerIdRef.current === requestCustomerId) setHidingBookingId("");
+      }
     }
   }
 
@@ -2285,13 +2325,13 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
       <button type="button" aria-pressed={view === "history"} onClick={()=>setView("history")} className="rounded-xl border px-3 py-3 text-sm font-semibold" style={{backgroundColor:view==="history"?"#18324B":"white",color:view==="history"?"white":"#18324B",borderColor:"#D9E5EF"}}>Riwayat ({historyOrders.length})</button>
     </div>
     {refreshing && <div className="text-xs text-gray-500 mb-2" role="status">Menyinkronkan perubahan…</div>}
-    {error && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert"><div>{error}</div><button onClick={()=>void fetchFirstPage(false)} className="underline font-semibold mt-1">Coba lagi</button></div>}
-    {hideError && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert">{hideError}</div>}
+    {error && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert"><div>{error}</div><button type="button" disabled={loading || refreshing || loadingMore} onClick={()=>void (retryMoreRef.current ? loadMore() : fetchFirstPage(false))} className="underline font-semibold mt-1 disabled:opacity-60">{loading || refreshing || loadingMore ? "Memuat…" : "Coba lagi"}</button></div>}
+    {hideError && view === "history" && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert"><div>{hideError}</div><button type="button" disabled={Boolean(hidingBookingId)} onClick={()=>{const row=orders.find(item=>item.id===hideErrorBookingId);if(row)void hideHistoryBooking(row);}} className="underline font-semibold mt-1 disabled:opacity-60">{hidingBookingId ? "Memproses…" : "Coba lagi"}</button></div>}
     {loading && orders.length === 0 && <div className="text-center text-gray-500 text-sm py-10" role="status">Memuat pesanan…</div>}
     {!loading && !error && visibleOrders.length === 0 && <div className="bg-white border border-gray-200 rounded-xl p-5 text-center text-sm text-gray-500"><p>{view === "active" ? "Belum ada pesanan aktif." : "Belum ada riwayat pesanan."}</p>{view === "active" && <button type="button" className="sules-primary mt-3" onClick={onGoToBooking}>Pesan Sekarang</button>}</div>}
     <div className="space-y-3">
       {visibleOrders.map(row => <article key={row.id} className="bg-white rounded-xl p-4 border border-gray-200 text-sm">
-        <div className="flex items-start justify-between gap-2 mb-2"><strong>{SERVICE_LABEL[row.service_id] || row.service_id} · {row.jumlah_orang} orang</strong><div className="flex items-center gap-2"><StatusBadge status={row.status} />{view === "history" && (row.status === "SELESAI" || row.status === "DITOLAK") && <button type="button" aria-label="Sembunyikan dari riwayat" title="Sembunyikan dari riwayat" disabled={hidingBookingId === row.id} onClick={() => void hideHistoryBooking(row)} className="rounded-full border border-gray-300 text-gray-500 hover:text-red-700 hover:border-red-300 disabled:opacity-50" style={{ width: 28, height: 28, lineHeight: "24px", fontSize: 18 }}>×</button>}</div></div>
+        <div className="flex items-start justify-between gap-2 mb-2"><strong>{SERVICE_LABEL[row.service_id] || row.service_id} · {row.jumlah_orang} orang</strong><div className="flex items-center gap-2"><StatusBadge status={row.status} />{view === "history" && (row.status === "SELESAI" || row.status === "DITOLAK") && <button type="button" aria-label={hidingBookingId === row.id ? "Menyembunyikan dari riwayat" : "Sembunyikan dari riwayat"} title={hidingBookingId === row.id ? "Sedang memproses" : "Sembunyikan dari riwayat"} aria-busy={hidingBookingId === row.id} disabled={Boolean(hidingBookingId)} onClick={() => void hideHistoryBooking(row)} className="rounded-full border border-gray-300 text-gray-500 hover:text-red-700 hover:border-red-300 disabled:opacity-50" style={{ width: 28, height: 28, lineHeight: "24px", fontSize: 18 }}>{hidingBookingId === row.id ? "…" : "×"}</button>}</div></div>
         <div className="grid grid-cols-2 gap-2 text-xs mb-2"><div><span className="text-gray-500 block">Tanggal</span>{row.tanggal}</div><div><span className="text-gray-500 block">Jam</span>{String(row.jam_mulai).slice(0,5)}</div></div>
         <div className="text-xs text-gray-600 mb-2">{row.tipe_lokasi === "HOME_SERVICE" ? "ke Rumah" : "Di Sules"} · {row.durasi_menit} menit</div>
         <div className="text-sm font-bold">Total: {formatRupiah(row.grand_total)}</div>
