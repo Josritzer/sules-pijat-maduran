@@ -124,6 +124,28 @@
     if (error) throw error;
     return data || [];
   }
+  async function getCustomerBookingSummary(customerId) {
+    const id = String(customerId || "");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      throw new Error("Sesi pelanggan tidak valid.");
+    }
+    const countForStatus = async status => {
+      let query = supabaseClient.from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("customer_id", id)
+        .is("disembunyikan_pelanggan_at", null);
+      if (status) query = query.eq("status", status);
+      const { count, error } = await query;
+      if (error) throw error;
+      if (!Number.isInteger(count) || count < 0) throw new Error("Jumlah booking belum dapat dihitung.");
+      return count;
+    };
+    const [total, menunggu, diterima, ditolak, selesai, dibatalkan] = await Promise.all([
+      countForStatus(null), countForStatus("MENUNGGU"), countForStatus("DITERIMA"),
+      countForStatus("DITOLAK"), countForStatus("SELESAI"), countForStatus("DIBATALKAN")
+    ]);
+    return { total, menunggu, diterima, ditolak, selesai, dibatalkan };
+  }
   async function getCustomerProfile(customerId) {
     const id = String(customerId || "");
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
@@ -363,18 +385,20 @@
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `id=eq.${id}` }, onChange)
       .subscribe();
   }
-  function subscribeCustomerOrders(customerId, onChange) {
+  function subscribeCustomerOrders(customerId, onChange, onStatusChange) {
     const id = String(customerId || "");
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
     return supabaseClient.channel(`sules-customer-orders-${id}-${++realtimeChannelSequence}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "bookings", filter: `customer_id=eq.${id}` }, onChange)
-      .subscribe();
+      .subscribe((status, error) => {
+        if (typeof onStatusChange === "function") onStatusChange(status, error);
+      });
   }
   async function removeRealtimeChannel(channel) {
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { createBooking, getCustomerBookingById, getCustomerBookings, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+  window.bookingService = { createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -1056,7 +1080,7 @@ function isCustomerProfileComplete(profile) {
 }
 
 /* ================= TAB BOOKING (PELANGGAN) ================= */
-function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = false, initialAuthMode = "login", onAuthComplete = null, onAuthCancel = null, onCustomerSessionChange = null, onGoToOrders = null } = {}) {
+function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = false, initialAuthMode = "login", onAuthComplete = null, onAuthCancel = null, onCustomerSessionChange = null, onGoToOrders = null, externalCustomerSession = null, customerSessionReady = true, customerSessionError = "", onRetryCustomerSession = null } = {}) {
   const [customerProfile, setCustomerProfile] = useState(null);
   const [profileStatus, setProfileStatus] = useState("idle");
   const [profileNama, setProfileNama] = useState("");
@@ -1149,19 +1173,11 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   };
 
   useEffect(() => {
-    let active = true;
-    withCustomerReadTimeout(() => window.bookingService.getCustomerSession()).then(session => {
-      if (!active) return;
-      setCustomerSession(session);
-    }).catch(() => {
-      if (!active) return;
-      setCustomerSession(null);
-      setAuthMsg("Sesi belum dapat diperiksa. Periksa koneksi, lalu coba lagi.");
-    }).finally(() => {
-      if (active) setCheckingSession(false);
-    });
-    return () => { active = false; };
-  }, []);
+    if (!customerSessionReady) { setCheckingSession(true); return; }
+    setCustomerSession(externalCustomerSession || null);
+    setCheckingSession(false);
+    if (!customerSessionError) setAuthMsg("");
+  }, [externalCustomerSession, customerSessionReady, customerSessionError]);
 
   useEffect(() => {
     if (!authOnly || !customerSession || !onAuthComplete || authCompletionNotifiedRef.current) return;
@@ -1629,6 +1645,16 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
 
   if (checkingSession) {
     return <div className="text-center text-gray-400 text-sm py-16">Memuat...</div>;
+  }
+
+  if (!customerSession && customerSessionError) {
+    return <div className="max-w-md mx-auto px-4 py-12">
+      <section className="bg-white rounded-2xl border border-gray-200 p-6" aria-labelledby="customer-session-error-title">
+        <h2 id="customer-session-error-title" className="text-lg font-bold mb-2">Sesi akun belum dapat dipastikan</h2>
+        <p className="text-sm text-red-700 mb-4" role="alert">{customerSessionError}</p>
+        {typeof onRetryCustomerSession === "function" && <button type="button" className="sules-primary w-full" onClick={onRetryCustomerSession}>Coba lagi</button>}
+      </section>
+    </div>;
   }
 
   if (authOnly && customerSession) {
@@ -2165,29 +2191,213 @@ function CatalogTab({ onBookPackage }) {
   </div>;
 }
 
-function NotificationsTab({ onGoToOrders }) {
-  return <div className="sules-notifications-screen">
-    <div className="sules-page-heading"><div className="sules-eyebrow">Pusat informasi</div><h1 className="text-2xl font-bold mt-1">Notifikasi</h1><p className="text-sm text-gray-500 mt-1">Pembaruan yang tersedia untuk Anda.</p></div>
-    <section className="sules-empty-state" aria-labelledby="notifications-empty-title">
-      <div className="sules-empty-icon"><SulesNavIcon name="bell" /></div>
-      <h2 id="notifications-empty-title" className="text-lg font-bold">Belum ada notifikasi</h2>
-      <p>Informasi terbaru tentang pesananmu akan muncul di sini.</p>
-      <button type="button" className="sules-primary" onClick={onGoToOrders}>Lihat Pesanan</button>
-    </section>
+function CustomerBookingSummary({ summary, loading, error, onRetry, className = "" }) {
+  const metrics = summary ? [
+    ["Total booking", summary.total], ["Menunggu", summary.menunggu], ["Diterima", summary.diterima],
+    ["Selesai", summary.selesai], ["Ditolak", summary.ditolak], ["Dibatalkan", summary.dibatalkan]
+  ] : [];
+  return <section className={`sules-active-card ${className}`.trim()} aria-label="Rekap booking pelanggan">
+    <div className="sules-eyebrow">REKAP BOOKING</div>
+    {loading && !summary && <p role="status" className="text-sm text-gray-500 mt-3">Memuat rekap booking…</p>}
+    {error && <div role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mt-3">
+      <p>{error}</p><button type="button" onClick={onRetry} disabled={loading} className="underline font-semibold mt-1 disabled:opacity-60">{loading ? "Memuat…" : "Coba lagi"}</button>
+    </div>}
+    {summary && <div className="grid grid-cols-2 gap-2 mt-3">
+      {metrics.map(([label, value]) => <div key={label} className="bg-white border border-gray-200 rounded-xl p-3">
+        <div className="text-xs text-gray-500">{label}</div><strong className="block text-lg mt-1" style={{color:"#18324B"}}>{value}</strong>
+      </div>)}
+      {loading && <p role="status" className="col-span-2 text-xs text-gray-500">Memperbarui rekap…</p>}
+    </div>}
+  </section>;
+}
+
+function CustomerRealtimeNotice({ error, onRetry }) {
+  if (!error) return null;
+  return <div role="alert" className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3">
+    <p>{error}</p><button type="button" onClick={onRetry} className="underline font-semibold mt-1">Coba lagi</button>
   </div>;
 }
 
-function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToCatalog, onOpenPublicSection, mode = "orders", initialView = "active" }) {
-  const [session, setSession] = useState(null);
-  const [checkingSession, setCheckingSession] = useState(true);
-  const [sessionError, setSessionError] = useState("");
-  const [sessionRetryKey, setSessionRetryKey] = useState(0);
+function NotificationsTab({ customerSession, customerSessionReady, customerSessionError, onRetryCustomerSession, onCustomerAuth, onGoToOrders }) {
+  const customerId = customerSession && customerSession.user && customerSession.user.id;
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [error, setError] = useState("");
+  const [moreError, setMoreError] = useState("");
+  const [realtimeError, setRealtimeError] = useState("");
+  const [realtimeRetryKey, setRealtimeRetryKey] = useState(0);
+  const requestSequenceRef = useRef(0);
+  const nextOffsetRef = useRef(0);
+  const loadingMoreRef = useRef(false);
+  const aliveRef = useRef(false);
+  const pageSize = Number(window.bookingService.customerOrderPageSize) || 50;
+  const statusMessages = {
+    MENUNGGU: ["Booking menunggu", "Permintaan booking Anda sedang menunggu diproses Admin."],
+    DITERIMA: ["Booking diterima", "Admin telah menerima booking Anda."],
+    DITOLAK: ["Booking ditolak", "Admin menolak booking Anda. Anda dapat membuat booking kembali."],
+    SELESAI: ["Pesanan selesai", "Layanan Anda telah selesai."],
+    DIBATALKAN: ["Booking dibatalkan", "Booking ini berstatus dibatalkan."]
+  };
+
+  async function loadNotifications(silent = false, merge = false) {
+    if (!customerId) return;
+    const requestId = ++requestSequenceRef.current;
+    if (silent) setRefreshing(true); else setLoading(true);
+    setError("");
+    try {
+      const rows = await withCustomerReadTimeout(() => window.bookingService.getCustomerBookings(customerId, 0));
+      if (!aliveRef.current || requestId !== requestSequenceRef.current) return;
+      const fetchedRows = Array.isArray(rows) ? rows : [];
+      const current = fetchedRows.filter(row => row && row.id && statusMessages[row.status]);
+      if (!merge) nextOffsetRef.current = fetchedRows.length;
+      setHasMore(fetchedRows.length === pageSize);
+      setNotifications(previous => {
+        if (!merge) return current;
+        const next = new Map(previous.map(row => [row.id, row]));
+        current.forEach(row => next.set(row.id, row));
+        return Array.from(next.values()).sort((a,b) => String(b.updated_at || b.created_at || "").localeCompare(String(a.updated_at || a.created_at || "")));
+      });
+      setError("");
+    } catch (_) {
+      if (aliveRef.current && requestId === requestSequenceRef.current) setError("Notifikasi booking belum dapat dimuat. Periksa koneksi lalu coba lagi.");
+    } finally {
+      if (aliveRef.current && requestId === requestSequenceRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    }
+  }
+
+  async function loadMoreNotifications() {
+    if (!customerId || loadingMoreRef.current || !hasMore) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    setMoreError("");
+    const offset = nextOffsetRef.current;
+    try {
+      const rows = await withCustomerReadTimeout(() => window.bookingService.getCustomerBookings(customerId, offset));
+      if (!aliveRef.current) return;
+      const fetchedRows = Array.isArray(rows) ? rows : [];
+      const current = fetchedRows.filter(row => row && row.id && statusMessages[row.status]);
+      setNotifications(previous => {
+        const next = new Map(previous.map(row => [row.id, row]));
+        current.forEach(row => next.set(row.id, row));
+        return Array.from(next.values()).sort((a,b) => String(b.updated_at || b.created_at || "").localeCompare(String(a.updated_at || a.created_at || "")));
+      });
+      nextOffsetRef.current = offset + fetchedRows.length;
+      setHasMore(fetchedRows.length === pageSize);
+    } catch (_) {
+      if (aliveRef.current) setMoreError("Notifikasi lama belum dapat dimuat. Data yang sudah tampil tetap tersedia.");
+    } finally {
+      loadingMoreRef.current = false;
+      if (aliveRef.current) setLoadingMore(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!customerId) { setNotifications([]); setHasMore(false); nextOffsetRef.current = 0; setRealtimeError(""); return; }
+    aliveRef.current = true;
+    let active = true;
+    let refreshTimer = null;
+    const channel = window.bookingService.subscribeCustomerOrders(customerId, payload => {
+      if (!active) return;
+      const row = payload && payload.new;
+      const oldRow = payload && payload.old;
+      const eventType = payload && payload.eventType;
+      if (eventType === "DELETE" && oldRow && oldRow.id) {
+        setNotifications(previous => {
+          const existed = previous.some(item => item.id === oldRow.id);
+          if (existed) nextOffsetRef.current = Math.max(0, nextOffsetRef.current - 1);
+          return previous.filter(item => item.id !== oldRow.id);
+        });
+      } else if (row && row.id && row.customer_id === customerId) {
+        setNotifications(previous => {
+          const existed = previous.some(item => item.id === row.id);
+          if (row.disembunyikan_pelanggan_at || !statusMessages[row.status]) {
+            if (existed) nextOffsetRef.current = Math.max(0, nextOffsetRef.current - 1);
+            return previous.filter(item => item.id !== row.id);
+          }
+          if (eventType === "INSERT" && !existed && nextOffsetRef.current > 0) nextOffsetRef.current += 1;
+          const next = new Map(previous.map(item => [item.id, item]));
+          next.set(row.id, row);
+          return Array.from(next.values()).sort((a,b) => String(b.updated_at || b.created_at || "").localeCompare(String(a.updated_at || a.created_at || "")));
+        });
+      }
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => {
+        refreshTimer = null;
+        if (active) void loadNotifications(true, true);
+      }, 120);
+    }, status => {
+      if (!active) return;
+      if (status === "SUBSCRIBED") setRealtimeError("");
+      else if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) setRealtimeError("Pembaruan langsung belum tersambung. Notifikasi yang sudah dimuat tetap tersedia.");
+    });
+    setRealtimeError("");
+    if (realtimeRetryKey > 0) void loadNotifications(true, true);
+    else void loadNotifications(false);
+    return () => {
+      active = false;
+      aliveRef.current = false;
+      requestSequenceRef.current += 1;
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+      void window.bookingService.removeRealtimeChannel(channel);
+    };
+  }, [customerId, realtimeRetryKey]);
+
+  return <div className="sules-notifications-screen">
+    <div className="sules-page-heading"><div className="sules-eyebrow">Pusat informasi</div><h1 className="text-2xl font-bold mt-1">Notifikasi</h1><p className="text-sm text-gray-500 mt-1">Pembaruan ini berasal dari status booking akun Anda.</p></div>
+    {!customerSessionReady ? <div role="status" className="sules-active-card">Memeriksa sesi akun…</div>
+      : !customerSession && customerSessionError ? <div role="alert" className="sules-active-card text-sm text-red-700">{customerSessionError}<button type="button" onClick={onRetryCustomerSession} className="underline font-semibold block mt-2">Coba lagi</button></div>
+      : !customerSession ? <section className="sules-empty-state" aria-labelledby="notifications-login-title">
+        <div className="sules-empty-icon"><SulesNavIcon name="bell" /></div><h2 id="notifications-login-title" className="text-lg font-bold">Masuk untuk melihat notifikasi</h2>
+        <p>Notifikasi hanya ditampilkan untuk akun pelanggan yang sedang masuk.</p><button type="button" className="sules-primary" onClick={()=>onCustomerAuth("login")}>Masuk</button>
+      </section> : <>
+        {customerSessionError && <div role="alert" className="sules-active-card text-sm text-red-700 mb-3">{customerSessionError}<button type="button" onClick={onRetryCustomerSession} className="underline font-semibold block mt-2">Coba lagi</button></div>}
+        {refreshing && <p role="status" className="text-xs text-gray-500 mb-2">Menyinkronkan pembaruan…</p>}
+        {error && <div role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3"><p>{error}</p>
+          <button type="button" disabled={loading || refreshing} onClick={()=>void loadNotifications(true, true)} className="underline font-semibold mt-1 disabled:opacity-60">{loading || refreshing ? "Memuat…" : "Coba lagi"}</button>
+        </div>}
+        <CustomerRealtimeNotice error={realtimeError} onRetry={()=>setRealtimeRetryKey(key => key + 1)} />
+        {loading && notifications.length === 0 && <div role="status" className="sules-active-card text-sm text-gray-500">Memuat notifikasi booking…</div>}
+        {!loading && !error && notifications.length === 0 && <section className="sules-empty-state" aria-labelledby="notifications-empty-title">
+          <div className="sules-empty-icon"><SulesNavIcon name="bell" /></div><h2 id="notifications-empty-title" className="text-lg font-bold">Belum ada notifikasi</h2>
+          <p>Informasi status akan muncul setelah akun ini memiliki booking.</p><button type="button" className="sules-primary" onClick={()=>onGoToOrders("active")}>Lihat Pesanan</button>
+        </section>}
+        <div className="space-y-3">
+          {notifications.filter(row => statusMessages[row.status]).map(row => {
+            const [title, message] = statusMessages[row.status];
+            const view = row.status === "MENUNGGU" || row.status === "DITERIMA" ? "active" : "history";
+            return <article key={row.id} className="bg-white rounded-xl p-4 border border-gray-200 text-sm">
+              <div className="flex items-start justify-between gap-2"><div><h2 className="font-bold" style={{color:"#18324B"}}>{title}</h2>
+                <p className="text-gray-600 mt-1">{message}</p></div><StatusBadge status={row.status} /></div>
+              <p className="text-xs text-gray-500 mt-3">{SERVICE_LABEL[row.service_id] || row.service_id} · {row.tanggal} · {String(row.jam_mulai).slice(0,5)}</p>
+              <button type="button" className="underline font-semibold mt-3" onClick={()=>onGoToOrders(view)}>Lihat pesanan</button>
+            </article>;
+          })}
+        </div>
+        {moreError && <div role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mt-3"><p>{moreError}</p><button type="button" disabled={loadingMore} onClick={()=>void loadMoreNotifications()} className="underline font-semibold mt-1 disabled:opacity-60">{loadingMore ? "Memuat…" : "Coba lagi"}</button></div>}
+        {hasMore && <button type="button" disabled={loadingMore} onClick={()=>void loadMoreNotifications()} className="sules-secondary w-full mt-3 disabled:opacity-60">{loadingMore ? "Memuat notifikasi…" : "Muat notifikasi sebelumnya"}</button>}
+      </>}
+  </div>;
+}
+
+function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToCatalog, onOpenPublicSection, customerSession: session, customerSessionReady, customerSessionError: sessionError, onRetryCustomerSession: retryCustomerSessionCheck, mode = "orders", initialView = "active" }) {
+  const checkingSession = !customerSessionReady;
   const [view, setView] = useState(initialView === "history" ? "history" : "active");
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  const [bookingSummary, setBookingSummary] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState("");
+  const [realtimeError, setRealtimeError] = useState("");
+  const [realtimeRetryKey, setRealtimeRetryKey] = useState(0);
   const [error, setError] = useState("");
   const [hideError, setHideError] = useState("");
   const [hideErrorBookingId, setHideErrorBookingId] = useState("");
@@ -2197,61 +2407,36 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
   const hideHistoryLockRef = useRef(null);
   const aliveRef = useRef(true);
   const fetchSequenceRef = useRef(0);
+  const summarySequenceRef = useRef(0);
   const statusByIdRef = useRef(new Map());
   const reloadRef = useRef(null);
   const currentCustomerIdRef = useRef("");
   const customerId = session && session.user ? session.user.id : "";
 
-  function retryCustomerSessionCheck() {
-    setCheckingSession(true);
-    setSessionError("");
-    setSessionRetryKey(key => key + 1);
-  }
-
-  function applyCustomerSession(nextSession) {
-    const nextCustomerId = nextSession && nextSession.user ? nextSession.user.id : "";
-    if (currentCustomerIdRef.current !== nextCustomerId) {
-      currentCustomerIdRef.current = nextCustomerId;
-      fetchSequenceRef.current += 1;
-      statusByIdRef.current.clear();
-      setOrders([]);
-      setHasMore(false);
-      setError("");
-      setLoading(Boolean(nextCustomerId));
-      setRefreshing(false);
-      setLoadingMore(false);
-      setHideError("");
-      setHideErrorBookingId("");
-      setHidingBookingId("");
-      loadingMoreLockRef.current = null;
-      retryMoreRef.current = false;
-      hideHistoryLockRef.current = null;
-    }
-    setSession(nextSession || null);
-  }
-
   useEffect(() => {
-    let mounted = true;
-    setCheckingSession(true);
-    setSessionError("");
-    const authSubscription = window.bookingService.subscribeCustomerAuthChanges((_event, nextSession) => {
-      if (!mounted) return;
-      applyCustomerSession(nextSession);
-      setSessionError("");
-      setCheckingSession(false);
-    });
-    withCustomerReadTimeout(() => window.bookingService.getCustomerSession()).then(currentSession => {
-      if (mounted) applyCustomerSession(currentSession);
-    }).catch(() => {
-      if (mounted) setSessionError("Sesi pelanggan belum dapat diperiksa. Periksa koneksi lalu coba lagi.");
-    }).finally(() => {
-      if (mounted) setCheckingSession(false);
-    });
-    return () => {
-      mounted = false;
-      window.bookingService.removeCustomerAuthSubscription(authSubscription);
-    };
-  }, [sessionRetryKey]);
+    const nextCustomerId = customerId || "";
+    if (currentCustomerIdRef.current === nextCustomerId) return;
+    currentCustomerIdRef.current = nextCustomerId;
+    fetchSequenceRef.current += 1;
+    summarySequenceRef.current += 1;
+    statusByIdRef.current.clear();
+    setOrders([]);
+    setHasMore(false);
+    setBookingSummary(null);
+    setSummaryError("");
+    setRealtimeError("");
+    setSummaryLoading(Boolean(nextCustomerId));
+    setError("");
+    setLoading(Boolean(nextCustomerId));
+    setRefreshing(false);
+    setLoadingMore(false);
+    setHideError("");
+    setHideErrorBookingId("");
+    setHidingBookingId("");
+    loadingMoreLockRef.current = null;
+    retryMoreRef.current = false;
+    hideHistoryLockRef.current = null;
+  }, [customerId]);
 
   useEffect(() => () => {
     aliveRef.current = false;
@@ -2296,6 +2481,26 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
   }
   reloadRef.current = fetchFirstPage;
 
+  async function fetchBookingSummary() {
+    if (!customerId || currentCustomerIdRef.current !== customerId) return;
+    const requestCustomerId = customerId;
+    const requestId = ++summarySequenceRef.current;
+    setSummaryLoading(true);
+    setSummaryError("");
+    try {
+      const summary = await withCustomerReadTimeout(() => window.bookingService.getCustomerBookingSummary(requestCustomerId));
+      if (!aliveRef.current || currentCustomerIdRef.current !== requestCustomerId || requestId !== summarySequenceRef.current) return;
+      setBookingSummary(summary);
+      setSummaryError("");
+    } catch (_) {
+      if (aliveRef.current && currentCustomerIdRef.current === requestCustomerId && requestId === summarySequenceRef.current) {
+        setSummaryError("Rekap booking belum dapat dimuat. Periksa koneksi lalu coba lagi.");
+      }
+    } finally {
+      if (aliveRef.current && currentCustomerIdRef.current === requestCustomerId && requestId === summarySequenceRef.current) setSummaryLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (!customerId) return;
     let active = true;
@@ -2313,16 +2518,24 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
       if (refreshTimer !== null) window.clearTimeout(refreshTimer);
       refreshTimer = window.setTimeout(() => {
         refreshTimer = null;
-        if (active && reloadRef.current) void reloadRef.current(true);
+        if (active && reloadRef.current) {
+          void reloadRef.current(true);
+          void fetchBookingSummary();
+        }
       }, 120);
+    }, status => {
+      if (!active || currentCustomerIdRef.current !== customerId) return;
+      if (status === "SUBSCRIBED") setRealtimeError("");
+      else if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) setRealtimeError("Pembaruan langsung belum tersambung. Data pesanan terakhir tetap tersedia.");
     });
-    void fetchFirstPage(false);
+    void fetchFirstPage(realtimeRetryKey > 0);
+    void fetchBookingSummary();
     return () => {
       active = false;
       if (refreshTimer !== null) window.clearTimeout(refreshTimer);
       void window.bookingService.removeRealtimeChannel(channel);
     };
-  }, [customerId]);
+  }, [customerId, realtimeRetryKey]);
 
   async function loadMore() {
     if (!customerId || currentCustomerIdRef.current !== customerId || loadingMoreLockRef.current || !hasMore) return;
@@ -2400,10 +2613,10 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
       </section>
       <section className="sules-active-card" aria-label="Ringkasan booking">
         <div className="sules-eyebrow">BOOKING ANDA</div>
-        <h2 className="text-lg font-bold mt-2">Masuk untuk melihat pesanan aktif</h2>
-        <p className="text-sm text-gray-500 mt-1 mb-4">Status dan riwayat hanya ditampilkan untuk akun pelanggan Anda.</p>
+        <h2 className="text-lg font-bold mt-2">{sessionError ? "Sesi akun belum dapat dipastikan" : "Masuk untuk melihat pesanan aktif"}</h2>
+        <p className="text-sm text-gray-500 mt-1 mb-4">{sessionError ? "Sesi belum diubah. Periksa koneksi lalu coba kembali." : "Status dan riwayat hanya ditampilkan untuk akun pelanggan Anda."}</p>
         {sessionError && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert"><div>{sessionError}</div><button type="button" onClick={retryCustomerSessionCheck} className="underline font-semibold mt-1">Coba lagi</button></div>}
-        <button type="button" className="sules-primary" onClick={onGoToBooking}>Masuk &amp; Pesan</button>
+        {!sessionError && <button type="button" className="sules-primary" onClick={onGoToBooking}>Masuk &amp; Pesan</button>}
       </section>
       <div className="grid grid-cols-2 gap-3 mt-3">
         <div className="sules-active-card"><div className="sules-eyebrow">LAYANAN</div><strong className="block mt-2">5 paket</strong></div>
@@ -2412,10 +2625,10 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
       <HomeDiscoveryContent onGoToCatalog={onGoToCatalog} onGoToBooking={onGoToBooking} onBookPackage={onBookPackage} onGoToOrders={onGoToOrders} onOpenPublicSection={onOpenPublicSection} />
     </div>;
     return <div className="max-w-md mx-auto px-4 py-12"><div className="bg-white rounded-2xl p-6 border border-gray-200">
-      <h2 className="text-lg font-bold mb-2">Pesanan Aktif &amp; Riwayat</h2>
-      <p className="text-sm text-gray-600 mb-4">Masuk dengan akun pelanggan yang digunakan saat booking untuk melihat pesanan milik Anda.</p>
+      <h2 className="text-lg font-bold mb-2">{sessionError ? "Sesi akun belum dapat dipastikan" : "Pesanan Aktif &amp; Riwayat"}</h2>
+      <p className="text-sm text-gray-600 mb-4">{sessionError ? "Sesi belum diubah. Periksa koneksi lalu coba kembali." : "Masuk dengan akun pelanggan yang digunakan saat booking untuk melihat pesanan milik Anda."}</p>
       {sessionError && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert"><div>{sessionError}</div><button type="button" onClick={retryCustomerSessionCheck} className="underline font-semibold mt-1">Coba lagi</button></div>}
-      <button onClick={onGoToBooking} className="sules-primary w-full rounded-xl px-4 py-3 font-bold text-white" style={{backgroundColor:"#18324B"}}>Buka Booking &amp; Masuk</button>
+      {!sessionError && <button onClick={onGoToBooking} className="sules-primary w-full rounded-xl px-4 py-3 font-bold text-white" style={{backgroundColor:"#18324B"}}>Buka Booking &amp; Masuk</button>}
     </div></div>;
   }
 
@@ -2449,6 +2662,8 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
         {sessionError && <div className="text-xs text-red-700 mt-2" role="alert"><div>{sessionError}</div><button type="button" onClick={retryCustomerSessionCheck} className="underline font-semibold mt-1">Coba lagi</button></div>}
         <button type="button" className="w-full mt-4" onClick={onGoToOrders}>Lihat semua pesanan <span aria-hidden="true">→</span></button>
       </section>
+      <CustomerBookingSummary summary={bookingSummary} loading={summaryLoading} error={summaryError} onRetry={()=>void fetchBookingSummary()} className="mt-3" />
+      <CustomerRealtimeNotice error={realtimeError} onRetry={()=>setRealtimeRetryKey(key => key + 1)} />
       <div className="grid grid-cols-2 gap-3 mt-3">
         <div className="sules-active-card"><div className="sules-eyebrow">LAYANAN</div><strong className="block mt-2">5 paket</strong></div>
         <div className="sules-active-card"><div className="sules-eyebrow">JADWAL</div><strong className="block mt-2">08–15 · 19–24</strong></div>
@@ -2459,6 +2674,9 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
 
   return <div className="max-w-md mx-auto px-4 pb-16">
     <div className="py-5"><h2 className="text-xl font-bold" style={{color:"#18324B"}}>Pesanan Anda</h2><p className="text-xs text-gray-500 mt-1">Data pesanan dimuat dari Supabase untuk akun yang sedang masuk.</p></div>
+    {sessionError && <div role="alert" className="sules-active-card text-sm text-red-700 mb-3">{sessionError}<button type="button" onClick={retryCustomerSessionCheck} className="underline font-semibold block mt-2">Coba lagi</button></div>}
+    <CustomerBookingSummary summary={bookingSummary} loading={summaryLoading} error={summaryError} onRetry={()=>void fetchBookingSummary()} className="mb-4" />
+    <CustomerRealtimeNotice error={realtimeError} onRetry={()=>setRealtimeRetryKey(key => key + 1)} />
     <div className="grid grid-cols-2 gap-2 mb-4" role="group" aria-label="Jenis pesanan">
       <button type="button" aria-pressed={view === "active"} onClick={()=>setView("active")} className="rounded-xl border px-3 py-3 text-sm font-semibold" style={{backgroundColor:view==="active"?"#18324B":"white",color:view==="active"?"white":"#18324B",borderColor:"#D9E5EF"}}>Aktif ({activeOrders.length})</button>
       <button type="button" aria-pressed={view === "history"} onClick={()=>setView("history")} className="rounded-xl border px-3 py-3 text-sm font-semibold" style={{backgroundColor:view==="history"?"#18324B":"white",color:view==="history"?"white":"#18324B",borderColor:"#D9E5EF"}}>Riwayat ({historyOrders.length})</button>
@@ -2962,6 +3180,58 @@ function SulesNavIcon({ name }) {
   return <svg {...common}><circle cx="12" cy="8" r="3.2"/><path d="M5 20.5a7 7 0 0 1 14 0"/></svg>;
 }
 
+function CustomerProfileCard({ customerSession, onCompleteProfile }) {
+  const customerId = customerSession && customerSession.user && customerSession.user.id;
+  const [profileRecord, setProfileRecord] = useState(null);
+  const [profileLoadedFor, setProfileLoadedFor] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
+  const requestSequenceRef = useRef(0);
+
+  useEffect(() => {
+    if (!customerId) return;
+    let active = true;
+    const requestId = ++requestSequenceRef.current;
+    setLoading(true);
+    setError("");
+    withCustomerReadTimeout(() => window.bookingService.getCustomerProfile(customerId)).then(profile => {
+      if (!active || requestId !== requestSequenceRef.current) return;
+      setProfileRecord(profile || null);
+      setProfileLoadedFor(customerId);
+      setError("");
+    }).catch(() => {
+      if (active && requestId === requestSequenceRef.current) setError("Profil belum dapat dimuat. Periksa koneksi lalu coba lagi.");
+    }).finally(() => {
+      if (active && requestId === requestSequenceRef.current) setLoading(false);
+    });
+    return () => { active = false; requestSequenceRef.current += 1; };
+  }, [customerId, retryKey]);
+
+  const profileReady = profileLoadedFor === customerId;
+  const profile = profileReady ? profileRecord : null;
+  const profileComplete = isCustomerProfileComplete(profile);
+  const storedWa = !!(profile && typeof profile.wa === "string" && profile.wa.trim());
+  const invalidStoredWa = storedWa && !normalizeIndonesianWhatsappForUi(profile.wa);
+
+  return <section className="sules-menu-card" aria-labelledby="customer-profile-heading">
+    <div className="sules-eyebrow">PROFIL PELANGGAN</div>
+    <h2 id="customer-profile-heading" className="text-lg font-bold mt-2 mb-3">Data Profil</h2>
+    <dl className="space-y-3 text-sm">
+      <div><dt className="text-xs text-gray-500">Nama</dt><dd className="font-medium break-words">{profileReady ? (profile && profile.nama && profile.nama.trim() || "Belum diisi") : "—"}</dd></div>
+      <div><dt className="text-xs text-gray-500">WhatsApp</dt><dd className="font-medium break-all">{profileReady ? (profile && profile.wa && profile.wa.trim() || "Belum diisi") : "—"}</dd></div>
+    </dl>
+    {loading && !profileReady && <p role="status" className="text-sm text-gray-500 mt-3">Memuat profil…</p>}
+    {error && <div role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mt-3">
+      <p>{error}</p><button type="button" disabled={loading} onClick={()=>setRetryKey(key => key + 1)} className="underline font-semibold mt-1 disabled:opacity-60">{loading ? "Memuat…" : "Coba lagi"}</button>
+    </div>}
+    {profileReady && !profileComplete && invalidStoredWa && <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3">Nomor WhatsApp tersimpan belum sesuai format. Perubahan nomor ini memerlukan bantuan Admin.</p>}
+    {profileReady && !profileComplete && !invalidStoredWa && <button type="button" className="sules-primary w-full mt-4" onClick={onCompleteProfile}>Lengkapi Profil</button>}
+    {profileReady && profileComplete && <p className="text-sm text-green-800 bg-green-50 border border-green-200 rounded-xl p-3 mt-3" role="status">Profil lengkap</p>}
+    {profileReady && profileComplete && <p className="text-xs text-gray-500 mt-2">Data profil ini dikelola melalui sesi pelanggan. Perubahan data yang sudah lengkap tidak didukung pada alur profil saat ini.</p>}
+  </section>;
+}
+
 function ProfileMenuTab({ onOpenAdmin, customerSession, customerSessionReady, customerSessionError, onRetryCustomerSession, onCustomerAuth, onCustomerLogout, onGoToOrders, onStartBooking }) {
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [logoutError, setLogoutError] = useState("");
@@ -2984,12 +3254,13 @@ function ProfileMenuTab({ onOpenAdmin, customerSession, customerSessionReady, cu
       <div className="sules-eyebrow">PELANGGAN</div>
       {!customerSessionReady ? (
         <p role="status" className="text-sm text-gray-500 mt-3">Memeriksa sesi akun...</p>
-      ) : customerSessionError ? (
+      ) : !customerSession && customerSessionError ? (
         <div role="alert" className="text-sm text-red-600 mt-3"><p>{customerSessionError}</p><button type="button" onClick={onRetryCustomerSession} className="underline font-semibold mt-1">Coba lagi</button></div>
       ) : customerSession ? (
         <>
+          {customerSessionError && <div role="alert" className="text-sm text-red-600 mt-3"><p>{customerSessionError}</p><button type="button" onClick={onRetryCustomerSession} className="underline font-semibold mt-1">Coba lagi</button></div>}
           <h3 className="text-lg font-bold mt-2 mb-1">Akun Pelanggan</h3>
-          <p className="text-sm text-gray-500 mb-3">{(customerSession.user && customerSession.user.email) || "Sesi pelanggan aktif"}</p>
+          <p className="text-sm text-gray-500 mb-3 break-all">{(customerSession.user && customerSession.user.email) || "Sesi pelanggan aktif"}</p>
           <button type="button" className="sules-menu-link" onClick={onGoToOrders}><span>Lihat Pesanan</span><span aria-hidden="true">→</span></button>
           <button type="button" className="sules-primary w-full mt-2" onClick={onStartBooking}>Mulai Booking</button>
           {logoutError && <div role="alert" className="text-sm text-red-600 mt-2">{logoutError}</div>}
@@ -3008,6 +3279,7 @@ function ProfileMenuTab({ onOpenAdmin, customerSession, customerSessionReady, cu
         </>
       )}
     </section>
+    {customerSession && customerSession.user && customerSession.user.id && <CustomerProfileCard customerSession={customerSession} onCompleteProfile={onStartBooking} />}
     <section className="sules-menu-card">
       <div className="sules-eyebrow">OPERASIONAL</div><h3 className="text-lg font-bold mt-2 mb-3">Admin Dashboard</h3>
       <button type="button" className="sules-primary w-full" onClick={onOpenAdmin}>Masuk ke Admin <span aria-hidden="true">→</span></button>
@@ -3037,11 +3309,13 @@ function AppTabs() {
 
   useEffect(() => {
     let active = true;
+    let authEventSeen = false;
+    let authEventSequence = 0;
     setCustomerSessionReady(false);
     setCustomerSessionError("");
-    (async () => {
+    const resolveCustomerSession = async (candidateSession, requestSequence) => {
       try {
-        let resolvedSession = await withCustomerReadTimeout(() => window.bookingService.getCustomerSession());
+        let resolvedSession = candidateSession || null;
         const customerId = resolvedSession && resolvedSession.user && resolvedSession.user.id;
         if (customerId) {
           try {
@@ -3052,21 +3326,38 @@ function AppTabs() {
             if (!error || error.code !== "ADMIN_ONLY") throw error;
           }
         }
-        if (active) {
-          setCustomerSession(resolvedSession || null);
+        if (active && requestSequence === authEventSequence) {
+          setCustomerSession(resolvedSession);
           setCustomerSessionError("");
+          setCustomerSessionReady(true);
         }
       } catch (_) {
-        if (active) {
-          setCustomerSession(null);
+        if (active && requestSequence === authEventSequence) {
           setCustomerSessionError("Sesi akun belum dapat diperiksa. Periksa koneksi, lalu coba lagi.");
+          setCustomerSessionReady(true);
         }
-      } finally {
-        if (active) setCustomerSessionReady(true);
       }
-    })();
+    };
+
+    const authSubscription = window.bookingService.subscribeCustomerAuthChanges((_event, nextSession) => {
+      authEventSeen = true;
+      const requestSequence = ++authEventSequence;
+      window.setTimeout(() => { void resolveCustomerSession(nextSession, requestSequence); }, 0);
+    });
+
+    withCustomerReadTimeout(() => window.bookingService.getCustomerSession()).then(currentSession => {
+      if (authEventSeen || !active) return;
+      const requestSequence = ++authEventSequence;
+      void resolveCustomerSession(currentSession, requestSequence);
+    }).catch(() => {
+      if (!authEventSeen && active) {
+        setCustomerSessionError("Sesi akun belum dapat diperiksa. Periksa koneksi, lalu coba lagi.");
+        setCustomerSessionReady(true);
+      }
+    });
     return () => {
       active = false;
+      window.bookingService.removeCustomerAuthSubscription(authSubscription);
     };
   }, [customerSessionRetryKey]);
 
@@ -3152,12 +3443,12 @@ function AppTabs() {
   return (
     <div className={isAdminScreen ? "sules-admin-shell" : "sules-app-shell"}>
       <div className={isAdminScreen ? "sules-admin-content" : `sules-app-content${tab === "catalog" ? " sules-app-content-catalog" : ""}`}>
-        {tab === "home" && <CustomerOrdersTab mode="home" onGoToBooking={()=>navigate("book")} onBookPackage={bookPackage} onGoToCatalog={()=>navigate("catalog")} onGoToOrders={goToOrders} onOpenPublicSection={openPublicSection} />}
+        {tab === "home" && <CustomerOrdersTab mode="home" onGoToBooking={()=>navigate("book")} onBookPackage={bookPackage} onGoToCatalog={()=>navigate("catalog")} onGoToOrders={goToOrders} onOpenPublicSection={openPublicSection} customerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
         {tab === "catalog" && <CatalogTab onBookPackage={bookPackage} />}
-        {tab === "book" && <BookingTab initialPackageId={bookingPackageId} onCustomerSessionChange={updateCustomerSession} onGoToOrders={()=>goToOrders("active")} />}
-        {tab === "customer-auth" && <BookingTab initialPackageId={bookingPackageId} authOnly initialAuthMode={customerAuthMode} onAuthComplete={finishCustomerAuth} onAuthCancel={finishCustomerAuth} onCustomerSessionChange={updateCustomerSession} />}
-        {tab === "orders" && <CustomerOrdersTab initialView={ordersView} onGoToBooking={()=>navigate("book")} />}
-        {tab === "notifications" && <NotificationsTab onGoToOrders={()=>goToOrders("active")} />}
+        {tab === "book" && <BookingTab initialPackageId={bookingPackageId} onCustomerSessionChange={updateCustomerSession} onGoToOrders={()=>goToOrders("active")} externalCustomerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
+        {tab === "customer-auth" && <BookingTab initialPackageId={bookingPackageId} authOnly initialAuthMode={customerAuthMode} onAuthComplete={finishCustomerAuth} onAuthCancel={finishCustomerAuth} onCustomerSessionChange={updateCustomerSession} externalCustomerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
+        {tab === "orders" && <CustomerOrdersTab initialView={ordersView} onGoToBooking={()=>navigate("book")} customerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
+        {tab === "notifications" && <NotificationsTab customerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} onCustomerAuth={openCustomerAuth} onGoToOrders={()=>goToOrders("active")} />}
         {tab === "account" && (menuView === "admin"
           ? <AdminTab onExitToApp={()=>setMenuView("menu")} />
           : <ProfileMenuTab onOpenAdmin={()=>setMenuView("admin")} customerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck}
