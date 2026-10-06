@@ -1420,7 +1420,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
           setGpsMsg("Lokasi akurat gagal diperoleh. Pastikan layanan lokasi aktif, lalu coba lagi.");
         }
       },
-      { enableHighAccuracy: true, timeout: 15000 }
+      { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
     );
   };
 
