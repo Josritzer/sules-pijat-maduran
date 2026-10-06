@@ -625,15 +625,6 @@
   .sules-hero-card:after { content:""; position:absolute; z-index:-1; width:170px; height:170px; right:-72px; bottom:-112px; border-radius:50%; background:rgba(72,143,190,.1); filter:blur(32px); }
   .sules-hero-card h1 { margin:7px 0 8px; max-width:15ch; color:#18324B !important; font-size:clamp(25px,6vw,38px); line-height:1.08; letter-spacing:-.04em; }
   .sules-hero-card p { max-width:44ch; color:#526B80; line-height:1.55; font-size:14px; }
-  .sules-home-screen > .sules-hero-card { border-color:#345675; background:radial-gradient(ellipse at 88% 0%,rgba(130,190,220,.22),transparent 42%),linear-gradient(135deg,#10273D 0%,#183A58 58%,#205477 100%); box-shadow:0 14px 32px rgba(12,36,58,.2); }
-  .sules-home-screen > .sules-hero-card:after { background:rgba(123,193,219,.18); }
-  .sules-home-screen > .sules-hero-card .sules-eyebrow { color:#C5E1EF; }
-  #root .sules-home-screen > .sules-hero-card h1 { color:#FFFFFF !important; }
-  .sules-home-screen > .sules-hero-card p { color:#E0EAF2; }
-  #root .sules-home-screen > .sules-hero-card .sules-primary { color:#163650 !important; background:linear-gradient(135deg,#FFFFFF,#E7F3F9) !important; border:1px solid rgba(255,255,255,.78) !important; box-shadow:0 5px 14px rgba(6,23,38,.2); }
-  .sules-home-screen { background:linear-gradient(155deg,#10273D 0%,#173A58 58%,#205477 100%); }
-  #root .sules-home-screen .sules-section-title { color:#F0F6FA !important; }
-  #root .sules-home-screen section[aria-labelledby="home-service-title"] > div > button { color:#D8EAF3 !important; }
   .sules-active-card,.sules-menu-card,.sules-order-card { border:1px solid var(--sules-line); border-radius:var(--sules-card-radius); background:#FFFFFF; box-shadow:var(--sules-card-shadow); }
   .sules-active-card { padding:var(--sules-card-padding); margin-top:14px; }
   .sules-price { color:var(--sules-navy); font-size:21px; font-weight:850; letter-spacing:-.035em; }
@@ -797,6 +788,118 @@
     #root .sules-catalog-grid .sules-service-price small { font-size:11px; }
     #root .sules-catalog-grid .sules-service-travel { font-size:10px; }
     #root .sules-catalog-grid .sules-service-card button.sules-primary { grid-area:cta; max-width:none; min-height:48px; margin-top:4px; }
+  }
+
+  /* Home-only editorial identity: warm paper, forest ink, quiet champagne details. */
+  .sules-home-screen {
+    --home-ink:#26372F; --home-muted:#68756D; --home-forest:#173A32; --home-forest-deep:#102C27;
+    --home-gold:#C6A96B; --home-line:#E4DCC9; --home-paper:#FCFAF5;
+    display:flex; flex-direction:column; gap:clamp(22px,3.5vw,34px); width:100%; padding:clamp(8px,1.6vw,14px);
+    border:1px solid #E9E2D4; border-radius:26px; color:var(--home-ink); background:#F5F1E8;
+  }
+  .sules-home-hero {
+    position:relative; display:grid; grid-template-columns:minmax(0,1.35fr) minmax(190px,.65fr); align-items:center; gap:20px;
+    min-height:330px; overflow:hidden; isolation:isolate; padding:clamp(27px,5vw,46px); border:1px solid rgba(198,169,107,.7); border-radius:28px;
+    color:#FBF8EF; background:radial-gradient(ellipse at 84% 8%,rgba(198,169,107,.17),transparent 33%),linear-gradient(135deg,#102C27 0%,#173A32 58%,#285044 100%);
+    box-shadow:0 20px 44px rgba(28,48,39,.12);
+  }
+  .sules-home-hero::before,.sules-home-hero::after { content:""; position:absolute; z-index:-1; border:1px solid rgba(221,199,146,.2); border-radius:50%; pointer-events:none; }
+  .sules-home-hero::before { width:390px; height:390px; right:-150px; top:-180px; }
+  .sules-home-hero::after { width:290px; height:290px; right:-100px; top:-130px; }
+  .sules-home-hero-copy { position:relative; z-index:1; min-width:0; }
+  .sules-home-kicker { display:flex; align-items:center; gap:9px; color:#E7D5A4; font-size:10px; font-weight:800; letter-spacing:.19em; }
+  .sules-home-kicker span { width:7px; height:7px; flex:none; border-radius:50%; background:var(--home-gold); box-shadow:0 0 0 4px rgba(198,169,107,.15); }
+  .sules-home-wordmark { margin:22px 0 8px; color:#E7D5A4; font-family:Georgia,'Times New Roman',serif; font-size:12px; font-weight:700; letter-spacing:.2em; }
+  .sules-home-wordmark span { color:#C7D5CA; font-family:inherit; font-size:9px; letter-spacing:.14em; }
+  #root .sules-home-hero h1 { max-width:12ch; margin:0; color:#FFFDF7 !important; font-family:Georgia,'Times New Roman',serif; font-size:clamp(39px,6.7vw,60px); font-weight:500; line-height:.99; letter-spacing:-.045em; }
+  .sules-home-hero h1 em { color:#E6D3A1; font-weight:400; }
+  #root .sules-home-screen h2,#root .sules-home-screen h3 { color:var(--home-ink) !important; }
+  .sules-home-hero-description { max-width:42ch; margin:17px 0 0; color:#E0E8DF; font-size:14px; line-height:1.7; }
+  .sules-home-hero-actions { display:flex; align-items:center; flex-wrap:wrap; gap:10px 18px; margin-top:23px; }
+  #root .sules-home-primary { display:inline-flex; align-items:center; justify-content:center; gap:15px; min-height:48px; padding:12px 18px; border:1px solid #E8D7A7 !important; border-radius:999px !important; color:#26372F !important; background:linear-gradient(135deg,#E7D5A4,#D2B879) !important; box-shadow:0 6px 18px rgba(7,23,19,.18); font-size:13px; font-weight:800; }
+  #root .sules-home-primary:hover { transform:translateY(-1px); box-shadow:0 9px 22px rgba(7,23,19,.24); }
+  #root .sules-home-secondary { min-height:44px; padding:9px 2px; border:0 !important; border-bottom:1px solid rgba(231,213,164,.65) !important; border-radius:0 !important; color:#F7F2E4 !important; background:transparent !important; font-size:13px; font-weight:650; }
+  .sules-home-emblem { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; min-width:0; }
+  .sules-home-emblem-ring { display:grid; width:176px; height:176px; place-items:center; border:1px solid rgba(231,213,164,.66); border-radius:50%; background:radial-gradient(circle,#F8F5EA 0%,#E8E1CF 100%); box-shadow:0 0 0 10px rgba(231,213,164,.055),0 18px 38px rgba(6,21,17,.23); }
+  .sules-home-emblem-ring img { display:block; width:112px; height:112px; object-fit:contain; border-radius:22px; }
+  .sules-home-emblem p { margin:0; color:#E9DCBA; font-size:8px; font-weight:750; letter-spacing:.18em; text-align:center; }
+  .sules-home-facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; padding:15px 4px 18px; border-bottom:1px solid var(--home-line); }
+  .sules-home-facts > div { display:flex; flex-direction:column; gap:6px; min-width:0; }
+  .sules-home-facts span,.sules-home-eyebrow,.sules-home-info-label { color:#917B4F; font-size:9px; font-weight:850; letter-spacing:.16em; }
+  .sules-home-facts strong { color:var(--home-ink); font-family:Georgia,'Times New Roman',serif; font-size:14px; font-weight:600; line-height:1.4; }
+  .sules-home-account { display:grid; gap:15px; padding:clamp(18px,3vw,25px); border:1px solid var(--home-line); border-radius:20px; background:var(--home-paper); box-shadow:0 8px 22px rgba(50,55,40,.045); }
+  .sules-home-account-copy h2,.sules-home-account-heading h2 { margin:5px 0 0; color:var(--home-ink); font-family:Georgia,'Times New Roman',serif; font-size:clamp(21px,4vw,27px); font-weight:600; letter-spacing:-.025em; }
+  .sules-home-account-copy > p:last-child { max-width:58ch; margin:7px 0 0; color:var(--home-muted); font-size:13px; line-height:1.55; }
+  .sules-home-account-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .sules-home-account-button { display:inline-flex; align-items:center; justify-content:space-between; gap:14px; width:max-content; min-width:175px; min-height:46px; padding:11px 16px; border:1px solid #C6A96B; border-radius:999px; color:#FBF8EF; background:var(--home-forest); font-size:13px; font-weight:750; }
+  .sules-home-account-button:hover { background:#244A40; }
+  .sules-home-error { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:12px 14px; border:1px solid #E7C8C0; border-radius:13px; color:#873F35; background:#FFF7F4; font-size:13px; line-height:1.5; }
+  .sules-home-error button { min-height:40px; padding:7px 11px; border:1px solid #D9A99D; border-radius:999px; color:#73372F; background:#FFFFFF; font-size:12px; font-weight:750; }
+  .sules-home-error button:disabled { opacity:.6; }
+  .sules-home-loading,.sules-home-empty { padding:15px; border:1px solid var(--home-line); border-radius:15px; color:var(--home-muted); background:#FFFFFF; font-size:13px; }
+  .sules-home-empty h3 { margin:0; color:var(--home-ink); font-family:Georgia,'Times New Roman',serif; font-size:18px; }
+  .sules-home-empty p { margin:5px 0 0; line-height:1.5; }
+  .sules-home-order { padding:17px !important; border-color:var(--home-line) !important; border-radius:16px !important; box-shadow:none !important; }
+  .sules-home-summary { margin:0 !important; border-color:var(--home-line) !important; border-radius:20px !important; background:var(--home-paper) !important; box-shadow:0 8px 22px rgba(50,55,40,.045) !important; }
+  .sules-home-summary .sules-eyebrow { color:#917B4F !important; }
+  .sules-home-summary > .grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:0 16px !important; margin-top:10px !important; }
+  .sules-home-summary > .grid > div { display:flex; align-items:baseline; justify-content:space-between; gap:7px; padding:9px 0 !important; border:0 !important; border-bottom:1px solid var(--home-line) !important; border-radius:0 !important; background:transparent !important; }
+  .sules-home-summary > .grid > div > div { color:var(--home-muted) !important; font-size:11px !important; }
+  .sules-home-summary > .grid > div > strong { margin-top:0 !important; color:var(--home-ink) !important; font-size:17px !important; }
+  .sules-home-services { display:flex; flex-direction:column; gap:17px; }
+  .sules-home-section-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:15px; }
+  .sules-home-section-heading h2 { margin:5px 0 0; color:var(--home-ink); font-family:Georgia,'Times New Roman',serif; font-size:clamp(25px,4.2vw,34px); font-weight:500; line-height:1.12; letter-spacing:-.035em; }
+  .sules-home-catalog-link { display:inline-flex; align-items:center; justify-content:center; gap:8px; flex:none; min-height:42px; padding:8px 12px; border:1px solid #D7C9A6; border-radius:999px; color:var(--home-forest); background:transparent; font-size:12px; font-weight:750; }
+  .sules-home-catalog-link:hover { border-color:#B99D62; background:#FCFAF5; }
+  .sules-home-screen .sules-service-rail { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-flow:row; grid-auto-columns:auto; gap:13px; overflow:visible; padding:0; scroll-snap-type:none; }
+  .sules-home-screen .sules-service-card { display:flex; align-items:stretch; min-width:0; min-height:100%; padding:17px; border:1px solid var(--home-line); border-radius:17px; background:linear-gradient(180deg,#FFFDF9,#FFFFFF); box-shadow:0 8px 20px rgba(50,55,40,.04); }
+  .sules-home-screen .sules-service-card:nth-child(5) { grid-column:1 / -1; width:calc((100% - 13px)/2); justify-self:center; }
+  .sules-home-screen .sules-service-card .sules-eyebrow { color:#917B4F !important; }
+  .sules-home-screen .sules-service-card h3 { color:var(--home-ink); font-family:Georgia,'Times New Roman',serif; font-size:17px; line-height:1.3; letter-spacing:-.02em; overflow-wrap:anywhere; }
+  .sules-home-screen .sules-service-card .sules-service-meta { color:var(--home-muted); font-size:12px; line-height:1.5; }
+  .sules-home-screen .sules-service-card .sules-service-price { color:var(--home-forest); font-size:20px; }
+  .sules-home-screen .sules-service-card .sules-service-price small { color:#917B4F; }
+  #root .sules-home-screen .sules-service-card button.sules-primary { min-height:46px; margin-top:auto; border:1px solid #C6A96B !important; border-radius:999px !important; color:#FBF8EF !important; background:var(--home-forest) !important; box-shadow:none !important; font-size:12px; }
+  .sules-home-story { display:grid; grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr); gap:clamp(18px,4vw,42px); padding:clamp(20px,4vw,32px) 4px; border-top:1px solid var(--home-line); border-bottom:1px solid var(--home-line); }
+  .sules-home-story h2 { max-width:17ch; margin:8px 0 0; color:var(--home-ink); font-family:Georgia,'Times New Roman',serif; font-size:clamp(25px,4.5vw,38px); font-weight:500; line-height:1.08; letter-spacing:-.035em; }
+  .sules-home-story-copy { color:#59665E; font-size:13px; line-height:1.75; }
+  .sules-home-story-copy p { margin:0 0 10px; }
+  .sules-home-story-copy p:last-child { margin-bottom:0; }
+  .sules-home-info-links { display:flex; align-items:center; flex-wrap:wrap; gap:8px 16px; padding-top:14px; border-top:1px solid var(--home-line); }
+  .sules-home-info-links button { display:inline-flex; align-items:center; gap:5px; min-height:40px; padding:7px 2px; border:0; color:var(--home-forest); background:transparent; font-size:12px; font-weight:700; }
+  .sules-home-info-links button:hover { color:#8B713C; }
+  .sules-home-info-label { margin-right:5px; }
+  @media (max-width:600px) {
+    .sules-home-screen { gap:22px; padding:5px; border-radius:19px; }
+    .sules-home-hero { grid-template-columns:minmax(0,1fr); gap:18px; min-height:0; padding:25px 20px 21px; border-radius:22px; }
+    .sules-home-wordmark { margin-top:17px; }
+    .sules-home-hero h1 { max-width:12ch; font-size:clamp(38px,11vw,48px); }
+    .sules-home-hero-description { max-width:36ch; margin-top:13px; font-size:13px; }
+    .sules-home-hero-actions { gap:7px 14px; margin-top:17px; }
+    .sules-home-emblem { flex-direction:row; justify-content:flex-start; gap:11px; }
+    .sules-home-emblem-ring { width:64px; height:64px; border-radius:50%; box-shadow:none; }
+    .sules-home-emblem-ring img { width:49px; height:49px; border-radius:12px; }
+    .sules-home-emblem p { color:#E9DCBA; font-size:8px; text-align:left; }
+    .sules-home-facts { grid-template-columns:minmax(0,1fr); gap:0; padding:0 4px 13px; }
+    .sules-home-facts > div { flex-direction:row; align-items:center; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid rgba(228,220,201,.72); }
+    .sules-home-facts > div:last-child { border-bottom:0; }
+    .sules-home-facts span { flex:none; font-size:8px; }
+    .sules-home-facts strong { max-width:62%; font-size:12px; text-align:right; }
+    .sules-home-account { gap:12px; padding:17px; border-radius:17px; }
+    .sules-home-account-heading { align-items:flex-start; flex-direction:column; }
+    .sules-home-account-heading .sules-home-catalog-link { align-self:flex-start; }
+    .sules-home-account-button { width:100%; }
+    .sules-home-section-heading { align-items:flex-start; flex-direction:column; gap:10px; }
+    .sules-home-section-heading h2 { max-width:19ch; font-size:28px; }
+    .sules-home-summary > .grid { grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:12px !important; }
+    .sules-home-screen .sules-service-rail { grid-template-columns:minmax(0,1fr); gap:10px; }
+    .sules-home-screen .sules-service-card:nth-child(5) { grid-column:auto; width:100%; }
+    .sules-home-screen .sules-service-card { padding:15px; }
+    .sules-home-screen .sules-service-card h3 { font-size:16px; }
+    .sules-home-story { grid-template-columns:minmax(0,1fr); gap:12px; padding:21px 4px; }
+    .sules-home-story h2 { max-width:16ch; font-size:29px; }
+    .sules-home-info-links { gap:4px 14px; }
+    .sules-home-info-label { width:100%; }
   }
 </style>
 </head>
@@ -2152,36 +2255,65 @@ function ServicePackageList({ onBookPackage, compact = false }) {
   </div>;
 }
 
-function HomeQuickMenu({ onGoToCatalog, onGoToBooking, onGoToOrders, onOpenPublicSection }) {
+function HomeBrandHero({ onGoToBooking, onGoToCatalog }) {
+  return <React.Fragment>
+    <section className="sules-home-hero" aria-labelledby="sules-home-hero-title">
+      <div className="sules-home-hero-copy">
+        <div className="sules-home-kicker"><span aria-hidden="true" />PIJAT MADURAN · LAMONGAN</div>
+        <p className="sules-home-wordmark">SULES <span>PIJAT MADURAN</span></p>
+        <h1 id="sules-home-hero-title">Sebuah jeda.<br /><em>Untuk diri Anda.</em></h1>
+        <p className="sules-home-hero-description">Pilih layanan pijat di Maduran dan jadwalkan waktu yang nyaman untuk Anda.</p>
+        <div className="sules-home-hero-actions">
+          <button type="button" className="sules-home-primary" onClick={onGoToBooking}>Pesan Sekarang <span aria-hidden="true">↗</span></button>
+          <button type="button" className="sules-home-secondary" onClick={onGoToCatalog}>Lihat layanan</button>
+        </div>
+      </div>
+      <div className="sules-home-emblem" aria-hidden="true">
+        <div className="sules-home-emblem-ring"><img src="./icons/pwa-192.png" alt="" width="112" height="112" /></div>
+        <p>PIJAT · MADURAN · LAMONGAN</p>
+      </div>
+    </section>
+    <section className="sules-home-facts" aria-label="Informasi layanan Sules">
+      <div><span>LOKASI</span><strong>Maduran · Lamongan</strong></div>
+      <div><span>PILIHAN LAYANAN</span><strong>Di Sules · ke Rumah</strong></div>
+      <div><span>JAM LAYANAN</span><strong>08.00–15.00 · 19.00–24.00</strong></div>
+    </section>
+  </React.Fragment>;
+}
+
+function HomeQuickMenu({ onOpenPublicSection }) {
   const items = [
-    { label:"Katalog", icon:"catalog", action:onGoToCatalog },
-    { label:"Pesan", icon:"book", action:onGoToBooking },
-    { label:"Pesanan aktif", icon:"orders", action:() => onGoToOrders("active") },
-    { label:"Riwayat", icon:"history", action:() => onGoToOrders("history") },
-    { label:"FAQ", icon:"help", action:() => onOpenPublicSection("faq") },
-    { label:"Legalitas", icon:"legal", action:() => onOpenPublicSection("legalitas") },
-    { label:"Kontak", icon:"phone", action:() => onOpenPublicSection("kontak") }
+    { label:"FAQ", section:"faq" },
+    { label:"Legalitas", section:"legalitas" },
+    { label:"Kontak", section:"kontak" }
   ];
-  return <section aria-labelledby="home-quick-menu-title">
-    <h2 id="home-quick-menu-title" className="sules-section-title">Menu cepat</h2>
-    <div className="sules-quick-menu">
-      {items.map(item => <button key={item.label} type="button" className="sules-quick-item" onClick={item.action}>
-        <SulesNavIcon name={item.icon} /><span>{item.label}</span>
-      </button>)}
+  return <nav className="sules-home-info-links" aria-label="Informasi Sules">
+    <span className="sules-home-info-label">INFORMASI</span>
+    {items.map(item => <button key={item.section} type="button" onClick={() => onOpenPublicSection(item.section)}>{item.label}<span aria-hidden="true">↗</span></button>)}
+  </nav>;
+}
+
+function HomeBrandStory() {
+  return <section className="sules-home-story" aria-labelledby="sules-home-story-title">
+    <div className="sules-home-story-heading"><p className="sules-home-eyebrow">JEJAK DI MADURAN</p><h2 id="sules-home-story-title">Sebuah perjalanan yang berawal di sini.</h2></div>
+    <div className="sules-home-story-copy">
+      <p>SULES PIJAT MADURAN adalah usaha Rumah Pijat di Maduran. Berawal dari masa SMA sekitar 2008, SULES HARIANTO telah dipercaya masyarakat untuk memberikan layanan pijat.</p>
+      <p>Pengalaman dan kepercayaan tersebut menjadi bagian dari perjalanan SULES PIJAT MADURAN, dengan mengutamakan kenyamanan, pelayanan, dan kepercayaan pelanggan.</p>
     </div>
   </section>;
 }
 
-function HomeDiscoveryContent({ onGoToCatalog, onGoToBooking, onBookPackage, onGoToOrders, onOpenPublicSection }) {
+function HomeDiscoveryContent({ onGoToCatalog, onBookPackage, onOpenPublicSection }) {
   return <React.Fragment>
-    <HomeQuickMenu onGoToCatalog={onGoToCatalog} onGoToBooking={onGoToBooking} onGoToOrders={onGoToOrders} onOpenPublicSection={onOpenPublicSection} />
-    <section aria-labelledby="home-service-title">
-      <div className="flex items-center justify-between gap-3">
-        <h2 id="home-service-title" className="sules-section-title">Layanan pilihan</h2>
-        <button type="button" className="text-sm font-semibold" onClick={onGoToCatalog}>Lihat semua</button>
+    <section className="sules-home-services" aria-labelledby="home-service-title">
+      <div className="sules-home-section-heading">
+        <div><p className="sules-home-eyebrow">{SERVICE_PACKAGES.length} PILIHAN LAYANAN</p><h2 id="home-service-title">Temukan sesi yang sesuai.</h2></div>
+        <button type="button" className="sules-home-catalog-link" onClick={onGoToCatalog}>Lihat katalog <span aria-hidden="true">↗</span></button>
       </div>
       <ServicePackageList compact onBookPackage={onBookPackage} />
     </section>
+    <HomeBrandStory />
+    <HomeQuickMenu onOpenPublicSection={onOpenPublicSection} />
   </React.Fragment>;
 }
 
@@ -2613,24 +2745,16 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
   if (checkingSession) return <div className="text-center text-gray-500 text-sm py-16" role="status">Memeriksa akun pelanggan…</div>;
   if (!session) {
     if (mode === "home") return <div className="sules-home-screen">
-      <section className="sules-hero-card">
-        <div className="sules-eyebrow">SULES PIJAT MADURAN</div>
-        <h1>Saatnya rileks.</h1>
-        <p>Pilih layanan pijat di Maduran dan jadwalkan waktu yang nyaman untuk Anda.</p>
-        <button type="button" className="sules-primary" onClick={onGoToBooking}>Pesan Sekarang <span aria-hidden="true">→</span></button>
+      <HomeBrandHero onGoToBooking={onGoToBooking} onGoToCatalog={onGoToCatalog} />
+      <section className="sules-home-account" aria-label="Akun pelanggan">
+        <div className="sules-home-account-copy"><p className="sules-home-eyebrow">AREA PELANGGAN</p>
+          <h2>{sessionError ? "Sesi akun belum dapat dipastikan" : "Sudah pernah booking?"}</h2>
+          <p>{sessionError ? "Sesi belum diubah. Periksa koneksi lalu coba kembali." : "Status dan riwayat hanya ditampilkan untuk akun pelanggan Anda."}</p>
+        </div>
+        {sessionError && <div className="sules-home-error" role="alert"><div>{sessionError}</div><button type="button" onClick={retryCustomerSessionCheck}>Coba lagi</button></div>}
+        {!sessionError && <button type="button" className="sules-home-account-button" onClick={onGoToBooking}>Masuk &amp; Pesan <span aria-hidden="true">↗</span></button>}
       </section>
-      <section className="sules-active-card" aria-label="Ringkasan booking">
-        <div className="sules-eyebrow">BOOKING ANDA</div>
-        <h2 className="text-lg font-bold mt-2">{sessionError ? "Sesi akun belum dapat dipastikan" : "Masuk untuk melihat pesanan aktif"}</h2>
-        <p className="text-sm text-gray-500 mt-1 mb-4">{sessionError ? "Sesi belum diubah. Periksa koneksi lalu coba kembali." : "Status dan riwayat hanya ditampilkan untuk akun pelanggan Anda."}</p>
-        {sessionError && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert"><div>{sessionError}</div><button type="button" onClick={retryCustomerSessionCheck} className="underline font-semibold mt-1">Coba lagi</button></div>}
-        {!sessionError && <button type="button" className="sules-primary" onClick={onGoToBooking}>Masuk &amp; Pesan</button>}
-      </section>
-      <div className="grid grid-cols-2 gap-3 mt-3">
-        <div className="sules-active-card"><div className="sules-eyebrow">LAYANAN</div><strong className="block mt-2">5 paket</strong></div>
-        <div className="sules-active-card"><div className="sules-eyebrow">JADWAL</div><strong className="block mt-2">08–15 · 19–24</strong></div>
-      </div>
-      <HomeDiscoveryContent onGoToCatalog={onGoToCatalog} onGoToBooking={onGoToBooking} onBookPackage={onBookPackage} onGoToOrders={onGoToOrders} onOpenPublicSection={onOpenPublicSection} />
+      <HomeDiscoveryContent onGoToCatalog={onGoToCatalog} onBookPackage={onBookPackage} onOpenPublicSection={onOpenPublicSection} />
     </div>;
     return <div className="max-w-md mx-auto px-4 py-12"><div className="bg-white rounded-2xl p-6 border border-gray-200">
       <h2 className="text-lg font-bold mb-2">{sessionError ? "Sesi akun belum dapat dipastikan" : "Pesanan Aktif &amp; Riwayat"}</h2>
@@ -2650,33 +2774,25 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
   if (mode === "home") {
     const booking = activeOrders[0];
     return <div className="sules-home-screen">
-      <section className="sules-hero-card">
-        <div className="sules-eyebrow">SULES PIJAT MADURAN</div>
-        <h1>Saatnya rileks.</h1>
-        <p>Pilih layanan pijat di Maduran dan jadwalkan waktu yang nyaman untuk Anda.</p>
-        <button type="button" className="sules-primary" onClick={onGoToBooking}>Pesan Sekarang <span aria-hidden="true">→</span></button>
-      </section>
-      <section className="sules-active-card" aria-label="Ringkasan booking aktif">
-        <div className="flex items-center justify-between gap-2 mb-3"><div className="sules-eyebrow">BOOKING ANDA</div><span className="text-xs text-gray-500">DARI SUPABASE</span></div>
-        {error && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3" role="alert"><div>{error}</div><button type="button" disabled={loading || refreshing} onClick={()=>void fetchFirstPage(false)} className="underline font-semibold mt-1 disabled:opacity-60">{loading || refreshing ? "Memuat…" : "Coba lagi"}</button></div>}
-        {(loading || checkingSession) && <div className="text-sm text-gray-500 py-3" role="status">Memuat booking aktif…</div>}
-        {!loading && !error && !booking && <div><h2 className="text-lg font-bold">Belum ada pesanan aktif</h2><p className="text-sm text-gray-500 mt-1">Pilih layanan dan jadwalkan sesi pijat Anda.</p></div>}
-        {!loading && !error && booking && <div className="sules-order-card p-4">
+      <HomeBrandHero onGoToBooking={onGoToBooking} onGoToCatalog={onGoToCatalog} />
+      <section className="sules-home-account" aria-label="Ringkasan booking aktif">
+        <div className="sules-home-account-heading"><div><p className="sules-home-eyebrow">AREA PELANGGAN · DARI SUPABASE</p><h2>Pesanan Anda</h2></div>
+          <button type="button" className="sules-home-catalog-link" onClick={onGoToOrders}>Semua pesanan <span aria-hidden="true">↗</span></button>
+        </div>
+        {error && <div className="sules-home-error" role="alert"><div>{error}</div><button type="button" disabled={loading || refreshing} onClick={()=>void fetchFirstPage(false)}>{loading || refreshing ? "Memuat…" : "Coba lagi"}</button></div>}
+        {(loading || checkingSession) && <div className="sules-home-loading" role="status">Memuat booking aktif…</div>}
+        {!loading && !error && !booking && <div className="sules-home-empty"><h3>Belum ada pesanan aktif</h3><p>Pilih layanan dan jadwalkan sesi pijat Anda.</p></div>}
+        {!loading && !error && booking && <div className="sules-order-card sules-home-order">
           <div className="flex items-start justify-between gap-2"><strong className="text-base">{SERVICE_LABEL[booking.service_id] || booking.service_id} · {booking.jumlah_orang} orang</strong><StatusBadge status={booking.status} /></div>
           <div className="grid grid-cols-2 gap-3 mt-4 text-sm"><div><span className="text-gray-500 block text-xs">Tanggal</span>{booking.tanggal}</div><div><span className="text-gray-500 block text-xs">Waktu</span>{String(booking.jam_mulai).slice(0,5)}</div></div>
           <div className="text-sm text-gray-500 mt-3">{booking.tipe_lokasi === "HOME_SERVICE" ? "Ke Rumah" : "Di Sules"}</div>
           <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-gray-200"><span className="text-xs text-gray-500">TOTAL</span><strong className="sules-price">{formatRupiah(booking.grand_total)}</strong></div>
         </div>}
-        {sessionError && <div className="text-xs text-red-700 mt-2" role="alert"><div>{sessionError}</div><button type="button" onClick={retryCustomerSessionCheck} className="underline font-semibold mt-1">Coba lagi</button></div>}
-        <button type="button" className="w-full mt-4" onClick={onGoToOrders}>Lihat semua pesanan <span aria-hidden="true">→</span></button>
+        {sessionError && <div className="sules-home-error" role="alert"><div>{sessionError}</div><button type="button" onClick={retryCustomerSessionCheck}>Coba lagi</button></div>}
       </section>
-      <CustomerBookingSummary summary={bookingSummary} loading={summaryLoading} error={summaryError} onRetry={()=>void fetchBookingSummary()} className="mt-3" />
+      <CustomerBookingSummary summary={bookingSummary} loading={summaryLoading} error={summaryError} onRetry={()=>void fetchBookingSummary()} className="sules-home-summary" />
       <CustomerRealtimeNotice error={realtimeError} onRetry={()=>setRealtimeRetryKey(key => key + 1)} />
-      <div className="grid grid-cols-2 gap-3 mt-3">
-        <div className="sules-active-card"><div className="sules-eyebrow">LAYANAN</div><strong className="block mt-2">5 paket</strong></div>
-        <div className="sules-active-card"><div className="sules-eyebrow">JADWAL</div><strong className="block mt-2">08–15 · 19–24</strong></div>
-      </div>
-      <HomeDiscoveryContent onGoToCatalog={onGoToCatalog} onGoToBooking={onGoToBooking} onBookPackage={onBookPackage} onGoToOrders={onGoToOrders} onOpenPublicSection={onOpenPublicSection} />
+      <HomeDiscoveryContent onGoToCatalog={onGoToCatalog} onBookPackage={onBookPackage} onOpenPublicSection={onOpenPublicSection} />
     </div>;
   }
 
