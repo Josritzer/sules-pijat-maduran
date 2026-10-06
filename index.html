@@ -625,6 +625,12 @@
   .sules-hero-card:after { content:""; position:absolute; z-index:-1; width:170px; height:170px; right:-72px; bottom:-112px; border-radius:50%; background:rgba(72,143,190,.1); filter:blur(32px); }
   .sules-hero-card h1 { margin:7px 0 8px; max-width:15ch; color:#18324B !important; font-size:clamp(25px,6vw,38px); line-height:1.08; letter-spacing:-.04em; }
   .sules-hero-card p { max-width:44ch; color:#526B80; line-height:1.55; font-size:14px; }
+  .sules-home-screen > .sules-hero-card { border-color:#345675; background:radial-gradient(ellipse at 88% 0%,rgba(130,190,220,.22),transparent 42%),linear-gradient(135deg,#10273D 0%,#183A58 58%,#205477 100%); box-shadow:0 14px 32px rgba(12,36,58,.2); }
+  .sules-home-screen > .sules-hero-card:after { background:rgba(123,193,219,.18); }
+  .sules-home-screen > .sules-hero-card .sules-eyebrow { color:#C5E1EF; }
+  #root .sules-home-screen > .sules-hero-card h1 { color:#FFFFFF !important; }
+  .sules-home-screen > .sules-hero-card p { color:#E0EAF2; }
+  #root .sules-home-screen > .sules-hero-card .sules-primary { color:#163650 !important; background:linear-gradient(135deg,#FFFFFF,#E7F3F9) !important; border:1px solid rgba(255,255,255,.78) !important; box-shadow:0 5px 14px rgba(6,23,38,.2); }
   .sules-active-card,.sules-menu-card,.sules-order-card { border:1px solid var(--sules-line); border-radius:var(--sules-card-radius); background:#FFFFFF; box-shadow:var(--sules-card-shadow); }
   .sules-active-card { padding:var(--sules-card-padding); margin-top:14px; }
   .sules-price { color:var(--sules-navy); font-size:21px; font-weight:850; letter-spacing:-.035em; }
@@ -806,9 +812,8 @@
     <a class="site-app-shortcut" href="#booking-app" data-app-tab="account" aria-label="Buka Akun" title="Akun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5 20.5a7 7 0 0 1 14 0"/></svg></a>
     <button id="pwa-install-button" class="site-pwa-install" type="button" aria-label="Instal Aplikasi" title="Instal Aplikasi">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4"/><path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>
-      <span class="site-pwa-install-label">Instal Aplikasi</span>
+      <span class="site-pwa-install-label">Instal</span>
     </button>
-    <a class="site-cta" href="#booking-app">Pesan</a>
   </div>
   <div id="pwa-install-nudge" hidden aria-live="polite">
     <div class="pwa-install-nudge-copy"><strong>Pasang aplikasi Sules</strong><span>Akses lebih praktis dari layar utama.</span></div>
