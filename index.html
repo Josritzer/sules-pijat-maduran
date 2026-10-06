@@ -1012,7 +1012,7 @@ function isCustomerProfileComplete(profile) {
 }
 
 /* ================= TAB BOOKING (PELANGGAN) ================= */
-function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = false, initialAuthMode = "login", onAuthComplete = null, onAuthCancel = null, onCustomerSessionChange = null } = {}) {
+function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = false, initialAuthMode = "login", onAuthComplete = null, onAuthCancel = null, onCustomerSessionChange = null, onGoToOrders = null } = {}) {
   const [customerProfile, setCustomerProfile] = useState(null);
   const [profileStatus, setProfileStatus] = useState("idle");
   const [profileNama, setProfileNama] = useState("");
@@ -1400,6 +1400,10 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   const transport = tipeLokasi === "HOME_SERVICE" && jarak !== null ? hitungTransport(jarak) : 0;
   const biayaLayanan = HARGA[layanan] * orang;
   const total = biayaLayanan + transport;
+  const detailBookingSiap = tipeLokasi !== "HOME_SERVICE" || (lat !== null && lng !== null && jarak !== null && sumberJarak === "road");
+  const bookingJourneyStep = !tanggal ? 2 : !jam ? 3 : !detailBookingSiap ? 4 : 5;
+  const bookingJourneyLabels = ["Layanan", "Tanggal", "Waktu", "Data", "Kirim"];
+  const bookingJourneyHint = bookingJourneyStep === 2 ? "Pilih tanggal layanan." : bookingJourneyStep === 3 ? "Pilih waktu yang tersedia." : bookingJourneyStep === 4 ? "Lengkapi lokasi dan hitung jarak jalan." : "Tinjau ringkasan booking sebelum mengirim.";
 
   const konfirmasiBooking = async () => {
     if (bookingSubmitLockRef.current) return;
@@ -1625,7 +1629,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       <div className="max-w-md mx-auto px-4 py-8 pb-24">
         <div className="text-center mb-4">
           <div className="text-3xl mb-2">✅</div>
-          <h2 className="text-xl font-bold">Pesanan Berhasil Dikirim</h2>
+          <h2 className="text-xl font-bold">Booking berhasil dikirim ke Admin</h2>
         </div>
 
         <div className="text-center mb-4">
@@ -1634,8 +1638,8 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
 
         {b.status === "MENUNGGU" && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-sm text-yellow-800 mb-4">
-            <div className="font-semibold mb-1">Belum dikonfirmasi</div>
-            Jam yang Anda pilih masih menunggu pengecekan jadwal oleh Admin. Pesanan baru dianggap diterima setelah Admin menekan TERIMA.
+            <div className="font-semibold mb-1">Status awal: MENUNGGU</div>
+            Admin akan memeriksa jadwal dan memproses booking Anda. Booking baru berstatus DITERIMA setelah Admin menekan TERIMA.
           </div>
         )}
         {b.status === "DITERIMA" && (
@@ -1679,12 +1683,15 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
           <div className="flex justify-between font-bold text-base mt-2 pt-2 border-t border-gray-200"><span>Total</span><span>{formatRupiah(b.grand_total)}</span></div>
         </div>
 
+        {typeof onGoToOrders === "function" && <button type="button" onClick={onGoToOrders}
+          style={{ backgroundColor:"#18324B", color:"white", fontWeight:"bold", padding:"14px", borderRadius:"14px", width:"100%" }}
+          className="mb-3">Lihat Pesanan Aktif <span aria-hidden="true">→</span></button>}
         <button onClick={refreshStatus} disabled={loadingStatus}
           style={{ backgroundColor:"#18324B", color:"white", fontWeight:"bold", padding:"14px", borderRadius:"14px", width:"100%" }}
           className="mb-2">{loadingStatus ? "Memuat..." : "🔄 Cek Status Terbaru"}</button>
         <button onClick={()=>{ localStorage.removeItem(LAST_BOOKING_ID_KEY); setCurrentBooking(null); setScreen("form"); }}
           style={{ backgroundColor:"white", border:"1px solid #18324B", color:"#18324B", padding:"14px", borderRadius:"14px", width:"100%" }}>
-          Kembali ke Beranda
+          Buat Booking Baru
         </button>
       </div>
     );
@@ -1741,6 +1748,23 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
           </div>
         )}
       </div>
+
+      <section className="bg-white rounded-2xl p-4 mb-4 border border-gray-200" aria-label="Tahapan booking" aria-live="polite">
+        <div className="text-sm font-bold">Langkah {bookingJourneyStep} dari 5 · {bookingJourneyLabels[bookingJourneyStep - 1]}</div>
+        <p className="text-xs text-gray-600 mt-1 mb-2">{bookingJourneyHint}</p>
+        <p className="text-xs text-gray-700 mb-2">Paket dipilih: <strong>{paketTerpilih.label}</strong> · {orang} orang</p>
+        <ol className="flex flex-wrap gap-2 text-xs" aria-label="Progres booking">
+          {bookingJourneyLabels.map((label, index) => {
+            const step = index + 1;
+            const complete = step < bookingJourneyStep;
+            const current = step === bookingJourneyStep;
+            return <li key={label} aria-current={current ? "step" : undefined} className="rounded-full px-3 py-1 border"
+              style={{ backgroundColor:current?"#18324B":complete?"#ECFDF5":"#F9FAFB", color:current?"white":complete?"#065F46":"#6B7280", borderColor:current?"#18324B":complete?"#10B981":"#D9E5EF" }}>
+              {complete ? "✓ " : `${step}. `}{label}
+            </li>;
+          })}
+        </ol>
+      </section>
 
       <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
         <div className="sules-step-label"><span>01</span> LAYANAN</div>
@@ -1824,7 +1848,13 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
 
       <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
         <div className="sules-step-label"><span>05</span> KONFIRMASI</div>
-        <div className="text-sm font-semibold mb-2">Rincian Biaya</div>
+        <div className="text-sm font-semibold mb-2">Tinjau Booking</div>
+        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-3 text-sm">
+          <div className="mb-1"><span className="text-gray-600">Layanan:</span> <strong>{paketTerpilih.label}</strong> · {orang} orang</div>
+          <div className="mb-1"><span className="text-gray-600">Tanggal:</span> <strong>{tanggal || "Belum dipilih"}</strong></div>
+          <div className="mb-1"><span className="text-gray-600">Waktu:</span> <strong>{jam || "Belum dipilih"}</strong></div>
+          <div><span className="text-gray-600">Lokasi:</span> <strong>{paketTerpilih.location}</strong>{tipeLokasi === "HOME_SERVICE" && <span> · {alamatText.trim() || (lat !== null && lng !== null ? `Koordinat ${lat.toFixed(5)}, ${lng.toFixed(5)}` : "Lokasi belum dipilih")}</span>}</div>
+        </div>
         <div className="flex justify-between text-sm mb-1">
           <span>Layanan: {layanan==="90m"?"90 Menit":"2 Jam"} x {orang}</span>
           <span>{formatRupiah(biayaLayanan)}</span>
@@ -1844,6 +1874,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
           <span>TOTAL</span>
           <span className="sules-price">{formatRupiah(total)}</span>
         </div>
+        <p className="text-xs text-gray-600 mt-3">Setelah dikirim, status awal booking adalah MENUNGGU. Admin akan memproses booking Anda.</p>
       </div>
 
       {formError && (
@@ -3007,7 +3038,7 @@ function AppTabs() {
       <div className={isAdminScreen ? "sules-admin-content" : `sules-app-content${tab === "catalog" ? " sules-app-content-catalog" : ""}`}>
         {tab === "home" && <CustomerOrdersTab mode="home" onGoToBooking={()=>navigate("book")} onBookPackage={bookPackage} onGoToCatalog={()=>navigate("catalog")} onGoToOrders={goToOrders} onOpenPublicSection={openPublicSection} />}
         {tab === "catalog" && <CatalogTab onBookPackage={bookPackage} />}
-        {tab === "book" && <BookingTab initialPackageId={bookingPackageId} onCustomerSessionChange={updateCustomerSession} />}
+        {tab === "book" && <BookingTab initialPackageId={bookingPackageId} onCustomerSessionChange={updateCustomerSession} onGoToOrders={()=>goToOrders("active")} />}
         {tab === "customer-auth" && <BookingTab initialPackageId={bookingPackageId} authOnly initialAuthMode={customerAuthMode} onAuthComplete={finishCustomerAuth} onAuthCancel={finishCustomerAuth} onCustomerSessionChange={updateCustomerSession} />}
         {tab === "orders" && <CustomerOrdersTab initialView={ordersView} onGoToBooking={()=>navigate("book")} />}
         {tab === "notifications" && <NotificationsTab onGoToOrders={()=>goToOrders("active")} />}
