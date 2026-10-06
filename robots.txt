@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://sules-pijat-maduran-hujc.vercel.app/sitemap.xml
+Sitemap: https://bookingpijat.com/sitemap.xml
