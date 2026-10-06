@@ -1619,7 +1619,10 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
               : (authMode === "register" ? "Daftar untuk Booking" : "Masuk untuk Booking")}
           </div>
           <div className="text-center text-xs text-gray-500 mb-4">
-            {authOnly ? "Gunakan OTP email Supabase. Setelah berhasil, Anda kembali ke menu akun." : "Verifikasi email diperlukan supaya pesanan Anda aman dan bisa dicek kembali."}
+            {authOnly
+              ? "Email digunakan untuk masuk dengan kode OTP. Setelah berhasil, Anda kembali ke menu akun. "
+              : "Email digunakan untuk masuk dan mengaitkan booking dengan akun agar statusnya dapat Anda periksa kembali. "}
+            <a href="#kebijakan-privasi" className="underline font-semibold">Kebijakan Privasi</a>
           </div>
 
           {!otpSent ? (
@@ -1777,7 +1780,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       <section className="bg-white rounded-2xl border border-gray-200 p-5" aria-labelledby="complete-profile-title">
         <div className="sules-eyebrow">LANGKAH WAJIB SEBELUM BOOKING</div>
         <h2 id="complete-profile-title" className="text-xl font-bold mt-2 mb-2">Lengkapi Profil</h2>
-        <p className="text-sm text-gray-600 mb-5">Nama dan nomor WhatsApp disimpan pada profil akun Anda dan digunakan untuk pesanan berikutnya.</p>
+        <p className="text-sm text-gray-600 mb-5">Nama dan nomor WhatsApp disimpan pada profil akun Anda dan digunakan untuk pesanan berikutnya. <a href="#kebijakan-privasi" className="underline font-semibold">Kebijakan Privasi</a>.</p>
         <label htmlFor="customer-profile-name" className="text-sm font-semibold block mb-1">Nama Lengkap</label>
         <input id="customer-profile-name" type="text" autoComplete="name" value={profileNama}
           onChange={e => setProfileNama(e.target.value)} readOnly={savedName}
@@ -1856,7 +1859,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
 
         {tipeLokasi === "HOME_SERVICE" && (
           <div>
-            <div className="text-xs text-gray-500 mb-3">1 km pertama gratis, selanjutnya Rp3,50 per meter untuk seluruh booking.</div>
+            <p className="text-xs text-gray-500 mb-3">Lokasi digunakan untuk menghitung jarak jalan dan biaya perjalanan. 1 km pertama gratis, selanjutnya Rp3,50 per meter untuk seluruh booking. <a href="#kebijakan-privasi" className="underline font-semibold">Kebijakan Privasi</a>.</p>
             <button onClick={ambilLokasiGPS} disabled={loadingGPS}
               style={{ backgroundColor:"#2F6F9F", color:"white", borderRadius:"999px", padding:"14px", width:"100%", fontWeight:"bold" }}
               className="mb-2 sules-location-share">
