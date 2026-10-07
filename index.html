@@ -2764,7 +2764,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
       <section className="sules-home-account" aria-label="Akun pelanggan">
         <div className="sules-home-account-copy"><p className="sules-home-eyebrow">AREA PELANGGAN</p>
           <h2>{sessionError ? "Sesi akun belum dapat dipastikan" : "Sudah pernah booking?"}</h2>
-          <p>{sessionError ? "Sesi belum diubah. Periksa koneksi lalu coba kembali." : "Status dan riwayat hanya ditampilkan untuk akun pelanggan Anda."}</p>
+          <p>{sessionError ? "Sesi belum diubah. Periksa koneksi lalu coba kembali." : "Status dan riwayat hanya ditampilkan untuk akun pelanggan."}</p>
         </div>
         {sessionError && <div className="sules-home-error" role="alert"><div>{sessionError}</div><button type="button" onClick={retryCustomerSessionCheck}>Coba lagi</button></div>}
         {!sessionError && <button type="button" className="sules-home-account-button" onClick={onGoToBooking}>Masuk &amp; Pesan <span aria-hidden="true">↗</span></button>}
