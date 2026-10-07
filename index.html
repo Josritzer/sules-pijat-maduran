@@ -796,9 +796,9 @@
     #root .sules-catalog-grid .sules-service-card button.sules-primary { grid-area:cta; max-width:none; min-height:48px; margin-top:4px; }
   }
 
-  /* Home-only editorial identity: warm paper, forest ink, quiet champagne details. */
+  /* Home-only editorial identity: warm paper, navy ink, quiet champagne details. */
   .sules-home-screen {
-    --home-ink:#26372F; --home-muted:#68756D; --home-forest:#173A32; --home-forest-deep:#102C27;
+    --home-ink:#1B2A40; --home-muted:#66758A; --home-forest:#172B4A; --home-forest-deep:#0D1B33;
     --home-gold:#C6A96B; --home-line:#E4DCC9; --home-paper:#FCFAF5;
     display:flex; flex-direction:column; gap:clamp(22px,3.5vw,34px); width:100%; padding:clamp(8px,1.6vw,14px);
     border:1px solid #E9E2D4; border-radius:26px; color:var(--home-ink); background:#F5F1E8;
@@ -806,8 +806,8 @@
   .sules-home-hero {
     position:relative; display:grid; grid-template-columns:minmax(0,1.35fr) minmax(190px,.65fr); align-items:center; gap:20px;
     min-height:330px; overflow:hidden; isolation:isolate; padding:clamp(27px,5vw,46px); border:1px solid rgba(198,169,107,.7); border-radius:28px;
-    color:#FBF8EF; background:radial-gradient(ellipse at 84% 8%,rgba(198,169,107,.17),transparent 33%),linear-gradient(135deg,#102C27 0%,#173A32 58%,#285044 100%);
-    box-shadow:0 20px 44px rgba(28,48,39,.12);
+    color:#FBF8EF; background:radial-gradient(ellipse at 84% 8%,rgba(198,169,107,.17),transparent 33%),linear-gradient(135deg,#0D1B33 0%,#172B4A 58%,#24436D 100%);
+    box-shadow:0 20px 44px rgba(14,28,51,.18);
   }
   .sules-home-hero::before,.sules-home-hero::after { content:""; position:absolute; z-index:-1; border:1px solid rgba(221,199,146,.2); border-radius:50%; pointer-events:none; }
   .sules-home-hero::before { width:390px; height:390px; right:-150px; top:-180px; }
@@ -816,29 +816,29 @@
   .sules-home-kicker { display:flex; align-items:center; gap:9px; color:#E7D5A4; font-size:10px; font-weight:800; letter-spacing:.19em; }
   .sules-home-kicker span { width:7px; height:7px; flex:none; border-radius:50%; background:var(--home-gold); box-shadow:0 0 0 4px rgba(198,169,107,.15); }
   .sules-home-wordmark { margin:22px 0 8px; color:#E7D5A4; font-family:Georgia,'Times New Roman',serif; font-size:12px; font-weight:700; letter-spacing:.2em; }
-  .sules-home-wordmark span { color:#C7D5CA; font-family:inherit; font-size:9px; letter-spacing:.14em; }
+  .sules-home-wordmark span { color:#CBD7E8; font-family:inherit; font-size:9px; letter-spacing:.14em; }
   #root .sules-home-hero h1 { max-width:12ch; margin:0; color:#FFFDF7 !important; font-family:Georgia,'Times New Roman',serif; font-size:clamp(39px,6.7vw,60px); font-weight:500; line-height:.99; letter-spacing:-.045em; }
   .sules-home-hero h1 em { color:#E6D3A1; font-weight:400; }
   #root .sules-home-screen h2,#root .sules-home-screen h3 { color:var(--home-ink) !important; }
-  .sules-home-hero-description { max-width:42ch; margin:17px 0 0; color:#E0E8DF; font-size:14px; line-height:1.7; }
+  .sules-home-hero-description { max-width:42ch; margin:17px 0 0; color:#E4EAF2; font-size:14px; line-height:1.7; }
   .sules-home-hero-actions { display:flex; align-items:center; flex-wrap:wrap; gap:10px 18px; margin-top:23px; }
-  #root .sules-home-primary { display:inline-flex; align-items:center; justify-content:center; gap:15px; min-height:48px; padding:12px 18px; border:1px solid #E8D7A7 !important; border-radius:999px !important; color:#26372F !important; background:linear-gradient(135deg,#E7D5A4,#D2B879) !important; box-shadow:0 6px 18px rgba(7,23,19,.18); font-size:13px; font-weight:800; }
-  #root .sules-home-primary:hover { transform:translateY(-1px); box-shadow:0 9px 22px rgba(7,23,19,.24); }
+  #root .sules-home-primary { display:inline-flex; align-items:center; justify-content:center; gap:15px; min-height:48px; padding:12px 18px; border:1px solid #E8D7A7 !important; border-radius:999px !important; color:#1B2A40 !important; background:linear-gradient(135deg,#E7D5A4,#D2B879) !important; box-shadow:0 6px 18px rgba(7,22,45,.18); font-size:13px; font-weight:800; }
+  #root .sules-home-primary:hover { transform:translateY(-1px); box-shadow:0 9px 22px rgba(7,22,45,.24); }
   #root .sules-home-secondary { min-height:44px; padding:9px 2px; border:0 !important; border-bottom:1px solid rgba(231,213,164,.65) !important; border-radius:0 !important; color:#F7F2E4 !important; background:transparent !important; font-size:13px; font-weight:650; }
   .sules-home-emblem { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; min-width:0; }
-  .sules-home-emblem-ring { display:grid; width:176px; height:176px; place-items:center; border:1px solid rgba(231,213,164,.66); border-radius:50%; background:radial-gradient(circle,#F8F5EA 0%,#E8E1CF 100%); box-shadow:0 0 0 10px rgba(231,213,164,.055),0 18px 38px rgba(6,21,17,.23); }
+  .sules-home-emblem-ring { display:grid; width:176px; height:176px; place-items:center; border:1px solid rgba(231,213,164,.66); border-radius:50%; background:radial-gradient(circle,#F8F5EA 0%,#E8E1CF 100%); box-shadow:0 0 0 10px rgba(231,213,164,.055),0 18px 38px rgba(8,20,42,.23); }
   .sules-home-emblem-ring img { display:block; width:112px; height:112px; object-fit:contain; border-radius:22px; }
   .sules-home-emblem p { margin:0; color:#E9DCBA; font-size:8px; font-weight:750; letter-spacing:.18em; text-align:center; }
   .sules-home-facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; padding:15px 4px 18px; border-bottom:1px solid var(--home-line); }
   .sules-home-facts > div { display:flex; flex-direction:column; gap:6px; min-width:0; }
   .sules-home-facts span,.sules-home-eyebrow,.sules-home-info-label { color:#917B4F; font-size:9px; font-weight:850; letter-spacing:.16em; }
   .sules-home-facts strong { color:var(--home-ink); font-family:Georgia,'Times New Roman',serif; font-size:14px; font-weight:600; line-height:1.4; }
-  .sules-home-account { display:grid; gap:15px; padding:clamp(18px,3vw,25px); border:1px solid var(--home-line); border-radius:20px; background:var(--home-paper); box-shadow:0 8px 22px rgba(50,55,40,.045); }
+  .sules-home-account { display:grid; gap:15px; padding:clamp(18px,3vw,25px); border:1px solid var(--home-line); border-radius:20px; background:var(--home-paper); box-shadow:0 8px 22px rgba(31,46,67,.045); }
   .sules-home-account-copy h2,.sules-home-account-heading h2 { margin:5px 0 0; color:var(--home-ink); font-family:Georgia,'Times New Roman',serif; font-size:clamp(21px,4vw,27px); font-weight:600; letter-spacing:-.025em; }
   .sules-home-account-copy > p:last-child { max-width:58ch; margin:7px 0 0; color:var(--home-muted); font-size:13px; line-height:1.55; }
   .sules-home-account-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .sules-home-account-button { display:inline-flex; align-items:center; justify-content:space-between; gap:14px; width:max-content; min-width:175px; min-height:46px; padding:11px 16px; border:1px solid #C6A96B; border-radius:999px; color:#FBF8EF; background:var(--home-forest); font-size:13px; font-weight:750; }
-  .sules-home-account-button:hover { background:#244A40; }
+  .sules-home-account-button:hover { background:#1E355B; }
   .sules-home-error { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:12px 14px; border:1px solid #E7C8C0; border-radius:13px; color:#873F35; background:#FFF7F4; font-size:13px; line-height:1.5; }
   .sules-home-error button { min-height:40px; padding:7px 11px; border:1px solid #D9A99D; border-radius:999px; color:#73372F; background:#FFFFFF; font-size:12px; font-weight:750; }
   .sules-home-error button:disabled { opacity:.6; }
@@ -846,7 +846,7 @@
   .sules-home-empty h3 { margin:0; color:var(--home-ink); font-family:Georgia,'Times New Roman',serif; font-size:18px; }
   .sules-home-empty p { margin:5px 0 0; line-height:1.5; }
   .sules-home-order { padding:17px !important; border-color:var(--home-line) !important; border-radius:16px !important; box-shadow:none !important; }
-  .sules-home-summary { margin:0 !important; border-color:var(--home-line) !important; border-radius:20px !important; background:var(--home-paper) !important; box-shadow:0 8px 22px rgba(50,55,40,.045) !important; }
+  .sules-home-summary { margin:0 !important; border-color:var(--home-line) !important; border-radius:20px !important; background:var(--home-paper) !important; box-shadow:0 8px 22px rgba(31,46,67,.045) !important; }
   .sules-home-summary .sules-eyebrow { color:#917B4F !important; }
   .sules-home-summary > .grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:0 16px !important; margin-top:10px !important; }
   .sules-home-summary > .grid > div { display:flex; align-items:baseline; justify-content:space-between; gap:7px; padding:9px 0 !important; border:0 !important; border-bottom:1px solid var(--home-line) !important; border-radius:0 !important; background:transparent !important; }
@@ -858,7 +858,7 @@
   .sules-home-catalog-link { display:inline-flex; align-items:center; justify-content:center; gap:8px; flex:none; min-height:42px; padding:8px 12px; border:1px solid #D7C9A6; border-radius:999px; color:var(--home-forest); background:transparent; font-size:12px; font-weight:750; }
   .sules-home-catalog-link:hover { border-color:#B99D62; background:#FCFAF5; }
   .sules-home-screen .sules-service-rail { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-flow:row; grid-auto-columns:auto; gap:13px; overflow:visible; padding:0; scroll-snap-type:none; }
-  .sules-home-screen .sules-service-card { display:flex; align-items:stretch; min-width:0; min-height:100%; padding:17px; border:1px solid var(--home-line); border-radius:17px; background:linear-gradient(180deg,#FFFDF9,#FFFFFF); box-shadow:0 8px 20px rgba(50,55,40,.04); }
+  .sules-home-screen .sules-service-card { display:flex; align-items:stretch; min-width:0; min-height:100%; padding:17px; border:1px solid var(--home-line); border-radius:17px; background:linear-gradient(180deg,#FFFDF9,#FFFFFF); box-shadow:0 8px 20px rgba(31,46,67,.04); }
   .sules-home-screen .sules-service-card:nth-child(5) { grid-column:1 / -1; width:calc((100% - 13px)/2); justify-self:center; }
   .sules-home-screen .sules-service-card .sules-eyebrow { color:#917B4F !important; }
   .sules-home-screen .sules-service-card h3 { color:var(--home-ink); font-family:Georgia,'Times New Roman',serif; font-size:17px; line-height:1.3; letter-spacing:-.02em; overflow-wrap:anywhere; }
@@ -868,7 +868,7 @@
   #root .sules-home-screen .sules-service-card button.sules-primary { min-height:46px; margin-top:auto; border:1px solid #C6A96B !important; border-radius:999px !important; color:#FBF8EF !important; background:var(--home-forest) !important; box-shadow:none !important; font-size:12px; }
   .sules-home-story { display:grid; grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr); gap:clamp(18px,4vw,42px); padding:clamp(20px,4vw,32px) 4px; border-top:1px solid var(--home-line); border-bottom:1px solid var(--home-line); }
   .sules-home-story h2 { max-width:17ch; margin:8px 0 0; color:var(--home-ink); font-family:Georgia,'Times New Roman',serif; font-size:clamp(25px,4.5vw,38px); font-weight:500; line-height:1.08; letter-spacing:-.035em; }
-  .sules-home-story-copy { color:#59665E; font-size:13px; line-height:1.75; }
+  .sules-home-story-copy { color:#596A80; font-size:13px; line-height:1.75; }
   .sules-home-story-copy p { margin:0 0 10px; }
   .sules-home-story-copy p:last-child { margin-bottom:0; }
   .sules-home-info-links { display:flex; align-items:center; flex-wrap:wrap; gap:8px 16px; padding-top:14px; border-top:1px solid var(--home-line); }
