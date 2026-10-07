@@ -528,6 +528,12 @@
   .site-pwa-install:hover { border-color:#8FB8D6; box-shadow:0 7px 16px rgba(47,111,159,.18); }
   .site-pwa-install svg { width:16px; height:16px; flex:0 0 auto; }
   .site-pwa-install[hidden],#pwa-install-nudge[hidden],#pwa-install-guide[hidden] { display:none !important; }
+  body:has(#root .sules-menu-screen) .site-pwa-install,
+  body:has(#root .sules-menu-screen) #pwa-install-nudge,
+  body:has(#root .sules-menu-screen) #pwa-install-guide,
+  body:has(#root .sules-account-auth-screen) .site-pwa-install,
+  body:has(#root .sules-account-auth-screen) #pwa-install-nudge,
+  body:has(#root .sules-account-auth-screen) #pwa-install-guide { display:none !important; }
   #pwa-install-nudge,#pwa-install-guide { max-width:1120px; margin:0 auto 8px; }
   #pwa-install-nudge { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 14px; border:1px solid #C8DCEB; border-radius:14px; background:linear-gradient(115deg,#FFFFFF 0%,#EDF6FC 100%); box-shadow:0 5px 16px rgba(24,50,75,.07); color:#18324B; }
   .pwa-install-nudge-copy { display:flex; flex-direction:column; gap:2px; min-width:0; }
@@ -1774,36 +1780,39 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
 
   if (!customerSession && screen === "form") {
     return (
-      <div className="max-w-sm mx-auto px-4 py-16">
+      <div className={`max-w-sm mx-auto px-4 py-10${authOnly ? " sules-account-auth-screen" : ""}`}>
         <div className="text-center py-4">
-          <h2 className="text-xl font-bold" style={{color:"#18324B"}}>SULES PIJAT MADURAN</h2>
+          <h2 className="text-xl font-bold" style={{color:"#18324B"}}>{authOnly ? "Akun" : "SULES PIJAT MADURAN"}</h2>
+          {authOnly && <p className="text-sm text-gray-500 mt-2">Masuk untuk mengelola pesanan dan informasi akun Anda.</p>}
         </div>
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
           <div className="text-center text-lg font-bold mb-1" style={{color:"#18324B"}}>
             {authOnly
-              ? (authMode === "register" ? "Daftar Akun Pelanggan" : "Masuk ke Akun Pelanggan")
+              ? (authMode === "register" ? "Buat akun pelanggan" : "Masuk ke akun")
               : (authMode === "register" ? "Daftar untuk Booking" : "Masuk untuk Booking")}
           </div>
           <div className="text-center text-xs text-gray-500 mb-4">
             {authOnly
-              ? "Email digunakan untuk masuk dengan kode OTP. Setelah berhasil, Anda kembali ke menu akun. "
-              : "Email digunakan untuk masuk dan mengaitkan booking dengan akun agar statusnya dapat Anda periksa kembali. "}
-            <a href="#kebijakan-privasi" className="underline font-semibold">Kebijakan Privasi</a>
+              ? (authMode === "register" ? "Gunakan email untuk membuat akun pelanggan." : "Gunakan email terdaftar untuk masuk.")
+              : <>Email digunakan untuk masuk dan mengaitkan booking dengan akun agar statusnya dapat Anda periksa kembali. <a href="#kebijakan-privasi" className="underline font-semibold">Kebijakan Privasi</a></>}
+            {authOnly && <div className="mt-2"><a href="#syarat-ketentuan" className="underline font-semibold">Syarat &amp; Ketentuan</a><span className="mx-1" aria-hidden="true">·</span><a href="#kebijakan-privasi" className="underline font-semibold">Kebijakan Privasi</a></div>}
           </div>
 
           {!otpSent ? (
             <React.Fragment>
-              <div className="grid grid-cols-2 gap-2 mb-3" role="group" aria-label="Pilih Masuk atau Daftar">
-                <button type="button" aria-pressed={authMode === "login"} disabled={authLoading}
-                  onClick={()=>{setAuthMode("login");setAuthMsg("");setAuthNotice("");}}
-                  style={{width:"100%",fontWeight:"bold"}}>Masuk</button>
-                <button type="button" aria-pressed={authMode === "register"} disabled={authLoading}
-                  onClick={()=>{setAuthMode("register");setAuthMsg("");setAuthNotice("");}}
-                  style={{width:"100%",fontWeight:"bold"}}>Daftar</button>
-              </div>
-              <div className="text-xs text-gray-500 mb-3">
-                {authMode === "login" ? "Masuk dengan email yang sudah terdaftar." : "Buat akun pelanggan baru menggunakan email."}
-              </div>
+              {!authOnly && <>
+                <div className="grid grid-cols-2 gap-2 mb-3" role="group" aria-label="Pilih Masuk atau Daftar">
+                  <button type="button" aria-pressed={authMode === "login"} disabled={authLoading}
+                    onClick={()=>{setAuthMode("login");setAuthMsg("");setAuthNotice("");}}
+                    style={{width:"100%",fontWeight:"bold"}}>Masuk</button>
+                  <button type="button" aria-pressed={authMode === "register"} disabled={authLoading}
+                    onClick={()=>{setAuthMode("register");setAuthMsg("");setAuthNotice("");}}
+                    style={{width:"100%",fontWeight:"bold"}}>Daftar</button>
+                </div>
+                <div className="text-xs text-gray-500 mb-3">
+                  {authMode === "login" ? "Masuk dengan email yang sudah terdaftar." : "Buat akun pelanggan baru menggunakan email."}
+                </div>
+              </>}
               <label className="text-sm font-semibold block mb-1">Email</label>
               <input type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} disabled={authLoading}
                 value={custEmail} onChange={e=>{setCustEmail(e.target.value);setAuthMsg("");setAuthNotice("");}}
@@ -1816,6 +1825,12 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
                 style={{ backgroundColor:"#18324B", border:"2px solid #2F6F9F", color:"white", borderRadius:"12px", padding:"12px", width:"100%", fontWeight:"bold", opacity:(authLoading || otpCooldownRemaining > 0)?0.7:1 }} className="sules-primary">
                 {authLoading ? "Mengirim..." : otpCooldownRemaining > 0 ? `Kirim ulang dalam ${otpCooldownRemaining} detik` : "Kirim Kode OTP"}
               </button>
+              {authOnly && <p className="text-center text-sm text-gray-500 mt-3 mb-0">
+                {authMode === "login" ? "Belum punya akun?" : "Sudah punya akun?"}
+                <button type="button" disabled={authLoading} className="font-semibold underline ml-1" onClick={()=>{setAuthMode(authMode === "login" ? "register" : "login");setAuthMsg("");setAuthNotice("");}}>
+                  {authMode === "login" ? "Daftar" : "Masuk"}
+                </button>
+              </p>}
             </React.Fragment>
           ) : (
             <React.Fragment>
@@ -1832,7 +1847,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
               <button type="button" onClick={verifikasiOtp} disabled={authLoading || otpCode.length !== 8}
                 style={{ backgroundColor:"#10B981", color:"white", borderRadius:"12px", padding:"12px", width:"100%", fontWeight:"bold", opacity:(authLoading || otpCode.length !== 8)?0.7:1 }}
                 className="sules-primary mb-2">
-                {authLoading ? "Memeriksa..." : authMode === "register" ? "Verifikasi & Buat Akun" : "Verifikasi & Masuk"}
+                {authLoading ? "Memeriksa..." : authOnly ? "Verifikasi OTP" : authMode === "register" ? "Verifikasi & Buat Akun" : "Verifikasi & Masuk"}
               </button>
               <button type="button" onClick={kirimKodeOtp}
                 disabled={authLoading || otpCooldownRemaining > 0}
@@ -3359,6 +3374,7 @@ function CustomerProfileCard({ customerSession, onCompleteProfile }) {
 function ProfileMenuTab({ onOpenAdmin, customerSession, customerSessionReady, customerSessionError, onRetryCustomerSession, onCustomerAuth, onCustomerLogout, onGoToOrders, onStartBooking }) {
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [logoutError, setLogoutError] = useState("");
+  const [accountAuthMode, setAccountAuthMode] = useState("login");
   const handleLogout = async () => {
     if (logoutLoading) return;
     setLogoutLoading(true);
@@ -3373,7 +3389,7 @@ function ProfileMenuTab({ onOpenAdmin, customerSession, customerSessionReady, cu
   };
 
   return <div className="sules-menu-screen">
-    <div className="sules-page-heading"><div className="sules-eyebrow">SULES · Pijat Maduran</div><h1 className="text-2xl font-bold mt-1">Akun &amp; Menu</h1><p className="text-sm text-gray-500 mt-1">Kelola akun pelanggan, dashboard Admin, dan informasi layanan.</p></div>
+    <div className="sules-page-heading"><div className="sules-eyebrow">SULES · Pijat Maduran</div><h1 className="text-2xl font-bold mt-1">Akun</h1><p className="text-sm text-gray-500 mt-1">Kelola profil dan informasi akun Anda.</p></div>
     <section className="sules-menu-card">
       <div className="sules-eyebrow">PELANGGAN</div>
       {!customerSessionReady ? (
@@ -3386,7 +3402,6 @@ function ProfileMenuTab({ onOpenAdmin, customerSession, customerSessionReady, cu
           <h3 className="text-lg font-bold mt-2 mb-1">Akun Pelanggan</h3>
           <p className="text-sm text-gray-500 mb-3 break-all">{(customerSession.user && customerSession.user.email) || "Sesi pelanggan aktif"}</p>
           <button type="button" className="sules-menu-link" onClick={onGoToOrders}><span>Lihat Pesanan</span><span aria-hidden="true">→</span></button>
-          <button type="button" className="sules-primary w-full mt-2" onClick={onStartBooking}>Mulai Booking</button>
           {logoutError && <div role="alert" className="text-sm text-red-600 mt-2">{logoutError}</div>}
           <button type="button" className="sules-danger w-full mt-2" onClick={handleLogout} disabled={logoutLoading}>
             {logoutLoading ? "Keluar..." : "Keluar"}
@@ -3394,28 +3409,23 @@ function ProfileMenuTab({ onOpenAdmin, customerSession, customerSessionReady, cu
         </>
       ) : (
         <>
-          <h3 className="text-lg font-bold mt-2 mb-1">Masuk atau Daftar</h3>
-          <p className="text-sm text-gray-500 mb-3">Gunakan OTP email melalui Supabase Auth. Password pelanggan tidak diperlukan.</p>
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" className="sules-primary w-full" onClick={()=>onCustomerAuth("login")}>Masuk</button>
-            <button type="button" className="w-full" onClick={()=>onCustomerAuth("register")}>Daftar</button>
-          </div>
+          <h3 className="text-lg font-bold mt-2 mb-1">{accountAuthMode === "login" ? "Akun Pelanggan" : "Buat Akun Pelanggan"}</h3>
+          <p className="text-sm text-gray-500 mb-3">{accountAuthMode === "login" ? "Masuk untuk mengelola pesanan dan informasi akun Anda." : "Daftar untuk mengelola pesanan dan informasi akun Anda."}</p>
+          <button type="button" className="sules-primary w-full" onClick={()=>onCustomerAuth(accountAuthMode)}>{accountAuthMode === "login" ? "Masuk" : "Daftar"}</button>
+          <p className="text-center text-sm text-gray-600 mt-3 mb-0">
+            {accountAuthMode === "login" ? "Belum punya akun?" : "Sudah punya akun?"}
+            <button type="button" className="font-semibold underline ml-1" onClick={()=>setAccountAuthMode(mode => mode === "login" ? "register" : "login")}>
+              {accountAuthMode === "login" ? "Daftar" : "Masuk"}
+            </button>
+          </p>
+          <p className="text-center text-xs text-gray-500 mt-3 mb-0">
+            <a href="#syarat-ketentuan" className="underline">Syarat &amp; Ketentuan</a><span className="mx-1" aria-hidden="true">·</span><a href="#kebijakan-privasi" className="underline">Kebijakan Privasi</a>
+          </p>
         </>
       )}
     </section>
     {customerSession && customerSession.user && customerSession.user.id && <CustomerProfileCard customerSession={customerSession} onCompleteProfile={onStartBooking} />}
-    <section className="sules-menu-card">
-      <div className="sules-eyebrow">OPERASIONAL</div><h3 className="text-lg font-bold mt-2 mb-3">Admin Dashboard</h3>
-      <button type="button" className="sules-primary w-full" onClick={onOpenAdmin}>Masuk ke Admin <span aria-hidden="true">→</span></button>
-    </section>
-    <section className="sules-menu-card">
-      <div className="sules-eyebrow">INFORMASI</div>
-      <a className="sules-menu-link" href="#faq"><span>FAQ &amp; bantuan</span><span aria-hidden="true">→</span></a>
-      <a className="sules-menu-link" href="#legalitas"><span>Informasi usaha</span><span aria-hidden="true">→</span></a>
-      <a className="sules-menu-link" href="#syarat-ketentuan"><span>Syarat &amp; ketentuan</span><span aria-hidden="true">→</span></a>
-      <a className="sules-menu-link" href="#kebijakan-privasi"><span>Kebijakan privasi</span><span aria-hidden="true">→</span></a>
-      <a className="sules-menu-link" href="#kontak"><span>Hubungi Sules</span><span aria-hidden="true">→</span></a>
-    </section>
+    {customerSessionReady && !customerSession && <div className="text-center mt-3 mb-4"><button type="button" className="text-xs text-gray-500 underline" onClick={onOpenAdmin}>Masuk ke Admin</button></div>}
   </div>;
 }
 
