@@ -1,0 +1,13 @@
+# Private release signing material — never commit
+*.jks
+*.keystore
+signing*.txt
+
+# Local Android build output
+.gradle/
+local.properties
+build/
+app/build/
+*.aab
+*.apk
+*.idsig
