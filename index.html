@@ -264,6 +264,29 @@
     return data.session;
   }
   async function customerLogout() { await supabaseClient.auth.signOut(); }
+  async function deleteCustomerAccount() {
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw new Error("Sesi akun belum dapat diperiksa. Masuk kembali sebelum menghapus akun.");
+    const session = sessionData && sessionData.session;
+    if (!session || !session.access_token) throw new Error("Sesi pelanggan tidak aktif. Masuk kembali sebelum menghapus akun.");
+    const { data, error } = await supabaseClient.functions.invoke("delete-account", {
+      body: { confirm: true },
+      headers: { Authorization: `Bearer ${session.access_token}`, apikey: SUPABASE_ANON_KEY }
+    });
+    if (error) throw await getFunctionError(error);
+    if (!data || data.deleted !== true) throw new Error("Penghapusan akun belum dapat dikonfirmasi. Periksa status akun sebelum mencoba lagi.");
+    try { await supabaseClient.auth.signOut({ scope: "local" }); } catch (_) {}
+    try {
+      const storage = supabaseClient.auth.storage;
+      const storageKey = supabaseClient.auth.storageKey;
+      if (storage && storageKey && typeof storage.removeItem === "function") await storage.removeItem(storageKey);
+    } catch (_) {}
+    try {
+      localStorage.removeItem("sules_last_booking_id");
+      localStorage.removeItem("sules_last_booking_token");
+    } catch (_) {}
+    return data;
+  }
   async function getCustomerSession() {
     const { data, error } = await supabaseClient.auth.getSession();
     if (error) throw error;
@@ -398,7 +421,7 @@
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+  window.bookingService = { createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -3371,9 +3394,12 @@ function CustomerProfileCard({ customerSession, onCompleteProfile }) {
   </section>;
 }
 
-function ProfileMenuTab({ onOpenAdmin, customerSession, customerSessionReady, customerSessionError, onRetryCustomerSession, onCustomerAuth, onCustomerLogout, onGoToOrders, onStartBooking }) {
+function ProfileMenuTab({ onOpenAdmin, customerSession, customerSessionReady, customerSessionError, onRetryCustomerSession, onCustomerAuth, onCustomerLogout, onDeleteAccount, onGoToOrders, onStartBooking }) {
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [logoutError, setLogoutError] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteSuccess, setDeleteSuccess] = useState("");
   const [accountAuthMode, setAccountAuthMode] = useState("login");
   const handleLogout = async () => {
     if (logoutLoading) return;
@@ -3385,6 +3411,22 @@ function ProfileMenuTab({ onOpenAdmin, customerSession, customerSessionReady, cu
       setLogoutError("Keluar belum berhasil. Periksa koneksi, lalu coba lagi.");
     } finally {
       setLogoutLoading(false);
+    }
+  };
+  const handleDeleteAccount = async () => {
+    if (deleteLoading || logoutLoading) return;
+    const confirmed = typeof window.confirm === "function" && window.confirm("Hapus akun pelanggan secara permanen?\n\nAkun, profil, dan seluruh booking serta riwayat milik akun ini akan dihapus dari Sules. Tindakan ini tidak dapat dibatalkan. Pilih Batal jika Anda ingin menyimpan data tersebut.");
+    if (!confirmed) return;
+    setDeleteLoading(true);
+    setDeleteError("");
+    setDeleteSuccess("");
+    try {
+      await onDeleteAccount();
+      setDeleteSuccess("Akun pelanggan dan data booking terkait telah dihapus permanen.");
+    } catch (error) {
+      setDeleteError(error && error.message || "Penghapusan akun belum berhasil. Muat ulang halaman untuk memastikan status akun sebelum mencoba lagi.");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -3403,9 +3445,13 @@ function ProfileMenuTab({ onOpenAdmin, customerSession, customerSessionReady, cu
           <p className="text-sm text-gray-500 mb-3 break-all">{(customerSession.user && customerSession.user.email) || "Sesi pelanggan aktif"}</p>
           <button type="button" className="sules-menu-link" onClick={onGoToOrders}><span>Lihat Pesanan</span><span aria-hidden="true">→</span></button>
           {logoutError && <div role="alert" className="text-sm text-red-600 mt-2">{logoutError}</div>}
-          <button type="button" className="sules-danger w-full mt-2" onClick={handleLogout} disabled={logoutLoading}>
+          <button type="button" className="sules-danger w-full mt-2" onClick={handleLogout} disabled={logoutLoading || deleteLoading}>
             {logoutLoading ? "Keluar..." : "Keluar"}
           </button>
+          <button type="button" className="sules-danger w-full mt-2" onClick={handleDeleteAccount} disabled={logoutLoading || deleteLoading}>
+            {deleteLoading ? "Menghapus akun..." : "Hapus Akun"}
+          </button>
+          {deleteError && <div role="alert" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl p-3 mt-2">{deleteError}</div>}
         </>
       ) : (
         <>
@@ -3423,6 +3469,7 @@ function ProfileMenuTab({ onOpenAdmin, customerSession, customerSessionReady, cu
           </p>
         </>
       )}
+      {deleteSuccess && <p role="status" className="text-sm text-green-800 bg-green-50 border border-green-200 rounded-xl p-3 mt-3">{deleteSuccess}</p>}
     </section>
     {customerSession && customerSession.user && customerSession.user.id && <CustomerProfileCard customerSession={customerSession} onCompleteProfile={onStartBooking} />}
     {customerSessionReady && !customerSession && <div className="text-center mt-3 mb-4"><button type="button" className="text-xs text-gray-500 underline" onClick={onOpenAdmin}>Masuk ke Admin</button></div>}
@@ -3527,6 +3574,10 @@ function AppTabs() {
     await window.bookingService.customerLogout();
     updateCustomerSession(null);
   };
+  const deleteCustomerAccount = async () => {
+    await window.bookingService.deleteCustomerAccount();
+    updateCustomerSession(null);
+  };
   const openCustomerAuth = mode => {
     setCustomerAuthReturnTab(tab === "customer-auth" ? customerAuthReturnTab : tab);
     setCustomerAuthMode(mode === "register" ? "register" : "login");
@@ -3586,7 +3637,7 @@ function AppTabs() {
         {tab === "account" && (menuView === "admin"
           ? <AdminTab onExitToApp={()=>setMenuView("menu")} />
           : <ProfileMenuTab onOpenAdmin={()=>setMenuView("admin")} customerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck}
-            onCustomerAuth={openCustomerAuth} onCustomerLogout={logoutCustomer}
+            onCustomerAuth={openCustomerAuth} onCustomerLogout={logoutCustomer} onDeleteAccount={deleteCustomerAccount}
             onGoToOrders={()=>goToOrders("active")} onStartBooking={()=>bookPackage(bookingPackageId)} />)}
       </div>
       {!isAdminScreen && <nav className="sules-bottom-nav" aria-label="Navigasi aplikasi">

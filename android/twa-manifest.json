@@ -21,7 +21,7 @@
     "alias": "sulesupload"
   },
   "appVersionName": "1.0.0",
-  "appVersionCode": 1,
+  "appVersionCode": 2,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://bookingpijat.com/manifest.webmanifest",
