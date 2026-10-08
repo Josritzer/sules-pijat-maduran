@@ -965,6 +965,69 @@
     .sules-home-info-links { gap:4px 14px; }
     .sules-home-info-label { width:100%; }
   }
+
+  /* Dashboard palette from the supplied reference: indigo, violet, magenta, ivory and champagne. */
+  body:has(#root .sules-app-shell),body.sules-admin-mode {
+    --sules-bg:#F5F2EF; --sules-surface:#FFFFFF; --sules-surface-raised:#FAF7FA; --sules-glass:rgba(255,255,255,.94);
+    --sules-line:#E3DDEA; --sules-text:#292B43; --sules-muted:#666A80; --sules-navy:#252A50;
+    --sules-blue:#4356B5; --sules-cyan:#8054B5; --sules-control-border:#D8D1E2;
+    --sules-primary-gradient:linear-gradient(115deg,#4058D5 0%,#8050B6 55%,#C34191 100%);
+    --sules-primary-shadow:0 6px 16px rgba(112,72,167,.2);
+    background:radial-gradient(ellipse at 88% 0%,rgba(224,79,164,.075),transparent 42%),radial-gradient(ellipse at 5% 25%,rgba(64,88,213,.055),transparent 40%),var(--sules-bg) !important;
+    color:var(--sules-text) !important;
+  }
+  #root .text-blue-600 { color:#4356B5 !important; }
+  #root .text-blue-800 { color:#3D4E9C !important; }
+  #root .bg-blue-50 { background:#F1EFFA !important; border-color:#D5CDEA !important; }
+  #root .text-green-800 { color:#356B67 !important; }
+  #root .bg-green-50 { background:#EEF6F3 !important; border-color:#C8DED6 !important; }
+  #root .text-yellow-800 { color:#725D22 !important; }
+  #root .bg-yellow-50 { background:#FBF6E8 !important; border-color:#E8D9A9 !important; }
+  #root .text-red-600,#root .text-red-700,#root .text-red-800 { color:#9B465B !important; }
+  #root .bg-red-50 { background:#FCF0F3 !important; border-color:#EBCAD4 !important; }
+  #root input:not([type="checkbox"]),#root select,#root textarea { border-color:var(--sules-control-border) !important; }
+  #root input:focus,#root select:focus,#root textarea:focus { border-color:#8A68BE !important; box-shadow:0 0 0 3px rgba(128,80,182,.14) !important; }
+  #root button:hover:not(:disabled) { border-color:#B9A8D3 !important; box-shadow:0 5px 14px rgba(85,64,129,.1); }
+  #root button[aria-pressed="true"],#root button.sules-primary { border-color:#8050B6 !important; }
+  #root button.sules-success { color:#FFFFFF !important; background:#477C78 !important; border-color:#477C78 !important; }
+  #root button.sules-danger { color:#98465A !important; background:#FCF0F3 !important; border-color:#EBCAD4 !important; }
+  #root .sules-status-badge[data-status="MENUNGGU"] { background:#FBF5E5 !important; color:#755E20 !important; border-color:#E7D59A !important; }
+  #root .sules-status-badge[data-status="DITERIMA"] { background:#F0EFFA !important; color:#3D4E9C !important; border-color:#D1CBE9 !important; }
+  #root .sules-status-badge[data-status="DITOLAK"],#root .sules-status-badge[data-status="DIBATALKAN"] { background:#FCF0F3 !important; color:#9B465B !important; border-color:#EBCAD4 !important; }
+  #root .sules-status-badge[data-status="SELESAI"] { background:#EEF6F3 !important; color:#356B67 !important; border-color:#C8DED6 !important; }
+  #root svg line { stroke:#A69BB7; }
+  #root svg text { fill:#666A80; }
+  #root .sules-location-share { background:linear-gradient(115deg,#4058D5 0%,#8050B6 55%,#E04FA4 100%) !important; border-color:#DCC9E8 !important; box-shadow:0 8px 18px rgba(112,72,167,.2),inset 0 1px rgba(255,255,255,.18); }
+  #root .sules-location-share:hover:not(:disabled) { box-shadow:0 10px 22px rgba(112,72,167,.25); }
+  #root .sules-quick-item { color:#444C82 !important; border-color:#E3DDEA !important; }
+  #root .sules-quick-item svg,#root .sules-empty-icon { color:#6852AA; }
+  #root .sules-quick-item:hover { background:#F7F3FA !important; }
+  #root .sules-empty-icon { background:#F1EFFA; }
+  #root .sules-bottom-nav button[data-nav="home"] { --nav-accent:#4356B5; --nav-tint:#F0EFFA; --nav-line:#D5CDEA; }
+  #root .sules-bottom-nav button[data-nav="catalog"] { --nav-accent:#7952AE; --nav-tint:#F5EFF8; --nav-line:#E1D2EC; }
+  #root .sules-bottom-nav button[data-nav="orders"] { --nav-accent:#477C78; --nav-tint:#EEF6F3; --nav-line:#C8DED6; }
+  #root .sules-bottom-nav button[data-nav="notifications"] { --nav-accent:#B04D75; --nav-tint:#FCF0F3; --nav-line:#EBCAD4; }
+  #root .sules-bottom-nav button[data-nav="account"] { --nav-accent:#8054B5; --nav-tint:#F4F0F8; --nav-line:#DDD2E8; }
+  .sules-admin-header-actions .sules-admin-logout { color:#98465A; border-color:#EBCAD4; background:#FCF0F3; }
+
+  #root .sules-home-screen {
+    --home-ink:#252A50; --home-muted:#666A80; --home-forest:#51458F; --home-forest-deep:#283775;
+    --home-gold:#D3BD73; --home-line:#E3DDEA; --home-paper:#FFFEFC;
+    color:var(--home-ink); border-color:#E3DDEA; background:#F5F2EF;
+  }
+  #root .sules-home-hero { border-color:rgba(211,189,115,.72); background:radial-gradient(ellipse at 92% 7%,rgba(236,116,192,.28),transparent 34%),linear-gradient(118deg,#3046A8 0%,#694DAC 53%,#C94EAA 100%); }
+  #root .sules-home-hero::before,#root .sules-home-hero::after { border-color:rgba(246,190,224,.28); }
+  #root .sules-home-hero h1 em { color:#F5B6DE; }
+  #root .sules-home-primary { border-color:#F2C9E2 !important; color:#FFFFFF !important; background:linear-gradient(115deg,#5369E1 0%,#9256C2 55%,#C34191 100%) !important; box-shadow:0 6px 18px rgba(30,35,91,.24); }
+  #root .sules-home-primary:hover { box-shadow:0 9px 22px rgba(30,35,91,.3); }
+  #root .sules-home-secondary { border-bottom-color:rgba(247,218,239,.72) !important; }
+  #root .sules-home-account-button { border-color:#D5C2EB; background:#51458F; }
+  #root .sules-home-account-button:hover { background:#403B83; }
+  #root .sules-home-catalog-link { border-color:#D9CBE4; color:#51458F; }
+  #root .sules-home-catalog-link:hover { border-color:#AF91C7; background:#F6F1F8; }
+  #root .sules-home-screen .sules-service-card button.sules-primary { border-color:#D5C2EB !important; background:#51458F !important; }
+  #root .sules-home-info-links button { color:#51458F; }
+  #root .sules-home-info-links button:hover { color:#A64D84; }
 </style>
 </head>
 <body>
