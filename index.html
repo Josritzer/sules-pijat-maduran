@@ -486,12 +486,47 @@
     object-fit:cover; object-position:center 44%; border-radius:22px;
     border:1px solid var(--sules-line); box-shadow:0 9px 24px rgba(24,50,75,.12);
   }
+  #kontak .appreciation-account-row {
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    margin:12px 0 8px; padding:12px; border:1px solid var(--sules-line);
+    border-radius:16px; background:linear-gradient(135deg,#FFFFFF,#F5F9FC);
+    box-shadow:0 4px 14px rgba(24,50,75,.055);
+  }
+  #kontak .appreciation-account-copy { min-width:0; }
+  #kontak .appreciation-account-label {
+    display:block; margin-bottom:5px; color:#627B90; font-size:11px;
+    font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+  }
+  #kontak .appreciation-account-number {
+    display:block; color:var(--sules-navy); font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:clamp(15px,4.5vw,21px); font-weight:800; letter-spacing:.035em;
+    font-variant-numeric:tabular-nums; white-space:nowrap;
+  }
+  #kontak .appreciation-copy-button {
+    display:inline-flex; flex:0 0 auto; align-items:center; justify-content:center; gap:6px;
+    min-width:76px; min-height:46px; padding:0 11px; border:1px solid #C9D8E5;
+    border-radius:12px; background:#FFFFFF; color:var(--sules-navy); font-family:inherit; font-size:13px; font-weight:700;
+    cursor:pointer; box-shadow:0 2px 7px rgba(24,50,75,.045);
+    transition:background-color .18s ease,border-color .18s ease,color .18s ease,transform .18s ease;
+  }
+  #kontak .appreciation-copy-button svg { display:block; width:16px; height:16px; flex:0 0 16px; }
+  #kontak .appreciation-copy-button svg[hidden] { display:none; }
+  #kontak .appreciation-copy-button:hover { background:#F2F7FB; border-color:#AFC6D8; }
+  #kontak .appreciation-copy-button:active { transform:scale(.97); }
+  #kontak .appreciation-copy-button:focus-visible { outline:3px solid rgba(47,111,159,.25); outline-offset:2px; }
+  #kontak .appreciation-copy-button.is-copied { color:#285D4C; background:#EFF7F3; border-color:#C9DFD4; }
+  #kontak .appreciation-copy-status { margin:4px 0 10px; font-size:12px; }
   @media (max-width:760px) {
     #kontak .contact-person { align-items:flex-start; gap:12px; }
     #kontak .contact-profile-photo { width:104px; height:105px; flex-basis:104px; border-radius:18px; }
   }
   @media (max-width:360px) {
     #kontak .contact-profile-photo { width:88px; height:89px; flex-basis:88px; border-radius:16px; }
+    #kontak .appreciation-card { padding-right:10px; padding-left:10px; }
+    #kontak .appreciation-account-row { gap:6px; padding:8px; }
+    #kontak .appreciation-account-number { font-size:15px; letter-spacing:0; }
+    #kontak .appreciation-copy-button { gap:4px; min-width:66px; padding:0 8px; font-size:12px; }
+    #kontak .appreciation-copy-button svg { width:15px; height:15px; flex-basis:15px; }
   }
 </style>
 <style>
@@ -1068,10 +1103,18 @@
       <dl class="public-data">
         <dt>Bank</dt><dd>BCA Digital (blu)</dd>
         <dt>Jenis</dt><dd>Rekening Pribadi</dd>
-        <dt>Nomor Rekening</dt><dd id="appreciation-account-number">006462128852</dd>
         <dt>Atas Nama</dt><dd>Sules Harianto</dd>
       </dl>
-      <button id="copy-appreciation-account" class="public-button secondary" type="button">Salin Nomor Rekening</button>
+      <div class="appreciation-account-row">
+        <div class="appreciation-account-copy">
+          <span class="appreciation-account-label">Nomor rekening</span>
+          <strong id="appreciation-account-number" class="appreciation-account-number" data-copy-value="006462128852">0064 6212 8852</strong>
+        </div>
+        <button id="copy-appreciation-account" class="appreciation-copy-button" type="button" aria-label="Salin nomor rekening">
+          <svg class="appreciation-copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="12" height="14" rx="2"/><path d="M16 17v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2"/></svg>
+          <span id="appreciation-copy-label">Salin</span>
+        </button>
+      </div>
       <p id="appreciation-copy-status" class="public-muted" role="status" aria-live="polite" hidden></p>
       <p class="public-muted"><strong>Catatan:</strong> “Apresiasi bersifat sepenuhnya sukarela dan bukan bagian dari biaya layanan atau persyaratan booking.”</p>
       <p class="public-muted"><strong>Terima kasih atas kepercayaan, kebaikan, dan apresiasi Anda.</strong></p>
@@ -1083,7 +1126,20 @@
   const button = document.getElementById("copy-appreciation-account");
   const account = document.getElementById("appreciation-account-number");
   const status = document.getElementById("appreciation-copy-status");
-  if (!button || !account || !status) return;
+  const copyIcon = button && button.querySelector(".appreciation-copy-icon");
+  const copyLabel = document.getElementById("appreciation-copy-label");
+  if (!button || !account || !status || !copyIcon || !copyLabel) return;
+  let copiedResetTimer = null;
+
+  function resetCopyButton() {
+    copyIcon.hidden = false;
+    copyLabel.textContent = "Salin";
+    button.setAttribute("aria-label", "Salin nomor rekening");
+    button.classList.remove("is-copied");
+    status.hidden = true;
+    status.textContent = "";
+    copiedResetTimer = null;
+  }
 
   function fallbackCopy(text) {
     const field = document.createElement("textarea");
@@ -1103,7 +1159,11 @@
 
   button.addEventListener("click", async () => {
     button.disabled = true;
-    const text = account.textContent.trim();
+    if (copiedResetTimer) {
+      window.clearTimeout(copiedResetTimer);
+      copiedResetTimer = null;
+    }
+    const text = account.dataset.copyValue || account.textContent.trim().replace(/\s+/g, "");
     let copied = false;
     try {
       if (navigator.clipboard && window.isSecureContext) {
@@ -1120,7 +1180,19 @@
         ? "Nomor rekening berhasil disalin"
         : "Belum dapat menyalin otomatis. Silakan salin nomor rekening yang tertera.";
       status.hidden = false;
+      if (copied) {
+        copyIcon.hidden = true;
+        copyLabel.textContent = "✓ Tersalin";
+        button.setAttribute("aria-label", "Nomor rekening berhasil disalin");
+        button.classList.add("is-copied");
+        copiedResetTimer = window.setTimeout(resetCopyButton, 2500);
+      } else {
+        resetCopyButton();
+        status.textContent = "Belum dapat menyalin otomatis. Silakan salin nomor rekening yang tertera.";
+        status.hidden = false;
+      }
     } catch (_) {
+      resetCopyButton();
       status.textContent = "Belum dapat menyalin otomatis. Silakan salin nomor rekening yang tertera.";
       status.hidden = false;
     } finally {
