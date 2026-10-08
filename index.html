@@ -966,59 +966,169 @@
     .sules-home-info-label { width:100%; }
   }
 
-  /* Dashboard palette from the supplied reference: indigo, violet, magenta, ivory and champagne. */
-  body:has(#root .sules-app-shell),body.sules-admin-mode {
-    --sules-bg:#F5F2EF; --sules-surface:#FFFFFF; --sules-surface-raised:#FAF7FA; --sules-glass:rgba(255,255,255,.94);
-    --sules-line:#E3DDEA; --sules-text:#292B43; --sules-muted:#666A80; --sules-navy:#252A50;
-    --sules-blue:#4356B5; --sules-cyan:#8054B5; --sules-control-border:#D8D1E2;
-    --sules-primary-gradient:linear-gradient(115deg,#4058D5 0%,#8050B6 55%,#C34191 100%);
-    --sules-primary-shadow:0 6px 16px rgba(112,72,167,.2);
-    background:radial-gradient(ellipse at 88% 0%,rgba(224,79,164,.075),transparent 42%),radial-gradient(ellipse at 5% 25%,rgba(64,88,213,.055),transparent 40%),var(--sules-bg) !important;
+  /* Global Sules palette: indigo, violet, magenta, ivory and champagne. */
+  :root {
+    --sules-bg:#F6F3F0; --sules-surface:#FFFEFC; --sules-surface-raised:#F8F4F8; --sules-glass:rgba(255,254,252,.94);
+    --sules-line:#E4DDEA; --sules-text:#29263F; --sules-muted:#686579; --sules-navy:#29294F;
+    --sules-blue:#4356C5; --sules-cyan:#7652B2; --sules-gold:#BFA45F; --sules-magenta:#AD3F83;
+    --sules-control-border:#D9D1E2; --sules-control-radius:13px; --sules-card-radius:18px;
+    --sules-primary-gradient:linear-gradient(115deg,#3F51C2 0%,#7550B4 54%,#AD3F83 100%);
+    --sules-primary-shadow:0 6px 16px rgba(98,67,150,.19);
+  }
+  html { background:var(--sules-bg); }
+  body,body.sules-admin-mode {
+    background:radial-gradient(ellipse at 88% 0%,rgba(173,63,131,.065),transparent 42%),radial-gradient(ellipse at 5% 25%,rgba(67,86,197,.055),transparent 40%),var(--sules-bg) !important;
     color:var(--sules-text) !important;
   }
-  #root .text-blue-600 { color:#4356B5 !important; }
-  #root .text-blue-800 { color:#3D4E9C !important; }
-  #root .bg-blue-50 { background:#F1EFFA !important; border-color:#D5CDEA !important; }
-  #root .text-green-800 { color:#356B67 !important; }
-  #root .bg-green-50 { background:#EEF6F3 !important; border-color:#C8DED6 !important; }
-  #root .text-yellow-800 { color:#725D22 !important; }
-  #root .bg-yellow-50 { background:#FBF6E8 !important; border-color:#E8D9A9 !important; }
-  #root .text-red-600,#root .text-red-700,#root .text-red-800 { color:#9B465B !important; }
-  #root .bg-red-50 { background:#FCF0F3 !important; border-color:#EBCAD4 !important; }
-  #root input:not([type="checkbox"]),#root select,#root textarea { border-color:var(--sules-control-border) !important; }
-  #root input:focus,#root select:focus,#root textarea:focus { border-color:#8A68BE !important; box-shadow:0 0 0 3px rgba(128,80,182,.14) !important; }
-  #root button:hover:not(:disabled) { border-color:#B9A8D3 !important; box-shadow:0 5px 14px rgba(85,64,129,.1); }
-  #root button[aria-pressed="true"],#root button.sules-primary { border-color:#8050B6 !important; }
-  #root button.sules-success { color:#FFFFFF !important; background:#477C78 !important; border-color:#477C78 !important; }
-  #root button.sules-danger { color:#98465A !important; background:#FCF0F3 !important; border-color:#EBCAD4 !important; }
-  #root .sules-status-badge[data-status="MENUNGGU"] { background:#FBF5E5 !important; color:#755E20 !important; border-color:#E7D59A !important; }
-  #root .sules-status-badge[data-status="DITERIMA"] { background:#F0EFFA !important; color:#3D4E9C !important; border-color:#D1CBE9 !important; }
-  #root .sules-status-badge[data-status="DITOLAK"],#root .sules-status-badge[data-status="DIBATALKAN"] { background:#FCF0F3 !important; color:#9B465B !important; border-color:#EBCAD4 !important; }
-  #root .sules-status-badge[data-status="SELESAI"] { background:#EEF6F3 !important; color:#356B67 !important; border-color:#C8DED6 !important; }
-  #root svg line { stroke:#A69BB7; }
-  #root svg text { fill:#666A80; }
-  #root .sules-location-share { background:linear-gradient(115deg,#4058D5 0%,#8050B6 55%,#E04FA4 100%) !important; border-color:#DCC9E8 !important; box-shadow:0 8px 18px rgba(112,72,167,.2),inset 0 1px rgba(255,255,255,.18); }
-  #root .sules-location-share:hover:not(:disabled) { box-shadow:0 10px 22px rgba(112,72,167,.25); }
-  #root .sules-quick-item { color:#444C82 !important; border-color:#E3DDEA !important; }
-  #root .sules-quick-item svg,#root .sules-empty-icon { color:#6852AA; }
-  #root .sules-quick-item:hover { background:#F7F3FA !important; }
-  #root .sules-empty-icon { background:#F1EFFA; }
-  #root .sules-bottom-nav button[data-nav="home"] { --nav-accent:#4356B5; --nav-tint:#F0EFFA; --nav-line:#D5CDEA; }
-  #root .sules-bottom-nav button[data-nav="catalog"] { --nav-accent:#7952AE; --nav-tint:#F5EFF8; --nav-line:#E1D2EC; }
-  #root .sules-bottom-nav button[data-nav="orders"] { --nav-accent:#477C78; --nav-tint:#EEF6F3; --nav-line:#C8DED6; }
-  #root .sules-bottom-nav button[data-nav="notifications"] { --nav-accent:#B04D75; --nav-tint:#FCF0F3; --nav-line:#EBCAD4; }
-  #root .sules-bottom-nav button[data-nav="account"] { --nav-accent:#8054B5; --nav-tint:#F4F0F8; --nav-line:#DDD2E8; }
-  .sules-admin-header-actions .sules-admin-logout { color:#98465A; border-color:#EBCAD4; background:#FCF0F3; }
+  ::selection { background:rgba(117,80,180,.2); color:#29294F; }
+  :focus-visible { outline-color:#7652B2 !important; }
 
-  #root .sules-home-screen {
-    --home-ink:#252A50; --home-muted:#666A80; --home-forest:#51458F; --home-forest-deep:#283775;
-    --home-gold:#D3BD73; --home-line:#E3DDEA; --home-paper:#FFFEFC;
-    color:var(--home-ink); border-color:#E3DDEA; background:#F5F2EF;
+  /* Public pages: landing, catalog, FAQ, legal, privacy and contact. */
+  .site-header { background:rgba(255,254,252,.94) !important; border-color:#E4DDEA !important; }
+  .site-brand,.site-nav .site-app-shortcut { color:#29294F !important; }
+  .site-brand small,.site-links a { color:#64627B !important; }
+  .site-links a:hover,.public-footer a,.public-card a:not(.public-button) { color:#5946A0 !important; }
+  .site-cta,.public-button { background:var(--sules-primary-gradient) !important; border-color:#7652B2 !important; box-shadow:0 6px 16px rgba(98,67,150,.17); }
+  .site-cta:hover,.public-button:hover { box-shadow:0 8px 20px rgba(98,67,150,.24); }
+  .public-button.secondary { background:#FFFEFC !important; color:#37345F !important; border-color:#D9D1E2 !important; }
+  .site-app-shortcut { border-color:#E4DDEA !important; background:#FFFEFC !important; }
+  .site-pwa-install { color:#45408B !important; border-color:#D6CBE4 !important; background:linear-gradient(135deg,#FFFEFC,#F2EDF8) !important; box-shadow:0 4px 12px rgba(98,67,150,.12); }
+  .site-pwa-install:hover { border-color:#AE9CCB !important; }
+  #pwa-install-nudge { border-color:#DED5E8 !important; background:linear-gradient(115deg,#FFFEFC,#F5F0F8) !important; color:#29294F !important; }
+  #pwa-install-nudge-action { border-color:#7050B2 !important; background:var(--sules-primary-gradient) !important; color:#fff !important; }
+  .pwa-install-nudge-actions button,#pwa-install-guide-close { border-color:#D9D1E2 !important; color:#37345F !important; }
+  #pwa-install-guide { border-color:#DED5E8 !important; background:#F6F2F8 !important; color:#29294F !important; }
+  #pwa-install-guide-text { color:#5F5C73 !important; }
+  .public-shell { color:#29263F; }
+  .public-hero { background:linear-gradient(135deg,#FFFEFC 8%,#F1EDF7 100%) !important; border-color:#E4DDEA !important; box-shadow:0 14px 36px rgba(57,45,91,.075) !important; }
+  .public-hero h1,.public-section h2,.public-card h3,.public-details summary { color:#29294F !important; }
+  .public-hero p,.public-section > p,.public-card p,.public-list,.public-details p { color:#5F5D73 !important; }
+  .public-eyebrow { color:#6950A5 !important; }
+  .public-hero-panel { background:linear-gradient(125deg,#3F51C2 0%,#7550B4 56%,#AD3F83 100%) !important; border:1px solid rgba(191,164,95,.55) !important; box-shadow:0 9px 22px rgba(56,43,99,.17) !important; }
+  .public-hero-panel p { color:#F4EDF7 !important; }
+  .public-card,.public-details { color:#29263F !important; background:#FFFEFC !important; border-color:#E4DDEA !important; box-shadow:0 6px 16px rgba(57,45,91,.05) !important; }
+  .public-muted,.public-footer { color:#686579 !important; }
+  .public-data dt { color:#706C80 !important; }
+  .public-data dd { color:#29294F !important; }
+  .public-footer { border-color:#E4DDEA !important; }
+  .package-grid .public-card:hover { border-color:#B9A8D2 !important; box-shadow:0 10px 22px rgba(57,45,91,.1) !important; }
+  #kontak .appreciation-account-row { background:linear-gradient(135deg,#FFFEFC,#F6F1F8) !important; border-color:#E4DDEA !important; box-shadow:0 4px 14px rgba(57,45,91,.06) !important; }
+  #kontak .appreciation-account-label { color:#686579 !important; }
+  #kontak .appreciation-account-number { color:#29294F !important; }
+  #kontak .appreciation-copy-button { color:#37345F !important; border-color:#D9D1E2 !important; background:#FFFEFC !important; box-shadow:0 2px 7px rgba(57,45,91,.05) !important; }
+  #kontak .appreciation-copy-button:hover { background:#F4EFF8 !important; border-color:#B9A8D2 !important; }
+  #kontak .appreciation-copy-button.is-copied { color:#5946A0 !important; background:#F2EDF8 !important; border-color:#D4C7E2 !important; }
+  #kontak .appreciation-copy-button:focus-visible { outline-color:rgba(117,80,180,.45) !important; }
+
+  /* Shared app shell, forms, cards, icons and states. */
+  #root { color:#29263F !important; }
+  #root h1,#root h2,#root h3 { color:#29294F !important; }
+  #root .bg-white { background:#FFFEFC !important; }
+  #root .bg-gray-100 { background:#F3EFF7 !important; }
+  #root .border-gray-100,#root .border-gray-200,#root .border-gray-300,#root .border-blue-100 { border-color:#E4DDEA !important; }
+  #root .border-blue-200 { border-color:#D1C8E3 !important; }
+  #root .border-green-200 { border-color:#D4C9E3 !important; }
+  #root .border-yellow-200,#root .border-amber-200 { border-color:#E5D6A8 !important; }
+  #root .border-red-200,#root .border-red-300 { border-color:#E8C7D6 !important; }
+  #root .border-t { border-color:#E4DDEA !important; }
+  #root .text-gray-400,#root .text-gray-500 { color:#777487 !important; }
+  #root .text-gray-600,#root .text-gray-700 { color:#56546B !important; }
+  #root .text-blue-600,#root .text-blue-800 { color:#4B4B9D !important; }
+  #root .text-green-700,#root .text-green-800 { color:#5946A0 !important; }
+  #root .text-yellow-800,#root .text-amber-700,#root .text-amber-800,#root .text-amber-900 { color:#725B20 !important; }
+  #root .text-red-600,#root .text-red-700,#root .text-red-800 { color:#913A61 !important; }
+  #root .bg-blue-50 { background:#F1EFF9 !important; border-color:#D7D0E9 !important; }
+  #root .bg-green-50 { background:#F3EFF8 !important; border-color:#D8CDE7 !important; }
+  #root .bg-yellow-50,#root .bg-amber-50 { background:#FBF6E8 !important; border-color:#E8D9AC !important; }
+  #root .bg-red-50 { background:#FCF1F5 !important; border-color:#EBCBD9 !important; }
+  #root input:not([type="checkbox"]),#root select,#root textarea { color:#29263F !important; background:#FFFEFC !important; border-color:#D9D1E2 !important; caret-color:#4356C5; }
+  #root input::placeholder,#root textarea::placeholder { color:#858194 !important; }
+  #root option { background:#FFFEFC; color:#29263F; }
+  #root input:focus,#root select:focus,#root textarea:focus { border-color:#7652B2 !important; box-shadow:0 0 0 3px rgba(117,80,180,.15) !important; }
+  #root button { color:#37345F !important; background:#FFFEFC !important; border-color:#DDD6E7 !important; }
+  #root button:hover:not(:disabled) { border-color:#B9A8D2 !important; box-shadow:0 5px 14px rgba(85,64,129,.11); }
+  #root button:disabled { opacity:.55; }
+  #root button[aria-pressed="true"],#root button.sules-primary { color:#FFFFFF !important; background:var(--sules-primary-gradient) !important; border-color:#7652B2 !important; box-shadow:var(--sules-primary-shadow); }
+  #root button.sules-primary:hover:not(:disabled) { filter:brightness(1.04); }
+  #root button.sules-success { color:#FFFFFF !important; background:linear-gradient(115deg,#4A4EAA,#7650B4) !important; border-color:#7652B2 !important; }
+  #root button.sules-danger { color:#913A61 !important; background:#FCF1F5 !important; border-color:#E8C7D6 !important; }
+  #root button.text-red-600 { color:#913A61 !important; }
+  #root .sules-status-badge { border-radius:999px !important; font-weight:750 !important; }
+  #root .sules-status-badge[data-status="MENUNGGU"] { background:#FBF6E8 !important; color:#725B20 !important; border-color:#E5D6A8 !important; }
+  #root .sules-status-badge[data-status="DITERIMA"] { background:#F0EFFA !important; color:#414B9B !important; border-color:#D1CDEA !important; }
+  #root .sules-status-badge[data-status="DITOLAK"],#root .sules-status-badge[data-status="DIBATALKAN"] { background:#FCF1F5 !important; color:#913A61 !important; border-color:#E8C7D6 !important; }
+  #root .sules-status-badge[data-status="SELESAI"] { background:#F3EFF8 !important; color:#5946A0 !important; border-color:#D8CDE7 !important; }
+  /* Normalize legacy inline semantic colors in booking progress/location and Admin actions. */
+  #root :not(button)[style*="236, 253, 245"],#root :not(button)[style*="236,253,245"] { background-color:#F3EFF8 !important; }
+  #root :not(button)[style*="16, 185, 129"],#root :not(button)[style*="16,185,129"] { border-color:#D8CDE7 !important; }
+  #root :not(button)[style*="6, 95, 70"],#root :not(button)[style*="6,95,70"] { color:#5946A0 !important; }
+  #root :not(button)[style*="24, 50, 75"],#root :not(button)[style*="24,50,75"] { color:#29294F !important; }
+  #root :not(button)[style*="47, 111, 159"],#root :not(button)[style*="47,111,159"] { color:#4B4B9D !important; border-color:#D1C8E3 !important; }
+  #root :not(button)[style*="249, 250, 251"],#root :not(button)[style*="249,250,251"] { background-color:#F8F4F8 !important; }
+  #root :not(button)[style*="107, 114, 128"],#root :not(button)[style*="107,114,128"] { color:#686579 !important; }
+  #root .sules-admin-dashboard button[style*="4, 120, 87"],#root .sules-admin-dashboard button[style*="4,120,87"] { color:#FFFFFF !important; background:linear-gradient(115deg,#4655B7,#7652B2) !important; border-color:#7652B2 !important; }
+  #root .sules-admin-dashboard button[style*="21, 128, 61"],#root .sules-admin-dashboard button[style*="21,128,61"] { color:#FFFFFF !important; background:linear-gradient(115deg,#7652B2,#AD3F83) !important; border-color:#AD3F83 !important; }
+  #root .sules-admin-dashboard button[style*="220, 38, 38"],#root .sules-admin-dashboard button[style*="220,38,38"] { color:#913A61 !important; background:#FCF1F5 !important; border-color:#E8C7D6 !important; }
+  #root svg line { stroke:#A69BB7; }
+  #root svg text { fill:#686579; }
+
+  /* Customer navigation and shared Home/Catalog/Admin components. */
+  .sules-admin-header { background:#FFFEFC !important; border-color:#E4DDEA !important; box-shadow:0 7px 18px rgba(57,45,91,.065) !important; }
+  .sules-admin-brand,.sules-admin-heading { color:#29294F !important; }
+  .sules-admin-header-actions button { background:#FFFEFC !important; color:#37345F !important; border-color:#DDD6E7 !important; }
+  .sules-admin-header-actions .sules-admin-logout { color:#913A61 !important; border-color:#E8C7D6 !important; background:#FCF1F5 !important; }
+  #root .sules-admin-dashboard button[style*="background-color: rgb(47, 111, 159)"] { color:#FFFFFF !important; background:var(--sules-primary-gradient) !important; border-color:#7652B2 !important; }
+  .sules-hero-card { border-color:#D9D1E2 !important; background:radial-gradient(ellipse at 88% 0%,rgba(173,63,131,.08),transparent 42%),linear-gradient(135deg,#FFFEFC,#F3EFF8 88%) !important; box-shadow:0 12px 28px rgba(57,45,91,.075) !important; }
+  .sules-hero-card h1,.sules-price,.sules-service-card .sules-service-price { color:#29294F !important; }
+  .sules-hero-card p,.sules-service-card .sules-service-meta { color:#5F5D73 !important; }
+  .sules-step-label { color:#55526C !important; }
+  .sules-step-label span { background:#F0EDF8 !important; color:#5946A0 !important; }
+  .sules-active-card,.sules-menu-card,.sules-order-card,.sules-service-card,.sules-empty-state { border-color:#E4DDEA !important; background:#FFFEFC !important; box-shadow:0 8px 20px rgba(57,45,91,.055) !important; }
+  .sules-menu-link { color:#37345F !important; background:#FAF7FA !important; border-color:#E4DDEA !important; }
+  .sules-menu-link:hover { border-color:#B9A8D2 !important; background:#F3EFF8 !important; }
+  .sules-service-card .sules-service-price small { color:#92793D !important; }
+  .sules-empty-icon { color:#5946A0 !important; background:#F1EFF9 !important; }
+  .sules-empty-state p { color:#686579 !important; }
+  .sules-bottom-nav { border-color:rgba(207,197,220,.92) !important; background:rgba(255,254,252,.96) !important; box-shadow:0 9px 28px rgba(57,45,91,.14) !important; }
+  #root .sules-bottom-nav button { color:#777487 !important; }
+  #root .sules-bottom-nav button[data-nav="home"] { --nav-accent:#4655B7; --nav-tint:#F0EFFA; --nav-line:#D5D0E9; }
+  #root .sules-bottom-nav button[data-nav="catalog"] { --nav-accent:#7050AE; --nav-tint:#F4EFF8; --nav-line:#DED2E9; }
+  #root .sules-bottom-nav button[data-nav="orders"] { --nav-accent:#574A9B; --nav-tint:#F1EFF9; --nav-line:#D9D1E9; }
+  #root .sules-bottom-nav button[data-nav="notifications"] { --nav-accent:#A7447A; --nav-tint:#FBF0F6; --nav-line:#E9CDDC; }
+  #root .sules-bottom-nav button[data-nav="account"] { --nav-accent:#7652B2; --nav-tint:#F4F0F8; --nav-line:#DDD2E8; }
+
+  /* Catalog: preserve its editorial layout while replacing legacy blue accents. */
+  .sules-catalog-wordmark { color:#29294F !important; }
+  .sules-catalog-subtitle { color:#5F5D73 !important; }
+  .sules-catalog-ornament { color:#BFA45F !important; }
+  .sules-catalog-ornament::before,.sules-catalog-ornament::after { background:linear-gradient(90deg,transparent,#BFA45F) !important; }
+  .sules-catalog-ornament span { border-color:#BFA45F !important; background:#FBF6E8 !important; }
+  .sules-catalog-travel-note { border-color:#E5D9B3 !important; border-left-color:#BFA45F !important; background:linear-gradient(100deg,#FFFEFC,#F6F2F8) !important; color:#5F5D73 !important; }
+  #root .sules-catalog-grid .sules-service-card { border-color:#E4DDEA !important; background:linear-gradient(180deg,#FFFEFC,#FAF7FA) !important; box-shadow:0 10px 24px rgba(57,45,91,.065) !important; }
+  .sules-service-icon { border-color:#D9C892 !important; background:linear-gradient(145deg,#F1EFF9,#FBF6E8) !important; color:#4A4D9C !important; }
+  #root .sules-catalog-grid .sules-service-card .sules-eyebrow { color:#80683A !important; }
+  #root .sules-catalog-grid .sules-service-card h3 { color:#29294F !important; }
+  #root .sules-catalog-grid .sules-service-meta { color:#686579 !important; }
+  #root .sules-catalog-grid .sules-service-price { color:#29294F !important; }
+  #root .sules-catalog-grid .sules-service-price small { color:#92793D !important; }
+  #root .sules-catalog-grid .sules-service-card button.sules-primary { border-color:#7652B2 !important; background:var(--sules-primary-gradient) !important; box-shadow:var(--sules-primary-shadow) !important; }
+  #root .sules-catalog-grid .sules-service-card button.sules-primary:hover:not(:disabled) { filter:brightness(1.04); }
+  @media (max-width:600px) {
+    .sules-catalog-heading { border-color:rgba(191,164,95,.55) !important; background:linear-gradient(125deg,#3F51C2 0%,#7550B4 58%,#AD3F83 100%) !important; box-shadow:0 10px 22px rgba(57,45,91,.17) !important; }
+    #root .sules-catalog-mobile-title { color:#FFFEFC !important; }
+    .sules-catalog-subtitle-mobile { color:#F4EDF7 !important; }
   }
-  #root .sules-home-hero { border-color:rgba(211,189,115,.72); background:radial-gradient(ellipse at 92% 7%,rgba(236,116,192,.28),transparent 34%),linear-gradient(118deg,#3046A8 0%,#694DAC 53%,#C94EAA 100%); }
-  #root .sules-home-hero::before,#root .sules-home-hero::after { border-color:rgba(246,190,224,.28); }
-  #root .sules-home-hero h1 em { color:#F5B6DE; }
-  #root .sules-home-primary { border-color:#F2C9E2 !important; color:#FFFFFF !important; background:linear-gradient(115deg,#5369E1 0%,#9256C2 55%,#C34191 100%) !important; box-shadow:0 6px 18px rgba(30,35,91,.24); }
+
+  /* Home palette and its signature gradient. */
+  #root .sules-home-screen {
+    --home-ink:#29294F; --home-muted:#686579; --home-forest:#51458F; --home-forest-deep:#343C7D;
+    --home-gold:#BFA45F; --home-line:#E4DDEA; --home-paper:#FFFEFC;
+    color:var(--home-ink); border-color:#E4DDEA; background:#F6F3F0;
+  }
+  #root .sules-home-hero { border-color:rgba(191,164,95,.72); background:radial-gradient(ellipse at 92% 7%,rgba(219,104,177,.23),transparent 34%),linear-gradient(118deg,#3E50BC 0%,#7050B2 54%,#AD3F83 100%); }
+  #root .sules-home-hero::before,#root .sules-home-hero::after { border-color:rgba(246,205,229,.3); }
+  #root .sules-home-hero h1 em { color:#F2B9DD; }
+  #root .sules-home-primary { border-color:#E9C6DE !important; color:#FFFFFF !important; background:var(--sules-primary-gradient) !important; box-shadow:0 6px 18px rgba(30,35,91,.24); }
   #root .sules-home-primary:hover { box-shadow:0 9px 22px rgba(30,35,91,.3); }
   #root .sules-home-secondary { border-bottom-color:rgba(247,218,239,.72) !important; }
   #root .sules-home-account-button { border-color:#D5C2EB; background:#51458F; }
