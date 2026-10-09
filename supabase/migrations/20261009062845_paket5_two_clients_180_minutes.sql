@@ -1,35 +1,21 @@
 -- Paket 5: one therapist serves two customers sequentially (90 + 90 minutes).
--- This migration only changes the server-side booking RPC body. It does not
--- alter services rows, booking data, schema, grants, or any production object
--- until this migration is deliberately applied.
+-- This version is already recorded in Supabase production as 20261009062845.
+-- Keep this source synchronized with the deployed create_booking_server RPC.
 
-CREATE OR REPLACE FUNCTION public.create_booking_server(
-  p_customer_id uuid,
-  p_nama text,
-  p_wa text,
-  p_service_id text,
-  p_jumlah_orang smallint,
-  p_tanggal date,
-  p_jam_mulai time without time zone,
-  p_tipe_lokasi public.tipe_lokasi,
-  p_alamat text DEFAULT NULL::text,
-  p_lat double precision DEFAULT NULL::double precision,
-  p_lng double precision DEFAULT NULL::double precision,
-  p_jarak_meter numeric DEFAULT NULL::numeric
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
+CREATE OR REPLACE FUNCTION public.create_booking_server(p_customer_id uuid, p_nama text, p_wa text, p_service_id text, p_jumlah_orang smallint, p_tanggal date, p_jam_mulai time without time zone, p_tipe_lokasi tipe_lokasi, p_alamat text DEFAULT NULL::text, p_lat double precision DEFAULT NULL::double precision, p_lng double precision DEFAULT NULL::double precision, p_jarak_meter numeric DEFAULT NULL::numeric)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
 AS $function$
 DECLARE
-  v_service services%rowtype;
-  v_booking_duration integer;
+  v_service public.services%rowtype;
   v_gratis_meter numeric;
   v_tarif numeric;
   v_service_price numeric;
   v_travel_fee numeric;
-  v_booking bookings%rowtype;
+  v_durasi_menit integer;
+  v_booking public.bookings%rowtype;
 BEGIN
   IF p_customer_id IS NULL THEN RAISE EXCEPTION 'Customer ID wajib'; END IF;
   IF p_nama IS NULL OR btrim(p_nama) = '' THEN RAISE EXCEPTION 'Nama pelanggan wajib diisi'; END IF;
@@ -47,17 +33,15 @@ BEGIN
     (p_service_id = '90m' AND p_tipe_lokasi = 'HOME_SERVICE' AND p_jumlah_orang = 2)
   ) THEN RAISE EXCEPTION 'Paket yang dipilih tidak valid'; END IF;
 
-  SELECT * INTO v_service FROM services WHERE id = p_service_id AND aktif = true;
+  SELECT * INTO v_service FROM public.services WHERE id = p_service_id AND aktif = true;
   IF NOT FOUND THEN RAISE EXCEPTION 'Layanan tidak ditemukan'; END IF;
 
-  -- The 2-person 90m Home Service reserves one therapist for 90 + 90 minutes.
-  -- The shared services.90m row stays at 90 minutes for one-person bookings.
-  v_booking_duration := CASE
+  v_durasi_menit := CASE
     WHEN p_tipe_lokasi = 'HOME_SERVICE' AND p_service_id = '90m' AND p_jumlah_orang = 2 THEN 180
     ELSE v_service.durasi_menit
   END;
 
-  IF NOT _dalam_jam_operasional(p_jam_mulai, v_booking_duration) THEN
+  IF NOT public._dalam_jam_operasional(p_jam_mulai, v_durasi_menit) THEN
     RAISE EXCEPTION 'Jam di luar jam operasional atau melewati jam tutup';
   END IF;
 
@@ -77,8 +61,8 @@ BEGIN
     v_service_price := v_service.harga * p_jumlah_orang;
   END IF;
 
-  SELECT value::numeric INTO v_gratis_meter FROM operational_settings WHERE key = 'travel_gratis_meter';
-  SELECT value::numeric INTO v_tarif FROM operational_settings WHERE key = 'travel_tarif_per_meter';
+  SELECT value::numeric INTO v_gratis_meter FROM public.operational_settings WHERE key = 'travel_gratis_meter';
+  SELECT value::numeric INTO v_tarif FROM public.operational_settings WHERE key = 'travel_tarif_per_meter';
   IF v_gratis_meter IS NULL OR v_tarif IS NULL THEN RAISE EXCEPTION 'Aturan travel fee belum tersedia'; END IF;
 
   IF p_tipe_lokasi = 'DI_TEMPAT' THEN
@@ -87,16 +71,16 @@ BEGIN
     v_travel_fee := greatest(p_jarak_meter - v_gratis_meter, 0) * v_tarif;
   END IF;
 
-  INSERT INTO customers (id, nama, wa)
+  INSERT INTO public.customers (id, nama, wa)
   VALUES (p_customer_id, btrim(p_nama), btrim(p_wa))
   ON CONFLICT (id) DO UPDATE SET nama = excluded.nama, wa = excluded.wa;
 
-  INSERT INTO bookings (
+  INSERT INTO public.bookings (
     customer_id, nama_pelanggan, wa_pelanggan, service_id, jumlah_orang, tanggal, jam_mulai,
     durasi_menit, tipe_lokasi, alamat, lat, lng, jarak_meter, service_price, travel_fee, status
   ) VALUES (
     p_customer_id, btrim(p_nama), btrim(p_wa), p_service_id, p_jumlah_orang, p_tanggal, p_jam_mulai,
-    v_booking_duration, p_tipe_lokasi, p_alamat, p_lat, p_lng,
+    v_durasi_menit, p_tipe_lokasi, p_alamat, p_lat, p_lng,
     CASE WHEN p_tipe_lokasi = 'HOME_SERVICE' THEN p_jarak_meter ELSE NULL END,
     v_service_price, v_travel_fee, 'MENUNGGU'
   ) RETURNING * INTO v_booking;

@@ -1393,7 +1393,7 @@ const SERVICE_PACKAGES = [
   { id: "sules-120m-1", label: "Pijat 2 Jam", location: "Di Sules", serviceId: "120m", people: 1, type: "DI_TEMPAT", price: 80000 },
   { id: "home-90m-1", label: "Pijat 90 Menit ke Rumah", location: "ke Rumah", serviceId: "90m", people: 1, type: "HOME_SERVICE", price: 60000 },
   { id: "home-120m-1", label: "Pijat 2 Jam ke Rumah", location: "ke Rumah", serviceId: "120m", people: 1, type: "HOME_SERVICE", price: 80000 },
-  { id: "home-90m-2", label: "Pijat 2 Orang ke Rumah – 90 Menit", location: "ke Rumah", serviceId: "90m", people: 2, type: "HOME_SERVICE", price: 120000 }
+  { id: "home-90m-2", label: "Pijat 2 Orang ke Rumah", location: "ke Rumah", serviceId: "90m", people: 2, type: "HOME_SERVICE", price: 120000 }
 ];
 const LAST_BOOKING_ID_KEY = "sules_last_booking_id"; // pointer nonrahasia; otorisasi tetap melalui session Supabase/RLS
 try { localStorage.removeItem("sules_last_booking_token"); } catch (_) {} // hapus token booking lama dari browser yang sudah pernah menyimpannya
@@ -1832,7 +1832,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
     return () => { active = false; };
   }, [authOnly, checkingSession, customerSession && customerSession.user && customerSession.user.id, bookingRestoreRetryKey]);
 
-  const durasiMenit = DURASI[layanan];
+  const durasiMenit = tipeLokasi === "HOME_SERVICE" && layanan === "90m" && orang === 2 ? 180 : DURASI[layanan];
   const { pagi, malam } = generateSlotsForDurasi(durasiMenit);
 
   const isSlotLewat = (slot) => {
@@ -2255,7 +2255,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
         )}
 
         <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
-          <div className="font-semibold mb-2">{b.layanan==="90m"?"Pijat 90 Menit":"Pijat 2 Jam"} × {b.orang} orang</div>
+          <div className="font-semibold mb-2">{b.tipeLokasi === "HOME_SERVICE" && b.layanan === "90m" && b.orang === 2 ? "Pijat 2 Orang ke Rumah · 180 Menit Total (90 Menit per Orang)" : `${b.layanan === "90m" ? "Pijat 90 Menit" : "Pijat 2 Jam"} × ${b.orang} orang`}</div>
           <div className="text-sm text-gray-600 mb-1">📅 {b.tanggal}</div>
           <div className="text-sm text-gray-600 mb-1">🕐 {b.jam}</div>
           <div className="text-sm text-gray-600 mb-1">📍 {b.tipeLokasi === "HOME_SERVICE" ? "ke Rumah" : "Di Sules"}</div>
@@ -2442,7 +2442,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
           <div><span className="text-gray-600">Lokasi:</span> <strong>{paketTerpilih.location}</strong>{tipeLokasi === "HOME_SERVICE" && <span> · {alamatText.trim() || (lat !== null && lng !== null ? `Koordinat ${lat.toFixed(5)}, ${lng.toFixed(5)}` : "Lokasi belum dipilih")}</span>}</div>
         </div>
         <div className="flex justify-between text-sm mb-1">
-          <span>Layanan: {layanan==="90m"?"90 Menit":"2 Jam"} x {orang}</span>
+          <span>Layanan: {tipeLokasi === "HOME_SERVICE" && layanan === "90m" && orang === 2 ? "180 Menit total (90 Menit per orang)" : `${layanan === "90m" ? "90 Menit" : "2 Jam"} x ${orang}`}</span>
           <span>{formatRupiah(biayaLayanan)}</span>
         </div>
         {tipeLokasi === "HOME_SERVICE" && jarak !== null && (
@@ -2593,12 +2593,14 @@ function RevenueChart({ days = [] }) {
 
 function ServicePackageCard({ item, onBookPackage, compact = false }) {
   const homeService = item.type === "HOME_SERVICE";
+  const paket5 = homeService && item.serviceId === "90m" && item.people === 2;
+  const durasiMenit = paket5 ? 180 : DURASI[item.serviceId];
   return <article className="sules-service-card">
     {!compact && <div className="sules-service-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M24 37c-8 0-14-4-17-11 9-1 15 3 17 11Z"/><path d="M24 37c8 0 14-4 17-11-9-1-15 3-17 11Z"/><path d="M24 36c-6-7-6-15 0-22 6 7 6 15 0 22Z"/><path d="M13 42h22"/><path d="M17 40c2-2 4-3 7-3 3 0 5 1 7 3"/></svg></div>}
     <div className="sules-service-copy">
-    <div className="sules-eyebrow">{DURASI[item.serviceId]} MENIT · {homeService ? "KE RUMAH" : "DI SULES"}</div>
+    <div className="sules-eyebrow">{durasiMenit} MENIT{paket5 ? " TOTAL" : ""} · {homeService ? "KE RUMAH" : "DI SULES"}</div>
     <h3>{item.label}</h3>
-    <p className="sules-service-meta">{item.people} orang · {homeService ? "Layanan ke Rumah" : "Layanan di tempat Sules"}</p>
+    <p className="sules-service-meta">{item.people} orang{paket5 ? " · 90 Menit per orang, berurutan" : ""} · {homeService ? "Layanan ke Rumah" : "Layanan di tempat Sules"}</p>
     <div className="sules-service-price">{formatRupiah(item.price)}{homeService && <small>+ biaya perjalanan</small>}</div>
     {homeService && <p className="sules-service-meta sules-service-travel">Biaya perjalanan dihitung satu kali per booking.</p>}
     </div>
