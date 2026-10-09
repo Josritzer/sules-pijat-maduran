@@ -1438,6 +1438,8 @@ const BASE_LAT = -7.0000833;
 const BASE_LNG = 112.2810000;
 const GRATIS_METER = 1000;
 const TARIF_PER_METER = 3.5;
+const GPS_MAX_ACCURACY_M = 100; // posisi dengan akurasi lebih buruk dari ini ditolak (bukan dipakai diam-diam)
+const GPS_WAIT_MS = 25000;      // waktu maksimum menunggu GPS mengunci posisi akurat
 const HARGA = { "90m": 60000, "120m": 80000 };
 const DURASI = { "90m": 90, "120m": 120 };
 const SERVICE_PACKAGES = [
@@ -1615,6 +1617,9 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   const [sumberJarak, setSumberJarak] = useState(null);
   const [loadingGPS, setLoadingGPS] = useState(false);
   const [gpsMsg, setGpsMsg] = useState("");
+  const [gpsAkurasi, setGpsAkurasi] = useState(null);
+  const gpsSessionRef = useRef(null);
+  const jarakReqRef = useRef(0);
   const [parseMsg, setParseMsg] = useState("");
   const [loadingJarak, setLoadingJarak] = useState(false);
   const [screen, setScreen] = useState("form");
@@ -1899,39 +1904,78 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   useEffect(() => { setJam(""); }, [paketId]);
 
   const setLatLng = (la, ln) => {
+    jarakReqRef.current += 1; // hasil jarak dari koordinat sebelumnya tidak boleh menimpa koordinat baru
     setLat(la); setLng(ln);
     latRef.current = la; lngRef.current = ln;
     setJarak(null); setSumberJarak(null); setJarakError("");
   };
+
+  const batalkanPencarianGPS = () => {
+    const s = gpsSessionRef.current;
+    gpsSessionRef.current = null;
+    if (!s) return;
+    if (s.timer !== null) window.clearTimeout(s.timer);
+    if (s.watchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(s.watchId);
+  };
+  useEffect(() => batalkanPencarianGPS, []);
 
   const ambilLokasiGPS = () => {
     if (!navigator.geolocation) {
       setGpsMsg("Perangkat atau browser ini tidak mendukung lokasi akurat.");
       return;
     }
+    // Mulai dari nol: koordinat/jarak dari percobaan sebelumnya tidak boleh tersisa jika percobaan ini gagal.
+    batalkanPencarianGPS();
+    setLatLng(null, null);
+    setAlamatText("");
+    setGpsAkurasi(null);
+    setLoadingJarak(false);
     setLoadingGPS(true);
     setGpsMsg("");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const la = pos.coords.latitude;
-        const ln = pos.coords.longitude;
-        setLatLng(la, ln);
-        setAlamatText(`GPS: ${la.toFixed(6)},${ln.toFixed(6)}`);
-        setLoadingGPS(false);
-        setGpsMsg("");
-        hitungJarakSekarang(la, ln);
-      },
-      (err) => {
-        setLoadingGPS(false);
-        if (err.code === 1) {
-          setGpsMsg("Izin lokasi ditolak. Izinkan akses lokasi untuk situs ini, lalu coba lagi.");
-        } else if (err.code === 3) {
-          setGpsMsg("Lokasi akurat tidak merespons sebelum batas waktu. Pastikan GPS aktif, lalu coba lagi.");
-        } else {
-          setGpsMsg("Lokasi akurat gagal diperoleh. Pastikan layanan lokasi aktif, lalu coba lagi.");
-        }
-      },
-      { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
+
+    const session = { watchId: null, timer: null, best: null };
+    gpsSessionRef.current = session;
+    const aktif = () => gpsSessionRef.current === session;
+    const selesai = () => { batalkanPencarianGPS(); setLoadingGPS(false); };
+
+    const onFix = (pos) => {
+      if (!aktif()) return;
+      const c = pos && pos.coords;
+      const la = c && c.latitude, ln = c && c.longitude, acc = c && c.accuracy;
+      if (![la, ln, acc].every(v => typeof v === "number" && Number.isFinite(v)) || Math.abs(la) > 90 || Math.abs(ln) > 180) return;
+      if (!session.best || acc < session.best.acc) session.best = { la, ln, acc };
+      if (acc > GPS_MAX_ACCURACY_M) return; // belum cukup akurat: terus tunggu fix yang lebih baik sampai batas waktu
+      selesai();
+      setLatLng(la, ln);
+      setAlamatText(`GPS: ${la.toFixed(6)},${ln.toFixed(6)}`);
+      setGpsAkurasi(Math.round(acc));
+      setGpsMsg("");
+      hitungJarakSekarang(la, ln);
+    };
+
+    const onError = (err) => {
+      if (!aktif()) return;
+      if (err && err.code === 1) {
+        selesai();
+        setGpsMsg("Izin lokasi ditolak. Izinkan akses lokasi untuk situs ini, lalu coba lagi.");
+      }
+      // kode 2/3 dapat bersifat sementara saat GPS belum mengunci; batas waktu keseluruhan yang memutuskan
+    };
+
+    session.timer = window.setTimeout(() => {
+      if (!aktif()) return;
+      const best = session.best;
+      selesai();
+      if (best) {
+        setGpsMsg(`Lokasi belum cukup akurat (±${Math.round(best.acc)} m, batas ±${GPS_MAX_ACCURACY_M} m). Pindah ke area terbuka, aktifkan GPS/Lokasi Akurat di perangkat, lalu coba lagi.`);
+      } else {
+        setGpsMsg("Lokasi akurat tidak berhasil diperoleh sebelum batas waktu. Pastikan GPS aktif, lalu coba lagi.");
+      }
+    }, GPS_WAIT_MS);
+
+    session.watchId = navigator.geolocation.watchPosition(
+      onFix, onError,
+      { enableHighAccuracy: true, timeout: GPS_WAIT_MS, maximumAge: 0 }
     );
   };
 
@@ -1959,20 +2003,25 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       setJarakError("Bagikan lokasi akurat melalui GPS terlebih dahulu.");
       return;
     }
+    const reqId = ++jarakReqRef.current;
     setLoadingJarak(true);
     setJarak(null);
     setSumberJarak(null);
     try {
       const { meters, sumber } = await computeRoadDistance(la, ln);
+      if (reqId !== jarakReqRef.current) return; // koordinat sudah berganti/direset: abaikan hasil lama
       setJarak(meters);
       setSumberJarak(sumber);
     } catch (_) {
+      if (reqId !== jarakReqRef.current) return;
       setJarakError("Jarak jalan Google Routes belum tersedia. Periksa koneksi lalu coba lagi.");
     }
-    setLoadingJarak(false);
+    if (reqId === jarakReqRef.current) setLoadingJarak(false);
   };
 
   const resetLokasi = () => {
+    batalkanPencarianGPS();
+    setGpsAkurasi(null);
     setLatLng(null, null);
     setAlamatText("");
     setJarak(null);
@@ -2462,6 +2511,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
               </div>
             </div>
 
+            {gpsAkurasi !== null && lat !== null && <div className="text-xs text-gray-500 mb-2">Akurasi GPS ±{gpsAkurasi} m</div>}
             {jarakError && <div className="text-xs text-red-600 mb-2">{jarakError}</div>}
             {jarak !== null && sumberJarak && (
               <div className="mb-2">
