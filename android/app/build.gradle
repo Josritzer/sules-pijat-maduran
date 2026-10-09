@@ -22,10 +22,11 @@ plugins {
 
 def twaManifest = [
     applicationId: 'com.bookingpijat.sules',
+    signingKey: [path: 'upload-key.jks', alias: 'sulesupload'],
     hostName: 'bookingpijat.com', // The domain being opened in the TWA.
     launchUrl: '/', // The start path for the TWA. Must be relative to the domain.
-    name: 'Sules Relaxing Massage', // The application name.
-    launcherName: 'Sules', // The name shown on the Android Launcher.
+    name: 'SL Relax', // The application name.
+    launcherName: 'SL', // The name shown on the Android Launcher.
     themeColor: '#18324B', // The color used for the status bar.
     themeColorDark: '#000000', // The color used for the dark status bar.
     navigationColor: '#000000', // The color used for the navigation bar.
@@ -50,14 +51,64 @@ def twaManifest = [
     orientation: 'default',
 ]
 
+def releaseKeystore = rootProject.file(twaManifest.signingKey.path)
+def releaseStorePassword = System.getenv('SULES_UPLOAD_STORE_PASSWORD')
+def releaseKeyPassword = System.getenv('SULES_UPLOAD_KEY_PASSWORD')
+def releaseSigningAvailable = releaseKeystore.isFile() && releaseStorePassword && releaseKeyPassword
+def expectedReleaseCertSha256 = '73:5B:7E:AB:D0:C7:DD:F5:40:C0:94:52:61:56:A5:B3:A1:10:B7:A7:15:93:E1:96:87:E8:49:E1:BC:B0:97:1F'
+
+def verifyReleaseSigning = {
+    if (!releaseKeystore.isFile()) {
+        throw new GradleException('Missing the existing upload keystore configured in twa-manifest.json.')
+    }
+    if (!releaseStorePassword || !releaseKeyPassword) {
+        throw new GradleException('Release signing requires SULES_UPLOAD_STORE_PASSWORD and SULES_UPLOAD_KEY_PASSWORD in the build environment.')
+    }
+
+    java.security.cert.Certificate certificate = null
+    for (String storeType : ['JKS', 'PKCS12']) {
+        try {
+            def keyStore = java.security.KeyStore.getInstance(storeType)
+            releaseKeystore.withInputStream { stream ->
+                keyStore.load(stream, releaseStorePassword.toCharArray())
+            }
+            certificate = keyStore.getCertificate(twaManifest.signingKey.alias)
+            if (certificate != null) break
+        } catch (Exception ignored) {
+            // Try the other supported keystore format without logging credential-related errors.
+        }
+    }
+    if (certificate == null) {
+        throw new GradleException('The configured keystore/alias could not be verified with the supplied local credentials.')
+    }
+
+    def actualFingerprint = java.security.MessageDigest.getInstance('SHA-256')
+        .digest(certificate.encoded)
+        .collect { String.format('%02X', it.toInteger() & 0xFF) }
+        .join(':')
+    if (actualFingerprint != expectedReleaseCertSha256) {
+        throw new GradleException('The configured upload certificate does not match the existing signed release certificate.')
+    }
+}
+
 android {
     compileSdkVersion 36
     namespace "com.bookingpijat.sules"
+    signingConfigs {
+        release {
+            if (releaseSigningAvailable) {
+                storeFile releaseKeystore
+                storePassword releaseStorePassword
+                keyAlias twaManifest.signingKey.alias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
     defaultConfig {
         applicationId "com.bookingpijat.sules"
         minSdkVersion 21
         targetSdkVersion 36
-        versionCode 2
+        versionCode 3
         versionName "1.0.0"
 
         // The name for the application
@@ -153,6 +204,9 @@ android {
     buildTypes {
         release {
             minifyEnabled true
+            if (releaseSigningAvailable) {
+                signingConfig signingConfigs.release
+            }
         }
     }
     compileOptions {
@@ -161,6 +215,14 @@ android {
     }
     lintOptions {
         checkReleaseBuilds false
+    }
+}
+
+tasks.configureEach { task ->
+    if (task.name in ['bundleRelease', 'assembleRelease']) {
+        task.doFirst {
+            verifyReleaseSigning()
+        }
     }
 }
 
