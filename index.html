@@ -1436,6 +1436,7 @@ const { useState, useEffect, useLayoutEffect, useRef } = React;
 /* ================= KONSTANTA ================= */
 const BASE_LAT = -7.0000833;
 const BASE_LNG = 112.2810000;
+const GOOGLE_REVIEW_URL = "https://g.page/r/CWXCZycYzhXqEBE/review"; // tautan penilaian Google Maps yang sudah ada
 const GRATIS_METER = 1000;
 const TARIF_PER_METER = 3.5;
 const HARGA = { "90m": 60000, "120m": 80000 };
@@ -2291,7 +2292,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
           </div>
         )}
         {shouldShowGoogleReview(b.status) && (
-          <a href="https://g.page/r/CWXCZycYzhXqEBE/review" target="_blank" rel="noopener noreferrer"
+          <a href={GOOGLE_REVIEW_URL} target="_blank" rel="noopener noreferrer"
             style={{ display:"block", textAlign:"center", backgroundColor:"white", border:"1px solid #2F6F9F", color:"#18324B", borderRadius:"12px", padding:"12px", fontWeight:"bold" }}
             className="mb-4">⭐ Bagikan Pengalaman di Google</a>
         )}
@@ -3254,6 +3255,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
         <div className="text-sm font-bold">Total: {formatRupiah(row.grand_total)}</div>
         {row.status === "DITOLAK" && row.catatan_penolakan && <p className="text-xs text-gray-600 mt-2">Catatan Admin: {row.catatan_penolakan}</p>}
         {row.status === "DITOLAK" && <button onClick={onGoToBooking} className="sules-primary mt-3 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{backgroundColor:"#18324B"}}>BOOKING LAGI</button>}
+        {shouldShowGoogleReview(row.status) && <a href={GOOGLE_REVIEW_URL} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", backgroundColor:"white", border:"1px solid #2F6F9F", color:"#18324B", borderRadius:"12px", padding:"10px", fontWeight:"bold" }} className="mt-3 text-sm">⭐ Beri Penilaian di Google Maps</a>}
       </article>)}
     </div>
     {hasMore && <button onClick={()=>void loadMore()} disabled={loadingMore} className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 mt-4 font-semibold disabled:opacity-60">{loadingMore ? "Memuat…" : `Muat ${view === "active" ? "pesanan aktif" : "riwayat"} berikutnya (hingga ${pageSize} per halaman)`}</button>}
