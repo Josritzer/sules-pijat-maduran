@@ -181,6 +181,16 @@
     if (error) throw error;
     return data;
   }
+  // Slot yang sudah terisi booking DITERIMA pada satu tanggal. Hanya menit mulai/selesai; tanpa data pribadi.
+  async function getSlotTerisi(tanggal) {
+    const tgl = String(tanggal || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(tgl)) throw new Error("Tanggal tidak valid.");
+    const { data, error } = await supabaseClient.rpc("get_slot_terisi", { p_tanggal: tgl });
+    if (error) throw error;
+    return (Array.isArray(data) ? data : [])
+      .map(r => ({ mulai_menit: Number(r.mulai_menit), selesai_menit: Number(r.selesai_menit) }))
+      .filter(r => Number.isFinite(r.mulai_menit) && Number.isFinite(r.selesai_menit) && r.selesai_menit > r.mulai_menit);
+  }
   async function getBookings(status = null) {
     const { data, error } = await supabaseClient.rpc("list_bookings_admin", { p_status: status });
     if (error) throw error;
@@ -423,7 +433,7 @@
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+  window.bookingService = { createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -1511,6 +1521,13 @@ function generateSlotsForDurasi(durasiMenit) {
   const malam = EVENING_SLOTS.filter(s => jamToMenit(s) + durasiMenit <= closeEvening);
   return { pagi, malam };
 }
+// Slot bentrok bila rentangnya [mulai, mulai+durasi) beririsan dengan rentang terisi. Berurutan (selesai = mulai) tidak bentrok.
+// Aturan sama dengan accept_booking() di server (menit sejak 00:00, separuh terbuka).
+function slotBentrokDenganTerisi(slot, durasiMenit, terisi) {
+  const mulai = jamToMenit(slot);
+  const selesai = mulai + durasiMenit;
+  return (terisi || []).some(r => mulai < r.selesai_menit && r.mulai_menit < selesai);
+}
 function parseAlamatText(raw) {
   const text = raw.replace(/\s+/g, " ").trim();
   let m = text.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
@@ -1605,6 +1622,8 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   const orang = paketTerpilih.people;
   const [tanggal, setTanggal] = useState("");
   const [jam, setJam] = useState("");
+  const [slotTerisi, setSlotTerisi] = useState([]);
+  const slotTerisiReqRef = useRef(0);
   const tipeLokasi = paketTerpilih.type;
   const [alamatText, setAlamatText] = useState("");
   const [lat, setLat] = useState(null);
@@ -1898,6 +1917,33 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
 
   useEffect(() => { setJam(""); }, [paketId]);
 
+  // Slot terisi (booking DITERIMA) untuk tanggal terpilih. Gagal memuat = tidak menandai apa pun; server tetap memvalidasi saat admin menerima.
+  const slotTerisiCustomerId = customerSession && customerSession.user && customerSession.user.id;
+  useEffect(() => {
+    if (!tanggal || !slotTerisiCustomerId) { slotTerisiReqRef.current += 1; setSlotTerisi([]); return; }
+    let active = true;
+    const muat = () => {
+      const reqId = ++slotTerisiReqRef.current;
+      withCustomerReadTimeout(() => window.bookingService.getSlotTerisi(tanggal))
+        .then(rows => { if (active && reqId === slotTerisiReqRef.current) setSlotTerisi(rows); })
+        .catch(() => { if (active && reqId === slotTerisiReqRef.current) setSlotTerisi([]); });
+    };
+    muat();
+    const onVisible = () => { if (document.visibilityState === "visible") muat(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", muat);
+    return () => {
+      active = false;
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", muat);
+    };
+  }, [tanggal, slotTerisiCustomerId]);
+
+  // Jam yang sudah dipilih tetapi ternyata bentrok (data terbaru) dilepas agar tidak terkirim.
+  useEffect(() => {
+    if (jam && slotBentrokDenganTerisi(jam, durasiMenit, slotTerisi)) setJam("");
+  }, [slotTerisi, durasiMenit, jam]);
+
   const setLatLng = (la, ln) => {
     setLat(la); setLng(ln);
     latRef.current = la; lngRef.current = ln;
@@ -2137,6 +2183,17 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
         {slots.map(s => {
           const lewat = isSlotLewat(s);
+          const terisi = !lewat && slotBentrokDenganTerisi(s, durasiMenit, slotTerisi);
+          if (terisi) {
+            return (
+              <button key={s} disabled aria-label={`${s} sudah terisi`}
+                style={{ backgroundColor:"#F3F4F6", color:"#9CA3AF", borderRadius:"12px", padding:"6px 4px", border:"1px solid #E5E7EB" }}
+                className="text-sm">
+                <span style={{ textDecoration:"line-through" }}>{s}</span>
+                <span className="block" style={{ fontSize:"10px" }}>Terisi</span>
+              </button>
+            );
+          }
           if (lewat) {
             return (
               <button key={s} disabled
