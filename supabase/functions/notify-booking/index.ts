@@ -102,7 +102,7 @@ Deno.serve(async (req: Request) => {
       method: "POST",
       signal: AbortSignal.timeout(15000),
       headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: "Sules Booking <onboarding@resend.dev>", to: [to], subject, html }),
+      body: JSON.stringify({ from: "Sules Booking <booking@bookingpijat.com>", to: [to], subject, html }),
     })));
     if (responses.some(response => !response.ok)) {
       console.error("Booking notification provider returned a non-success status.");
