@@ -328,6 +328,19 @@
     return data;
   }
 
+  async function requestResolveMapsLink(url) {
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+    const accessToken = sessionData && sessionData.session && sessionData.session.access_token;
+    if (!accessToken) throw new Error("Customer session required for resolving map links.");
+    const { data, error } = await supabaseClient.functions.invoke("resolve-maps-link", {
+      body: { url },
+      headers: { Authorization: `Bearer ${accessToken}`, apikey: SUPABASE_ANON_KEY }
+    });
+    if (error) throw error;
+    return data;
+  }
+
   // CP-6: short event-only chimes; no audio starts until a real user gesture unlocks Web Audio.
   const playedRealtimeSoundEvents = new Set();
   const realtimeSoundProfiles = {
@@ -433,7 +446,7 @@
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+  window.bookingService = { createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -1656,6 +1669,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   const [parseMsg, setParseMsg] = useState("");
   const [tautanText, setTautanText] = useState("");
   const [tautanKandidat, setTautanKandidat] = useState(null);
+  const [loadingTautan, setLoadingTautan] = useState(false);
   const [loadingJarak, setLoadingJarak] = useState(false);
   const [screen, setScreen] = useState("form");
   const [currentBooking, setCurrentBooking] = useState(null);
@@ -2068,13 +2082,13 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
     }, GPS_TAHAP1_MS + GPS_TAHAP2_MS);
   };
 
-  const parseAlamat = () => {
+  const parseAlamat = async () => {
     setParseMsg("");
     setTautanKandidat(null);
     if (!tautanText.trim()) { setParseMsg("Tempel tautan Google Maps atau koordinat dulu."); return; }
     const hasil = parseAlamatText(tautanText);
     if (!hasil) {
-      setParseMsg("Tautan atau koordinat tidak bisa dibaca. Tempel koordinat seperti -7.000083, 112.281000 atau tautan Google Maps lengkap. Alamat teks biasa tidak bisa dipakai.");
+      setParseMsg("Tautan atau koordinat tidak bisa dibaca. Tempel koordinat seperti -7.000083, 112.281000 atau tautan Google Maps. Alamat teks biasa tidak bisa dipakai.");
       return;
     }
     if (hasil.tidakValid) {
@@ -2082,7 +2096,21 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       return;
     }
     if (hasil.shortLink) {
-      setParseMsg("Tautan pendek tidak bisa dibaca di sini dan lokasinya tidak ditebak. Buka tautan itu di Google Maps, tekan lama pada titik tujuan atau pilih Bagikan, salin koordinat (contoh -7.000083, 112.281000), lalu tempel di sini. Atau pakai tombol GPS.");
+      // Tautan pendek diubah di server (hanya host Google yang diizinkan); lokasi tidak pernah ditebak.
+      const urlPendek = (tautanText.match(/https?:\/\/\S+/i) || [tautanText.trim()])[0];
+      const petunjuk = "Tautan pendek ini tidak bisa diubah otomatis dan lokasinya tidak ditebak. Buka tautan itu di Google Maps, tekan lama pada titik tujuan atau pilih Bagikan, salin koordinat (contoh -7.000083, 112.281000), lalu tempel di sini. Atau pakai tombol GPS.";
+      setLoadingTautan(true);
+      try {
+        const data = await withCustomerReadTimeout(() => window.bookingService.requestResolveMapsLink(urlPendek), 20000);
+        if (data && koordinatValid(data.lat, data.lng)) {
+          setTautanKandidat({ la: data.lat, ln: data.lng, dariHalaman: data.sumber === "halaman" });
+        } else {
+          setParseMsg(petunjuk);
+        }
+      } catch (_) {
+        setParseMsg(petunjuk);
+      }
+      setLoadingTautan(false);
       return;
     }
     // Tampilkan titik yang terbaca; baru dipakai setelah pelanggan mengonfirmasi.
@@ -2125,6 +2153,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
     setParseMsg("");
     setTautanText("");
     setTautanKandidat(null);
+    setLoadingTautan(false);
     setJarakError("");
     setLoadingGPS(false);
     setLoadingJarak(false);
@@ -2623,13 +2652,13 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
               placeholder="Tempel tautan Google Maps atau koordinat. Contoh: -7.000083, 112.281000"
               aria-label="Tautan Google Maps atau koordinat tujuan"
               className="w-full border border-gray-300 rounded-xl p-3 mb-2 text-sm" rows="2"></textarea>
-            <button type="button" onClick={parseAlamat}
+            <button type="button" onClick={parseAlamat} disabled={loadingTautan}
               style={{ backgroundColor:"white", border:"1px solid #18324B", color:"#18324B", borderRadius:"12px", padding:"12px", width:"100%" }}
-              className="mb-2">📋 Baca tautan / koordinat</button>
+              className="mb-2 disabled:opacity-60">{loadingTautan ? "Membaca tautan..." : "📋 Baca tautan / koordinat"}</button>
             {parseMsg && <div className="text-xs text-red-600 mb-3" role="alert">{parseMsg}</div>}
             {tautanKandidat && (
               <div className="text-xs mb-3 rounded-xl p-3" style={{ border:"1px solid #2F6F9F", backgroundColor:"#EFF6FF", color:"#18324B" }} role="status">
-                Titik tujuan terbaca: <strong>{tautanKandidat.la.toFixed(6)}, {tautanKandidat.ln.toFixed(6)}</strong>. Titik ini dari tautan, bukan dari GPS, jadi tidak ada angka akurasi. Pastikan sudah sesuai tempat tujuan sebelum dipakai.
+                Titik tujuan terbaca: <strong>{tautanKandidat.la.toFixed(6)}, {tautanKandidat.ln.toFixed(6)}</strong>. Titik ini dari tautan, bukan dari GPS, jadi tidak ada angka akurasi.{tautanKandidat.dariHalaman ? " Titik ini dibaca dari halaman peta dan bisa kurang tepat." : ""} Buka "Lihat di Google Maps" dan pastikan sudah sesuai tempat tujuan sebelum dipakai.
                 <div className="mt-2 flex gap-3 flex-wrap">
                   <a href={`https://www.google.com/maps?q=${tautanKandidat.la},${tautanKandidat.ln}`} target="_blank" rel="noopener noreferrer" className="underline font-semibold">Lihat di Google Maps</a>
                   <button type="button" onClick={() => terimaLokasi(tautanKandidat.la, tautanKandidat.ln, null, "tautan")} className="underline font-bold">Gunakan titik ini</button>
