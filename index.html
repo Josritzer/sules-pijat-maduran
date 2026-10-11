@@ -1439,7 +1439,9 @@ const BASE_LNG = 112.2810000;
 const GRATIS_METER = 1000;
 const TARIF_PER_METER = 3.5;
 const GPS_MAX_ACCURACY_M = 100; // posisi dengan akurasi lebih buruk dari ini ditolak (bukan dipakai diam-diam)
-const GPS_WAIT_MS = 25000;      // waktu maksimum menunggu GPS mengunci posisi akurat
+const GPS_TAHAP1_MS = 12000;    // tahap 1: hanya GPS akurat
+const GPS_TAHAP2_MS = 15000;    // tahap 2: GPS + lokasi jaringan sebagai cadangan
+const GPS_TOLAK_DI_ATAS_M = 500; // lebih kasar dari ini ditolak; antara 100-500 m perlu konfirmasi pelanggan
 const HARGA = { "90m": 60000, "120m": 80000 };
 const DURASI = { "90m": 90, "120m": 120 };
 const SERVICE_PACKAGES = [
@@ -1618,6 +1620,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   const [loadingGPS, setLoadingGPS] = useState(false);
   const [gpsMsg, setGpsMsg] = useState("");
   const [gpsAkurasi, setGpsAkurasi] = useState(null);
+  const [gpsKandidat, setGpsKandidat] = useState(null);
   const gpsSessionRef = useRef(null);
   const jarakReqRef = useRef(0);
   const [parseMsg, setParseMsg] = useState("");
@@ -1915,9 +1918,20 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
     gpsSessionRef.current = null;
     if (!s) return;
     if (s.timer !== null) window.clearTimeout(s.timer);
+    if (s.timer2 !== null) window.clearTimeout(s.timer2);
     if (s.watchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(s.watchId);
+    if (s.watchId2 !== null && navigator.geolocation) navigator.geolocation.clearWatch(s.watchId2);
   };
   useEffect(() => batalkanPencarianGPS, []);
+
+  const terimaLokasi = (la, ln, acc) => {
+    setGpsKandidat(null);
+    setLatLng(la, ln);
+    setAlamatText(`GPS: ${la.toFixed(6)},${ln.toFixed(6)}`);
+    setGpsAkurasi(Math.round(acc));
+    setGpsMsg("");
+    hitungJarakSekarang(la, ln);
+  };
 
   const ambilLokasiGPS = () => {
     if (!navigator.geolocation) {
@@ -1929,11 +1943,12 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
     setLatLng(null, null);
     setAlamatText("");
     setGpsAkurasi(null);
+    setGpsKandidat(null);
     setLoadingJarak(false);
     setLoadingGPS(true);
     setGpsMsg("");
 
-    const session = { watchId: null, timer: null, best: null };
+    const session = { watchId: null, watchId2: null, timer: null, timer2: null, best: null };
     gpsSessionRef.current = session;
     const aktif = () => gpsSessionRef.current === session;
     const selesai = () => { batalkanPencarianGPS(); setLoadingGPS(false); };
@@ -1946,11 +1961,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       if (!session.best || acc < session.best.acc) session.best = { la, ln, acc };
       if (acc > GPS_MAX_ACCURACY_M) return; // belum cukup akurat: terus tunggu fix yang lebih baik sampai batas waktu
       selesai();
-      setLatLng(la, ln);
-      setAlamatText(`GPS: ${la.toFixed(6)},${ln.toFixed(6)}`);
-      setGpsAkurasi(Math.round(acc));
-      setGpsMsg("");
-      hitungJarakSekarang(la, ln);
+      terimaLokasi(la, ln, acc);
     };
 
     const onError = (err) => {
@@ -1962,21 +1973,34 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       // kode 2/3 dapat bersifat sementara saat GPS belum mengunci; batas waktu keseluruhan yang memutuskan
     };
 
+    // Tahap 1: GPS akurat. Tahap 2 (cadangan): setelah GPS_TAHAP1_MS, lokasi jaringan (Wi-Fi/seluler) ikut dicoba.
+    session.watchId = navigator.geolocation.watchPosition(
+      onFix, onError,
+      { enableHighAccuracy: true, timeout: GPS_TAHAP1_MS + GPS_TAHAP2_MS, maximumAge: 0 }
+    );
+    session.timer2 = window.setTimeout(() => {
+      if (!aktif()) return;
+      session.timer2 = null;
+      session.watchId2 = navigator.geolocation.watchPosition(
+        onFix, () => {},
+        { enableHighAccuracy: false, timeout: GPS_TAHAP2_MS, maximumAge: 0 }
+      );
+    }, GPS_TAHAP1_MS);
+
     session.timer = window.setTimeout(() => {
       if (!aktif()) return;
       const best = session.best;
       selesai();
-      if (best) {
-        setGpsMsg(`Lokasi belum cukup akurat (±${Math.round(best.acc)} m, batas ±${GPS_MAX_ACCURACY_M} m). Pindah ke area terbuka, aktifkan GPS/Lokasi Akurat di perangkat, lalu coba lagi.`);
+      if (best && best.acc <= GPS_TOLAK_DI_ATAS_M) {
+        // Cukup untuk dikonfirmasi pelanggan, tetapi tidak dipakai diam-diam.
+        setGpsKandidat(best);
+        setGpsMsg("");
+      } else if (best) {
+        setGpsMsg(`Lokasi terlalu kasar (±${Math.round(best.acc)} m). Pindah ke dekat jendela atau area terbuka, aktifkan Lokasi akurasi tinggi, lalu coba lagi.`);
       } else {
-        setGpsMsg("Lokasi akurat tidak berhasil diperoleh sebelum batas waktu. Pastikan GPS aktif, lalu coba lagi.");
+        setGpsMsg("Lokasi tidak berhasil diperoleh. Pastikan GPS/Lokasi aktif dan internet menyala, lalu coba lagi.");
       }
-    }, GPS_WAIT_MS);
-
-    session.watchId = navigator.geolocation.watchPosition(
-      onFix, onError,
-      { enableHighAccuracy: true, timeout: GPS_WAIT_MS, maximumAge: 0 }
-    );
+    }, GPS_TAHAP1_MS + GPS_TAHAP2_MS);
   };
 
   const parseAlamat = () => {
@@ -2022,6 +2046,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   const resetLokasi = () => {
     batalkanPencarianGPS();
     setGpsAkurasi(null);
+    setGpsKandidat(null);
     setLatLng(null, null);
     setAlamatText("");
     setJarak(null);
@@ -2499,6 +2524,16 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
               {gpsMsg}
               <button type="button" onClick={ambilLokasiGPS} disabled={loadingGPS} className="underline font-semibold ml-2 disabled:opacity-60">Coba lagi</button>
             </div>}
+
+            {gpsKandidat && (
+              <div className="text-xs mb-3 rounded-xl p-3" style={{ border:"1px solid #F59E0B", backgroundColor:"#FFFBEB", color:"#92400E" }} role="alert">
+                Lokasi kurang akurat (±{Math.round(gpsKandidat.acc)} m). Biaya perjalanan dihitung dari titik ini. Pakai lokasi ini, atau coba lagi di dekat jendela / area terbuka.
+                <div className="mt-2 flex gap-3">
+                  <button type="button" onClick={() => terimaLokasi(gpsKandidat.la, gpsKandidat.ln, gpsKandidat.acc)} className="underline font-bold">Gunakan lokasi ini</button>
+                  <button type="button" onClick={ambilLokasiGPS} className="underline font-semibold">Coba lagi</button>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-2 mb-3">
               <div style={{ border: lat!==null ? "1px solid #10B981" : "1px solid #D1D5DB", backgroundColor: lat!==null ? "#ECFDF5" : "#F9FAFB", color: lat!==null ? "#065F46" : "#6B7280" }} className="rounded-xl p-2 text-xs">
