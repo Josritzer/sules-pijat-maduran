@@ -1448,6 +1448,10 @@ const BASE_LAT = -7.0000833;
 const BASE_LNG = 112.2810000;
 const GRATIS_METER = 1000;
 const TARIF_PER_METER = 3.5;
+const GPS_MAX_ACCURACY_M = 100; // posisi dengan akurasi lebih buruk dari ini ditolak (bukan dipakai diam-diam)
+const GPS_TAHAP1_MS = 12000;    // tahap 1: hanya GPS akurat
+const GPS_TAHAP2_MS = 15000;    // tahap 2: GPS + lokasi jaringan sebagai cadangan
+const GPS_TOLAK_DI_ATAS_M = 500; // lebih kasar dari ini ditolak; antara 100-500 m perlu konfirmasi pelanggan
 const HARGA = { "90m": 60000, "120m": 80000 };
 const DURASI = { "90m": 90, "120m": 120 };
 const SERVICE_PACKAGES = [
@@ -1528,19 +1532,30 @@ function slotBentrokDenganTerisi(slot, durasiMenit, terisi) {
   const selesai = mulai + durasiMenit;
   return (terisi || []).some(r => mulai < r.selesai_menit && r.mulai_menit < selesai);
 }
+function koordinatValid(la, ln) {
+  return Number.isFinite(la) && Number.isFinite(ln) && Math.abs(la) <= 90 && Math.abs(ln) <= 180 && !(la === 0 && ln === 0);
+}
+// Hasil: {lat,lng} | {tidakValid:true} | {shortLink:true} | null. Tidak pernah menebak lokasi dari alamat teks atau tautan pendek.
 function parseAlamatText(raw) {
-  const text = raw.replace(/\s+/g, " ").trim();
-  let m = text.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
-  if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
-  m = text.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-  if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
-  m = text.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
-  if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
-  m = text.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
-  if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
-  if (/maps\.app\.goo\.gl|goo\.gl\/maps/.test(text)) {
-    return { shortLink: text };
+  if (typeof raw !== "string") return null;
+  let text = raw.trim();
+  try { text = decodeURIComponent(text); } catch (_) { /* biarkan apa adanya */ }
+  text = text.replace(/\s+/g, " ");
+  const D = "(-?\\d+\\.\\d+)";
+  const pola = [
+    new RegExp("!3d" + D + "!4d" + D),                                     // pin tempat di tautan Google Maps panjang
+    new RegExp("@" + D + "," + D),                                          // pusat peta
+    new RegExp("[?&](?:q|ll|query|destination|daddr|center)=" + D + "\\s*,\\s*" + D), // WhatsApp / bagikan lokasi
+    new RegExp(D + "\\s*,\\s*" + D),                                      // koordinat desimal langsung
+  ];
+  for (const re of pola) {
+    const m = text.match(re);
+    if (m) {
+      const la = parseFloat(m[1]), ln = parseFloat(m[2]);
+      return koordinatValid(la, ln) ? { lat: la, lng: ln } : { tidakValid: true };
+    }
   }
+  if (/maps\.app\.goo\.gl|goo\.gl\/maps|g\.co\/kgs|share\.google/i.test(text)) return { shortLink: true };
   return null;
 }
 async function computeRoadDistance(destLat, destLng) {
@@ -1634,7 +1649,13 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   const [sumberJarak, setSumberJarak] = useState(null);
   const [loadingGPS, setLoadingGPS] = useState(false);
   const [gpsMsg, setGpsMsg] = useState("");
+  const [gpsAkurasi, setGpsAkurasi] = useState(null);
+  const [gpsKandidat, setGpsKandidat] = useState(null);
+  const gpsSessionRef = useRef(null);
+  const jarakReqRef = useRef(0);
   const [parseMsg, setParseMsg] = useState("");
+  const [tautanText, setTautanText] = useState("");
+  const [tautanKandidat, setTautanKandidat] = useState(null);
   const [loadingJarak, setLoadingJarak] = useState(false);
   const [screen, setScreen] = useState("form");
   const [currentBooking, setCurrentBooking] = useState(null);
@@ -1945,9 +1966,34 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   }, [slotTerisi, durasiMenit, jam]);
 
   const setLatLng = (la, ln) => {
+    jarakReqRef.current += 1; // hasil jarak dari koordinat sebelumnya tidak boleh menimpa koordinat baru
     setLat(la); setLng(ln);
     latRef.current = la; lngRef.current = ln;
     setJarak(null); setSumberJarak(null); setJarakError("");
+  };
+
+  const batalkanPencarianGPS = () => {
+    const s = gpsSessionRef.current;
+    gpsSessionRef.current = null;
+    if (!s) return;
+    if (s.timer !== null) window.clearTimeout(s.timer);
+    if (s.timer2 !== null) window.clearTimeout(s.timer2);
+    if (s.watchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(s.watchId);
+    if (s.watchId2 !== null && navigator.geolocation) navigator.geolocation.clearWatch(s.watchId2);
+  };
+  useEffect(() => batalkanPencarianGPS, []);
+
+  // Satu pintu untuk semua sumber lokasi (GPS atau tautan): setelah pelanggan mengonfirmasi, jarak dihitung dari titik yang sama.
+  const terimaLokasi = (la, ln, acc, sumber = "gps") => {
+    if (!koordinatValid(la, ln)) { setParseMsg("Koordinat tidak valid. Periksa lagi lalu coba kembali."); return; }
+    setGpsKandidat(null);
+    setTautanKandidat(null);
+    setLatLng(la, ln);
+    setAlamatText(sumber === "gps" ? `GPS: ${la.toFixed(6)},${ln.toFixed(6)}` : `Tautan Maps: ${la.toFixed(6)},${ln.toFixed(6)}`);
+    setGpsAkurasi(typeof acc === "number" ? Math.round(acc) : null);
+    setGpsMsg("");
+    setParseMsg("");
+    hitungJarakSekarang(la, ln);
   };
 
   const ambilLokasiGPS = () => {
@@ -1955,46 +2001,92 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       setGpsMsg("Perangkat atau browser ini tidak mendukung lokasi akurat.");
       return;
     }
+    // Mulai dari nol: koordinat/jarak dari percobaan sebelumnya tidak boleh tersisa jika percobaan ini gagal.
+    batalkanPencarianGPS();
+    setLatLng(null, null);
+    setAlamatText("");
+    setGpsAkurasi(null);
+    setGpsKandidat(null);
+    setTautanKandidat(null);
+    setParseMsg("");
+    setLoadingJarak(false);
     setLoadingGPS(true);
     setGpsMsg("");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const la = pos.coords.latitude;
-        const ln = pos.coords.longitude;
-        setLatLng(la, ln);
-        setAlamatText(`GPS: ${la.toFixed(6)},${ln.toFixed(6)}`);
-        setLoadingGPS(false);
-        setGpsMsg("");
-        hitungJarakSekarang(la, ln);
-      },
-      (err) => {
-        setLoadingGPS(false);
-        if (err.code === 1) {
-          setGpsMsg("Izin lokasi ditolak. Izinkan akses lokasi untuk situs ini, lalu coba lagi.");
-        } else if (err.code === 3) {
-          setGpsMsg("Lokasi akurat tidak merespons sebelum batas waktu. Pastikan GPS aktif, lalu coba lagi.");
-        } else {
-          setGpsMsg("Lokasi akurat gagal diperoleh. Pastikan layanan lokasi aktif, lalu coba lagi.");
-        }
-      },
-      { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
+
+    const session = { watchId: null, watchId2: null, timer: null, timer2: null, best: null };
+    gpsSessionRef.current = session;
+    const aktif = () => gpsSessionRef.current === session;
+    const selesai = () => { batalkanPencarianGPS(); setLoadingGPS(false); };
+
+    const onFix = (pos) => {
+      if (!aktif()) return;
+      const c = pos && pos.coords;
+      const la = c && c.latitude, ln = c && c.longitude, acc = c && c.accuracy;
+      if (![la, ln, acc].every(v => typeof v === "number" && Number.isFinite(v)) || Math.abs(la) > 90 || Math.abs(ln) > 180) return;
+      if (!session.best || acc < session.best.acc) session.best = { la, ln, acc };
+      if (acc > GPS_MAX_ACCURACY_M) return; // belum cukup akurat: terus tunggu fix yang lebih baik sampai batas waktu
+      selesai();
+      terimaLokasi(la, ln, acc);
+    };
+
+    const onError = (err) => {
+      if (!aktif()) return;
+      if (err && err.code === 1) {
+        selesai();
+        setGpsMsg("Izin lokasi ditolak. Izinkan akses lokasi untuk situs ini, lalu coba lagi.");
+      }
+      // kode 2/3 dapat bersifat sementara saat GPS belum mengunci; batas waktu keseluruhan yang memutuskan
+    };
+
+    // Tahap 1: GPS akurat. Tahap 2 (cadangan): setelah GPS_TAHAP1_MS, lokasi jaringan (Wi-Fi/seluler) ikut dicoba.
+    session.watchId = navigator.geolocation.watchPosition(
+      onFix, onError,
+      { enableHighAccuracy: true, timeout: GPS_TAHAP1_MS + GPS_TAHAP2_MS, maximumAge: 0 }
     );
+    session.timer2 = window.setTimeout(() => {
+      if (!aktif()) return;
+      session.timer2 = null;
+      session.watchId2 = navigator.geolocation.watchPosition(
+        onFix, () => {},
+        { enableHighAccuracy: false, timeout: GPS_TAHAP2_MS, maximumAge: 0 }
+      );
+    }, GPS_TAHAP1_MS);
+
+    session.timer = window.setTimeout(() => {
+      if (!aktif()) return;
+      const best = session.best;
+      selesai();
+      if (best && best.acc <= GPS_TOLAK_DI_ATAS_M) {
+        // Cukup untuk dikonfirmasi pelanggan, tetapi tidak dipakai diam-diam.
+        setGpsKandidat(best);
+        setGpsMsg("");
+      } else if (best) {
+        setGpsMsg(`Lokasi terlalu kasar (±${Math.round(best.acc)} m). Pindah ke dekat jendela atau area terbuka, aktifkan Lokasi akurasi tinggi, lalu coba lagi.`);
+      } else {
+        setGpsMsg("Lokasi tidak berhasil diperoleh. Pastikan GPS/Lokasi aktif dan internet menyala, lalu coba lagi.");
+      }
+    }, GPS_TAHAP1_MS + GPS_TAHAP2_MS);
   };
 
   const parseAlamat = () => {
     setParseMsg("");
-    const hasil = parseAlamatText(alamatText);
+    setTautanKandidat(null);
+    if (!tautanText.trim()) { setParseMsg("Tempel tautan Google Maps atau koordinat dulu."); return; }
+    const hasil = parseAlamatText(tautanText);
     if (!hasil) {
-      setParseMsg("Gagal membaca alamat. Pastikan format koordinat atau link Google Maps benar.");
+      setParseMsg("Tautan atau koordinat tidak bisa dibaca. Tempel koordinat seperti -7.000083, 112.281000 atau tautan Google Maps lengkap. Alamat teks biasa tidak bisa dipakai.");
+      return;
+    }
+    if (hasil.tidakValid) {
+      setParseMsg("Koordinat tidak valid (lintang harus -90 sampai 90, bujur -180 sampai 180). Periksa urutan: lintang dulu, lalu bujur.");
       return;
     }
     if (hasil.shortLink) {
-      window.open(hasil.shortLink, "_blank");
-      setParseMsg("Link pendek tidak bisa dibaca langsung. Buka Maps, tap Share / Bagikan, salin koordinat -7.xxx,112.xxx lalu tempel di sini. Atau pakai GPS di atas.");
+      setParseMsg("Tautan pendek tidak bisa dibaca di sini dan lokasinya tidak ditebak. Buka tautan itu di Google Maps, tekan lama pada titik tujuan atau pilih Bagikan, salin koordinat (contoh -7.000083, 112.281000), lalu tempel di sini. Atau pakai tombol GPS.");
       return;
     }
-    setLatLng(hasil.lat, hasil.lng);
-    hitungJarakSekarang(hasil.lat, hasil.lng);
+    // Tampilkan titik yang terbaca; baru dipakai setelah pelanggan mengonfirmasi.
+    setTautanKandidat({ la: hasil.lat, ln: hasil.lng });
   };
 
   const hitungJarakSekarang = async (laArg, lnArg) => {
@@ -2002,29 +2094,37 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
     const la = laArg !== undefined ? laArg : latRef.current;
     const ln = lnArg !== undefined ? lnArg : lngRef.current;
     if (la === null || la === undefined || ln === null || ln === undefined) {
-      setJarakError("Bagikan lokasi akurat melalui GPS terlebih dahulu.");
+      setJarakError("Tentukan lokasi lewat GPS atau tautan Google Maps terlebih dahulu.");
       return;
     }
+    const reqId = ++jarakReqRef.current;
     setLoadingJarak(true);
     setJarak(null);
     setSumberJarak(null);
     try {
       const { meters, sumber } = await computeRoadDistance(la, ln);
+      if (reqId !== jarakReqRef.current) return; // koordinat sudah berganti/direset: abaikan hasil lama
       setJarak(meters);
       setSumberJarak(sumber);
     } catch (_) {
-      setJarakError("Jarak jalan Google Routes belum tersedia. Periksa koneksi lalu coba lagi.");
+      if (reqId !== jarakReqRef.current) return;
+      setJarakError("Jarak jalan Google Routes belum tersedia, biaya perjalanan belum bisa dihitung. Periksa koneksi lalu tekan Hitung Jarak Jalan untuk mencoba lagi.");
     }
-    setLoadingJarak(false);
+    if (reqId === jarakReqRef.current) setLoadingJarak(false);
   };
 
   const resetLokasi = () => {
+    batalkanPencarianGPS();
+    setGpsAkurasi(null);
+    setGpsKandidat(null);
     setLatLng(null, null);
     setAlamatText("");
     setJarak(null);
     setSumberJarak(null);
     setGpsMsg("");
     setParseMsg("");
+    setTautanText("");
+    setTautanKandidat(null);
     setJarakError("");
     setLoadingGPS(false);
     setLoadingJarak(false);
@@ -2051,7 +2151,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
     if (!tanggal) { setFormError("Pilih tanggal dulu."); return; }
     if (!jam) { setFormError("Pilih jam dulu."); return; }
     if (tipeLokasi === "HOME_SERVICE" && (lat === null || lng === null)) {
-      setFormError("Untuk paket ke Rumah, bagikan lokasi akurat melalui GPS terlebih dahulu.");
+      setFormError("Untuk paket ke Rumah, tentukan lokasi lewat GPS atau tempel tautan Google Maps, lalu konfirmasi titiknya.");
       return;
     }
     if (tipeLokasi === "HOME_SERVICE" && (jarak === null || sumberJarak !== "road")) {
@@ -2501,12 +2601,42 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
             <button onClick={ambilLokasiGPS} disabled={loadingGPS}
               style={{ backgroundColor:"#2F6F9F", color:"white", borderRadius:"999px", padding:"14px", width:"100%", fontWeight:"bold" }}
               className="mb-2 sules-location-share">
-              {loadingGPS ? "📡 Mencari lokasi akurat..." : "📍 Lokasi akurat"}
+              {loadingGPS ? "📡 Mencari lokasi akurat..." : "📍 Gunakan GPS"}
             </button>
             {gpsMsg && <div className="text-xs text-red-600 mb-3" role="alert">
               {gpsMsg}
               <button type="button" onClick={ambilLokasiGPS} disabled={loadingGPS} className="underline font-semibold ml-2 disabled:opacity-60">Coba lagi</button>
             </div>}
+
+            {gpsKandidat && (
+              <div className="text-xs mb-3 rounded-xl p-3" style={{ border:"1px solid #F59E0B", backgroundColor:"#FFFBEB", color:"#92400E" }} role="alert">
+                Lokasi kurang akurat (±{Math.round(gpsKandidat.acc)} m, titik {gpsKandidat.la.toFixed(6)}, {gpsKandidat.ln.toFixed(6)}). Biaya perjalanan dihitung dari titik ini. Pakai lokasi ini, atau coba lagi di dekat jendela / area terbuka.
+                <div className="mt-2 flex gap-3">
+                  <button type="button" onClick={() => terimaLokasi(gpsKandidat.la, gpsKandidat.ln, gpsKandidat.acc)} className="underline font-bold">Gunakan lokasi ini</button>
+                  <button type="button" onClick={ambilLokasiGPS} className="underline font-semibold">Coba lagi</button>
+                </div>
+              </div>
+            )}
+
+            <div className="text-center text-xs text-gray-400 my-2">atau</div>
+            <textarea value={tautanText} onChange={e => { setTautanText(e.target.value); setTautanKandidat(null); setParseMsg(""); }}
+              placeholder="Tempel tautan Google Maps atau koordinat. Contoh: -7.000083, 112.281000"
+              aria-label="Tautan Google Maps atau koordinat tujuan"
+              className="w-full border border-gray-300 rounded-xl p-3 mb-2 text-sm" rows="2"></textarea>
+            <button type="button" onClick={parseAlamat}
+              style={{ backgroundColor:"white", border:"1px solid #18324B", color:"#18324B", borderRadius:"12px", padding:"12px", width:"100%" }}
+              className="mb-2">📋 Baca tautan / koordinat</button>
+            {parseMsg && <div className="text-xs text-red-600 mb-3" role="alert">{parseMsg}</div>}
+            {tautanKandidat && (
+              <div className="text-xs mb-3 rounded-xl p-3" style={{ border:"1px solid #2F6F9F", backgroundColor:"#EFF6FF", color:"#18324B" }} role="status">
+                Titik tujuan terbaca: <strong>{tautanKandidat.la.toFixed(6)}, {tautanKandidat.ln.toFixed(6)}</strong>. Titik ini dari tautan, bukan dari GPS, jadi tidak ada angka akurasi. Pastikan sudah sesuai tempat tujuan sebelum dipakai.
+                <div className="mt-2 flex gap-3 flex-wrap">
+                  <a href={`https://www.google.com/maps?q=${tautanKandidat.la},${tautanKandidat.ln}`} target="_blank" rel="noopener noreferrer" className="underline font-semibold">Lihat di Google Maps</a>
+                  <button type="button" onClick={() => terimaLokasi(tautanKandidat.la, tautanKandidat.ln, null, "tautan")} className="underline font-bold">Gunakan titik ini</button>
+                  <button type="button" onClick={() => setTautanKandidat(null)} className="underline font-semibold">Batal</button>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-2 mb-3">
               <div style={{ border: lat!==null ? "1px solid #10B981" : "1px solid #D1D5DB", backgroundColor: lat!==null ? "#ECFDF5" : "#F9FAFB", color: lat!==null ? "#065F46" : "#6B7280" }} className="rounded-xl p-2 text-xs">
@@ -2519,6 +2649,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
               </div>
             </div>
 
+            {gpsAkurasi !== null && lat !== null && <div className="text-xs text-gray-500 mb-2">Akurasi GPS ±{gpsAkurasi} m</div>}
             {jarakError && <div className="text-xs text-red-600 mb-2">{jarakError}</div>}
             {jarak !== null && sumberJarak && (
               <div className="mb-2">
@@ -2562,11 +2693,11 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
         {tipeLokasi === "HOME_SERVICE" && (
           <div className="flex justify-between text-sm mb-1">
             <span>Transport</span>
-            <span>{formatRupiah(transport)}</span>
+            <span>{jarak !== null && sumberJarak === "road" ? formatRupiah(transport) : "Belum dihitung"}</span>
           </div>
         )}
         <div className="flex justify-between font-bold text-base mt-2 pt-2 border-t border-gray-200">
-          <span>TOTAL</span>
+          <span>{tipeLokasi === "HOME_SERVICE" && (jarak === null || sumberJarak !== "road") ? "TOTAL (belum termasuk transport)" : "TOTAL"}</span>
           <span className="sules-price">{formatRupiah(total)}</span>
         </div>
         <p className="text-xs text-gray-600 mt-3">Setelah dikirim, status awal booking adalah MENUNGGU. Admin akan memproses booking Anda.</p>
