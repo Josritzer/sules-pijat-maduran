@@ -191,6 +191,27 @@
       .map(r => ({ mulai_menit: Number(r.mulai_menit), selesai_menit: Number(r.selesai_menit) }))
       .filter(r => Number.isFinite(r.mulai_menit) && Number.isFinite(r.selesai_menit) && r.selesai_menit > r.mulai_menit);
   }
+  // Status buka/tutup sesi dibaca dari Supabase (operational_settings, baca publik). Gagal/rusak = dianggap buka (fail-open); server tetap menolak bila memang tutup.
+  async function getSesiStatus() {
+    const { data, error } = await supabaseClient.from("operational_settings").select("key,value").in("key", ["sesi_pagi", "sesi_malam"]);
+    if (error) throw error;
+    const byKey = {};
+    (Array.isArray(data) ? data : []).forEach(r => { byKey[r.key] = r.value; });
+    return { pagi: byKey.sesi_pagi, malam: byKey.sesi_malam };
+  }
+  async function setSesiAdmin(sesi, buka, sampai, pesan) {
+    if (sesi !== "pagi" && sesi !== "malam") throw new Error("Sesi tidak valid.");
+    const { data, error } = await supabaseClient.rpc("admin_set_sesi", {
+      p_sesi: sesi, p_buka: !!buka, p_sampai: buka ? null : (sampai || null), p_pesan: buka ? null : (pesan || null)
+    });
+    if (error) throw error;
+    return data;
+  }
+  async function getSesiRingkasan() {
+    const { data, error } = await supabaseClient.rpc("admin_sesi_ringkasan");
+    if (error) throw error;
+    return data || {};
+  }
   async function getBookings(status = null) {
     const { data, error } = await supabaseClient.rpc("list_bookings_admin", { p_status: status });
     if (error) throw error;
@@ -446,7 +467,7 @@
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+  window.bookingService = { createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -1545,6 +1566,71 @@ function slotBentrokDenganTerisi(slot, durasiMenit, terisi) {
   const selesai = mulai + durasiMenit;
   return (terisi || []).some(r => mulai < r.selesai_menit && r.mulai_menit < selesai);
 }
+// ===== Sesi buka/tutup (siang < 17:00, malam >= 17:00; tanggal booking, zona WIB) =====
+const SESI_NAMA = { pagi: "siang", malam: "malam" };
+function normalisasiSesi(v) {
+  // Fail-open: apa pun yang tidak persis {"buka": false, ...} dianggap buka.
+  if (!v || typeof v !== "object" || Array.isArray(v) || v.buka !== false) return { buka: true, pesan: "", sampai: null };
+  const sampai = typeof v.sampai === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v.sampai) ? v.sampai : (v.sampai ? "rusak" : null);
+  if (sampai === "rusak") return { buka: true, pesan: "", sampai: null };
+  return { buka: false, pesan: typeof v.pesan === "string" ? v.pesan.slice(0, 200) : "", sampai };
+}
+function hariIniWIB() {
+  try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
+  catch (e) { return ""; }
+}
+function sesiDariJam(jam) { return jamToMenit(jam) < 17 * 60 ? "pagi" : "malam"; }
+function sesiTutupPadaTanggal(sesi, tanggalStr) {
+  const s = normalisasiSesi(sesi);
+  if (s.buka || !tanggalStr) return false;
+  return s.sampai === null || tanggalStr <= s.sampai;
+}
+function sesiTutupAktif(sesi) {
+  const s = normalisasiSesi(sesi);
+  if (s.buka) return false;
+  const hari = hariIniWIB();
+  return s.sampai === null || !hari || s.sampai >= hari;
+}
+function formatTanggalSesi(str) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(str || ""))) return "";
+  const [y, m, d] = str.split("-").map(Number);
+  const bulan = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  return `${d} ${bulan[m - 1] || ""} ${y}`;
+}
+function useSesiStatus() {
+  const [sesi, setSesi] = useState({ pagi: null, malam: null });
+  useEffect(() => {
+    let active = true;
+    const muat = () => {
+      if (!window.bookingService || !window.bookingService.getSesiStatus) return;
+      window.bookingService.getSesiStatus()
+        .then(r => { if (active) setSesi(r || { pagi: null, malam: null }); })
+        .catch(() => { /* fail-open: tidak menandai apa pun */ });
+    };
+    muat();
+    const onVis = () => { if (document.visibilityState === "visible") muat(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { active = false; document.removeEventListener("visibilitychange", onVis); };
+  }, []);
+  return sesi;
+}
+function SesiBanner({ sesi, className = "" }) {
+  const daftar = ["pagi", "malam"].filter(k => sesiTutupAktif(sesi && sesi[k])).map(k => ({ k, ...normalisasiSesi(sesi[k]) }));
+  if (!daftar.length) return null;
+  return <div role="status" className={className}>
+    {daftar.map(s => (
+      <div key={s.k} data-sesi-banner={s.k} style={{ backgroundColor:"#FEF3C7", border:"1px solid #F59E0B", color:"#92400E", borderRadius:"12px", padding:"10px 12px", marginBottom:"8px", fontSize:"13px" }}>
+        <div className="font-semibold">{s.k === "pagi" ? "☀️" : "🌙"} Sesi {SESI_NAMA[s.k]} tutup{s.sampai ? ` sampai ${formatTanggalSesi(s.sampai)}` : " untuk sementara"}</div>
+        {s.sampai && <div>Booking tersedia lagi mulai {formatTanggalSesi(new Date(new Date(s.sampai + "T00:00:00Z").getTime() + 86400000).toISOString().slice(0, 10))}.</div>}
+        {s.pesan && <div className="mt-1">{s.pesan}</div>}
+      </div>
+    ))}
+  </div>;
+}
+function HomeSesiBanner() {
+  const sesi = useSesiStatus();
+  return <SesiBanner sesi={sesi} className="px-4 pt-3" />;
+}
 function koordinatValid(la, ln) {
   return Number.isFinite(la) && Number.isFinite(ln) && Math.abs(la) <= 90 && Math.abs(ln) <= 180 && !(la === 0 && ln === 0);
 }
@@ -1651,6 +1737,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   const [tanggal, setTanggal] = useState("");
   const [jam, setJam] = useState("");
   const [slotTerisi, setSlotTerisi] = useState([]);
+  const sesiStatus = useSesiStatus();
   const slotTerisiReqRef = useRef(0);
   const tipeLokasi = paketTerpilih.type;
   const [alamatText, setAlamatText] = useState("");
@@ -1978,6 +2065,11 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   useEffect(() => {
     if (jam && slotBentrokDenganTerisi(jam, durasiMenit, slotTerisi)) setJam("");
   }, [slotTerisi, durasiMenit, jam]);
+
+  // Jam terpilih yang ternyata masuk sesi ditutup Admin dilepas (server tetap menolak bila lolos).
+  useEffect(() => {
+    if (jam && tanggal && sesiTutupPadaTanggal(sesiStatus[sesiDariJam(jam)], tanggal)) setJam("");
+  }, [sesiStatus, tanggal, jam]);
 
   const setLatLng = (la, ln) => {
     jarakReqRef.current += 1; // hasil jarak dari koordinat sebelumnya tidak boleh menimpa koordinat baru
@@ -2312,6 +2404,17 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
         {slots.map(s => {
           const lewat = isSlotLewat(s);
+          const sesiTutup = sesiTutupPadaTanggal(sesiStatus[sesiDariJam(s)], tanggal);
+          if (sesiTutup) {
+            return (
+              <button key={s} disabled aria-label={`${s} sesi tutup`}
+                style={{ backgroundColor:"#FEF3C7", color:"#92400E", borderRadius:"12px", padding:"6px 4px", border:"1px solid #FDE68A" }}
+                className="text-sm">
+                <span style={{ textDecoration:"line-through" }}>{s}</span>
+                <span className="block" style={{ fontSize:"10px" }}>Tutup</span>
+              </button>
+            );
+          }
           const terisi = !lewat && slotBentrokDenganTerisi(s, durasiMenit, slotTerisi);
           if (terisi) {
             return (
@@ -2613,6 +2716,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
         <div className="sules-step-label"><span>02</span> TANGGAL</div>
         <input type="date" value={tanggal} onChange={e=>setTanggal(e.target.value)} className="w-full border border-gray-300 rounded-xl p-3 mb-4" />
         <div className="sules-step-label"><span>03</span> WAKTU</div>
+        <SesiBanner sesi={sesiStatus} className="mb-3" />
         {renderSlotGrup("☀️ Pagi (08:00-15:00)", pagi)}
         {renderSlotGrup("🌙 Malam (19:00-24:00)", malam)}
       </div>
@@ -3478,6 +3582,82 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
   </div>;
 }
 
+function SesiAdminPanel() {
+  const [status, setStatus] = useState({ pagi: null, malam: null });
+  const [ringkasan, setRingkasan] = useState({});
+  const [form, setForm] = useState({ pagi: { sampai: "", pesan: "" }, malam: { sampai: "", pesan: "" } });
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+  const muat = async () => {
+    try {
+      const [st, rk] = await Promise.all([
+        window.bookingService.getSesiStatus(),
+        window.bookingService.getSesiRingkasan().catch(() => ({}))
+      ]);
+      setStatus(st || { pagi: null, malam: null });
+      setRingkasan(rk || {});
+    } catch (e) { setError("Status sesi belum dapat dimuat dari server."); }
+  };
+  useEffect(() => { muat(); }, []);
+  const ubahForm = (k, f, v) => setForm(prev => ({ ...prev, [k]: { ...prev[k], [f]: v } }));
+  const jalankan = async (k, buka) => {
+    const f = form[k];
+    const nama = SESI_NAMA[k];
+    if (!buka) {
+      const ket = f.sampai ? `sampai ${formatTanggalSesi(f.sampai)}` : "tanpa batas tanggal (sampai Anda membukanya kembali)";
+      if (!window.confirm(`Tutup sesi ${nama} ${ket}?\n\nBooking baru pada sesi ini akan ditolak. Booking yang sudah ada tidak berubah.`)) return;
+    }
+    setBusy(k); setError(""); setInfo("");
+    try {
+      await window.bookingService.setSesiAdmin(k, buka, f.sampai, f.pesan);
+      await muat();
+      setInfo(buka ? `Sesi ${nama} dibuka kembali.` : `Sesi ${nama} ditutup.`);
+      if (buka) ubahForm(k, "sampai", "");
+    } catch (e) {
+      setError("Perubahan sesi gagal disimpan: " + ((e && e.message) || "coba lagi"));
+    } finally { setBusy(""); }
+  };
+  return (
+    <div className="bg-white rounded-xl p-3 border border-gray-200 mb-3" aria-label="Buka atau tutup sesi">
+      <div className="text-sm font-bold mb-2">Buka / Tutup Sesi</div>
+      {error && <div role="alert" className="text-xs text-red-700 mb-2">{error}</div>}
+      {info && <div role="status" className="text-xs text-green-700 mb-2">{info}</div>}
+      {["pagi", "malam"].map(k => {
+        const st = normalisasiSesi(status[k]);
+        const r = ringkasan[`sesi_${k}`];
+        return (
+          <div key={k} data-sesi-admin={k} className="border border-gray-200 rounded-lg p-2 mb-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold">{k === "pagi" ? "☀️ Siang (08:00–15:00)" : "🌙 Malam (19:00–24:00)"}</span>
+              <span className="text-xs font-bold" style={{ color: st.buka ? "#166534" : "#92400E" }}>
+                {st.buka ? "BUKA" : `TUTUP${st.sampai ? " s.d. " + formatTanggalSesi(st.sampai) : ""}`}
+              </span>
+            </div>
+            {!st.buka && r && <div className="text-xs text-gray-600 mt-1">Booking tercakup (info saja): MENUNGGU {r.menunggu}, DITERIMA {r.diterima}</div>}
+            {st.buka ? (
+              <div className="mt-2">
+                <label className="text-xs font-semibold block">Tutup sampai tanggal (kosongkan = sampai dibuka kembali)
+                  <input type="date" value={form[k].sampai} min={hariIniWIB() || undefined} onChange={e=>ubahForm(k, "sampai", e.target.value)} className="w-full border border-gray-300 rounded-lg p-2 mt-1 text-sm" />
+                </label>
+                <label className="text-xs font-semibold block mt-2">Pesan untuk pelanggan (opsional)
+                  <input type="text" maxLength={200} value={form[k].pesan} onChange={e=>ubahForm(k, "pesan", e.target.value)} className="w-full border border-gray-300 rounded-lg p-2 mt-1 text-sm" />
+                </label>
+                <button type="button" disabled={!!busy} onClick={()=>jalankan(k, false)} className="mt-2 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{ backgroundColor:"#B45309", opacity: busy ? 0.6 : 1 }}>
+                  {busy === k ? "Menyimpan…" : "Tutup Sesi"}
+                </button>
+              </div>
+            ) : (
+              <button type="button" disabled={!!busy} onClick={()=>jalankan(k, true)} className="mt-2 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{ backgroundColor:"#166534", opacity: busy ? 0.6 : 1 }}>
+                {busy === k ? "Menyimpan…" : "Buka Kembali"}
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 function AdminTab({ onExitToApp }) {
   const [loggedIn, setLoggedIn] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -3823,6 +4003,8 @@ function AdminTab({ onExitToApp }) {
     <div className="sules-admin-page">
       {adminHeader}
       <div className="sules-admin-dashboard pb-8">
+
+      <SesiAdminPanel />
 
       <div className="bg-white rounded-xl p-3 border border-gray-200 mb-3">
         <label htmlFor="dashboard-period" className="text-sm font-semibold block mb-1">Periode Dashboard</label>
@@ -4256,6 +4438,7 @@ function AppTabs() {
   return (
     <div className={isAdminScreen ? "sules-admin-shell" : "sules-app-shell"}>
       <div className={isAdminScreen ? "sules-admin-content" : `sules-app-content${tab === "catalog" ? " sules-app-content-catalog" : ""}`}>
+        {tab === "home" && <HomeSesiBanner />}
         {tab === "home" && <CustomerOrdersTab mode="home" onGoToBooking={()=>navigate("book")} onBookPackage={bookPackage} onGoToCatalog={()=>navigate("catalog")} onGoToOrders={goToOrders} onOpenPublicSection={openPublicSection} customerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
         {tab === "catalog" && <CatalogTab onBookPackage={bookPackage} />}
         {tab === "book" && <BookingTab initialPackageId={bookingPackageId} onCustomerSessionChange={updateCustomerSession} onGoToOrders={()=>goToOrders("active")} externalCustomerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
