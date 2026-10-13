@@ -1135,6 +1135,9 @@
   #root button.sules-success { color:#FFFFFF !important; background:linear-gradient(115deg,#4A4EAA,#7650B4) !important; border-color:#7652B2 !important; }
   #root button.sules-danger { color:#913A61 !important; background:#FCF1F5 !important; border-color:#E8C7D6 !important; }
   #root button.text-red-600 { color:#913A61 !important; }
+  /* Tombol Tutup Sesi / Buka Kembali (Admin): lebih spesifik dari #root button agar warna tidak ditimpa putih. */
+  #root button.sules-session-close { color:#FFFFFF !important; background:#B45309 !important; border-color:#92400E !important; }
+  #root button.sules-session-open { color:#FFFFFF !important; background:#166534 !important; border-color:#14532D !important; }
   #root .sules-status-badge { border-radius:999px !important; font-weight:750 !important; }
   #root .sules-status-badge[data-status="MENUNGGU"] { background:#FBF6E8 !important; color:#725B20 !important; border-color:#E5D6A8 !important; }
   #root .sules-status-badge[data-status="DITERIMA"] { background:#F0EFFA !important; color:#414B9B !important; border-color:#D1CDEA !important; }
@@ -3643,12 +3646,12 @@ function SesiAdminPanel() {
                 <label className="text-xs font-semibold block mt-2">Pesan untuk pelanggan (opsional)
                   <input type="text" maxLength={200} value={form[k].pesan} onChange={e=>ubahForm(k, "pesan", e.target.value)} className="w-full border border-gray-300 rounded-lg p-2 mt-1 text-sm" />
                 </label>
-                <button type="button" disabled={!!busy} onClick={()=>jalankan(k, false)} className="mt-2 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{ backgroundColor:"#B45309", opacity: busy ? 0.6 : 1 }}>
+                <button type="button" disabled={!!busy} onClick={()=>jalankan(k, false)} className="sules-session-close mt-2 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{ backgroundColor:"#B45309", opacity: busy ? 0.6 : 1 }}>
                   {busy === k ? "Menyimpan…" : "Tutup Sesi"}
                 </button>
               </div>
             ) : (
-              <button type="button" disabled={!!busy} onClick={()=>jalankan(k, true)} className="mt-2 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{ backgroundColor:"#166534", opacity: busy ? 0.6 : 1 }}>
+              <button type="button" disabled={!!busy} onClick={()=>jalankan(k, true)} className="sules-session-open mt-2 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{ backgroundColor:"#166534", opacity: busy ? 0.6 : 1 }}>
                 {busy === k ? "Menyimpan…" : "Buka Kembali"}
               </button>
             )}
