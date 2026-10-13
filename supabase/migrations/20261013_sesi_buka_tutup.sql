@@ -15,7 +15,7 @@ CREATE OR REPLACE FUNCTION public._pesan_sesi_tutup(p_tanggal date, p_jam_mulai 
  RETURNS text
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO 'pg_catalog', 'public'
 AS $function$
 DECLARE
   v_key text;
@@ -53,7 +53,7 @@ CREATE OR REPLACE FUNCTION public.create_booking_server(p_customer_id uuid, p_na
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO 'pg_catalog', 'public'
 AS $function$
 DECLARE
   v_service public.services%rowtype;
