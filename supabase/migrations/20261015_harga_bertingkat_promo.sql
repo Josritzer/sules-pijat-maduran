@@ -188,8 +188,8 @@ BEGIN
   v_subtotal := v_package_price + v_travel_fee;
   IF v_config.package_key IS NOT NULL
      AND v_config.promo_type <> 'none'
-     AND v_config.promo_start_date <= v_today
-     AND v_config.promo_end_date >= v_today THEN
+     AND v_config.promo_start_date <= p_tanggal
+     AND v_config.promo_end_date >= p_tanggal THEN
     v_promo_type := v_config.promo_type;
     v_promo_value := v_config.promo_value;
     IF v_promo_type = 'percent' THEN
