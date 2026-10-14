@@ -1513,7 +1513,7 @@
       const row = rows.find(item => item.package_key === id);
       if (!row || !bases[id]) return;
       const level = Math.max(1, Math.min(5, Number(row.active_level) || 1));
-      const price = bases[id] + (level - 1) * (id === "home-90m-2" ? 25000 : 12500);
+      const price = bases[id] + level * (id === "home-90m-2" ? 20000 : 10000);
       node.textContent = "Rp" + price.toLocaleString("id-ID");
       const promoActive = row.promo_type !== "none" && row.promo_start_date && row.promo_end_date && today >= row.promo_start_date && today <= row.promo_end_date;
       if (promoActive) {
@@ -1552,8 +1552,8 @@ const SERVICE_PACKAGES = [
 function getPackagePrice(item, configRows = []) {
   const config = configRows.find(row => row.package_key === item.id);
   const level = Math.min(5, Math.max(1, Number(config && config.active_level) || 1));
-  const step = item.id === "home-90m-2" ? 25000 : 12500;
-  return Number(item.price) + (level - 1) * step;
+  const step = item.id === "home-90m-2" ? 20000 : 10000;
+  return Number(item.price) + level * step;
 }
 function getActivePackagePromo(item, configRows = [], subtotal = 0, dateKey = localDateKey(new Date())) {
   const config = configRows.find(row => row.package_key === item.id);
@@ -3805,7 +3805,7 @@ function PackagePricingAdminPanel() {
         const price = getPackagePrice(item, rows);
         return <div key={row.package_key} className="rounded-xl border border-gray-200 p-3">
           <div className="font-semibold text-sm">{item.label}</div>
-          <div className="text-xs text-gray-500 mb-3">Harga paket saat ini: <strong>{formatRupiah(price)}</strong>{item.id === "home-90m-2" ? " · selisih Rp25.000 antar level" : " · selisih Rp12.500 antar level"}</div>
+          <div className="text-xs text-gray-500 mb-3">Harga paket saat ini: <strong>{formatRupiah(price)}</strong>{item.id === "home-90m-2" ? " · kenaikan Rp20.000 per level dari harga dasar" : " · kenaikan Rp10.000 per level dari harga dasar"}</div>
           <div className="grid grid-cols-2 gap-2">
             <label className="text-xs font-semibold">Level aktif
               <select value={row.active_level} onChange={e=>edit(row.package_key,"active_level",Number(e.target.value))} className="block w-full border rounded-lg p-2 mt-1 text-sm">
