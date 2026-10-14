@@ -126,7 +126,7 @@
     const customerId = sessionData && sessionData.session && sessionData.session.user && sessionData.session.user.id;
     if (!customerId) return null;
     const { data, error } = await supabaseClient.from("bookings")
-      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
+      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,package_key,base_price,price_level,package_price,subtotal,promo_type,promo_value,promo_discount,final_total,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
       .eq("id", id)
       .eq("customer_id", customerId)
       .is("disembunyikan_pelanggan_at", null)
@@ -142,7 +142,7 @@
     }
     const start = Number.isInteger(offset) && offset >= 0 ? offset : 0;
     const { data, error } = await supabaseClient.from("bookings")
-      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
+      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,package_key,base_price,price_level,package_price,subtotal,promo_type,promo_value,promo_discount,final_total,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
       .eq("customer_id", id)
       .is("disembunyikan_pelanggan_at", null)
       .order("created_at", { ascending: false })
@@ -2655,9 +2655,11 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
 
         <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
           <div className="text-sm font-semibold mb-2">Rincian Biaya</div>
-          <div className="flex justify-between text-sm mb-1"><span>Harga Layanan</span><span>{formatRupiah(b.service_price)}</span></div>
+          <div className="flex justify-between text-sm mb-1"><span>Harga paket{b.price_level ? ` · Level ${b.price_level}` : ""}</span><span>{formatRupiah(b.package_price ?? b.service_price)}</span></div>
           <div className="flex justify-between text-sm mb-1"><span>Travel Fee</span><span>{formatRupiah(b.travel_fee)}</span></div>
-          <div className="flex justify-between font-bold text-base mt-2 pt-2 border-t border-gray-200"><span>Total</span><span>{formatRupiah(b.grand_total)}</span></div>
+          {b.subtotal != null && <div className="flex justify-between text-sm mb-1"><span>Subtotal</span><span>{formatRupiah(b.subtotal)}</span></div>}
+          {Number(b.promo_discount) > 0 && <div className="flex justify-between text-sm mb-1 text-green-700"><span>Promo ({b.promo_type === "percent" ? `${b.promo_value}%` : "nominal"})</span><span>−{formatRupiah(b.promo_discount)}</span></div>}
+          <div className="flex justify-between font-bold text-base mt-2 pt-2 border-t border-gray-200"><span>Total</span><span>{formatRupiah(b.final_total ?? b.grand_total)}</span></div>
         </div>
 
         {typeof onGoToOrders === "function" && <button type="button" onClick={onGoToOrders}
@@ -3603,7 +3605,13 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
           <div className="flex items-start justify-between gap-2"><strong className="text-base">{SERVICE_LABEL[booking.service_id] || booking.service_id} · {booking.jumlah_orang} orang</strong><StatusBadge status={booking.status} /></div>
           <div className="grid grid-cols-2 gap-3 mt-4 text-sm"><div><span className="text-gray-500 block text-xs">Tanggal</span>{booking.tanggal}</div><div><span className="text-gray-500 block text-xs">Waktu</span>{String(booking.jam_mulai).slice(0,5)}</div></div>
           <div className="text-sm text-gray-500 mt-3">{booking.tipe_lokasi === "HOME_SERVICE" ? "Ke Rumah" : "Di Sules"}</div>
-          <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-gray-200"><span className="text-xs text-gray-500">TOTAL</span><strong className="sules-price">{formatRupiah(booking.grand_total)}</strong></div>
+          <div className="mt-3 pt-3 border-t border-gray-200 space-y-1 text-xs text-gray-600">
+            <div className="flex justify-between gap-2"><span>Harga paket{booking.price_level ? ` · Level ${booking.price_level}` : ""}</span><span>{formatRupiah(booking.package_price ?? booking.service_price)}</span></div>
+            <div className="flex justify-between gap-2"><span>Biaya perjalanan</span><span>{formatRupiah(booking.travel_fee)}</span></div>
+            {booking.subtotal != null && <div className="flex justify-between gap-2"><span>Subtotal</span><span>{formatRupiah(booking.subtotal)}</span></div>}
+            {Number(booking.promo_discount) > 0 && <div className="flex justify-between gap-2 text-green-700"><span>Promo</span><span>−{formatRupiah(booking.promo_discount)}</span></div>}
+          </div>
+          <div className="flex items-center justify-between gap-3 mt-2 pt-2 border-t border-gray-200"><span className="text-xs text-gray-500">TOTAL</span><strong className="sules-price">{formatRupiah(booking.final_total ?? booking.grand_total)}</strong></div>
         </div>}
         {sessionError && <div className="sules-home-error" role="alert"><div>{sessionError}</div><button type="button" onClick={retryCustomerSessionCheck}>Coba lagi</button></div>}
       </section>
@@ -3632,7 +3640,13 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
         <div className="flex items-start justify-between gap-2 mb-2"><strong>{SERVICE_LABEL[row.service_id] || row.service_id} · {row.jumlah_orang} orang</strong><div className="flex items-center gap-2"><StatusBadge status={row.status} />{view === "history" && (row.status === "SELESAI" || row.status === "DITOLAK") && <button type="button" aria-label={hidingBookingId === row.id ? "Menyembunyikan dari riwayat" : "Sembunyikan dari riwayat"} title={hidingBookingId === row.id ? "Sedang memproses" : "Sembunyikan dari riwayat"} aria-busy={hidingBookingId === row.id} disabled={Boolean(hidingBookingId)} onClick={() => void hideHistoryBooking(row)} className="rounded-full border border-gray-300 text-gray-500 hover:text-red-700 hover:border-red-300 disabled:opacity-50" style={{ width: 28, height: 28, lineHeight: "24px", fontSize: 18 }}>{hidingBookingId === row.id ? "…" : "×"}</button>}</div></div>
         <div className="grid grid-cols-2 gap-2 text-xs mb-2"><div><span className="text-gray-500 block">Tanggal</span>{row.tanggal}</div><div><span className="text-gray-500 block">Jam</span>{String(row.jam_mulai).slice(0,5)}</div></div>
         <div className="text-xs text-gray-600 mb-2">{row.tipe_lokasi === "HOME_SERVICE" ? "ke Rumah" : "Di Sules"} · {row.durasi_menit} menit</div>
-        <div className="text-sm font-bold">Total: {formatRupiah(row.grand_total)}</div>
+        <div className="mt-2 text-xs text-gray-600 space-y-1">
+          <div>Harga paket{row.price_level ? ` · Level ${row.price_level}` : ""}: {formatRupiah(row.package_price ?? row.service_price)}</div>
+          <div>Biaya perjalanan: {formatRupiah(row.travel_fee)}</div>
+          {row.subtotal != null && <div>Subtotal: {formatRupiah(row.subtotal)}</div>}
+          {Number(row.promo_discount) > 0 && <div className="text-green-700">Promo: −{formatRupiah(row.promo_discount)}</div>}
+        </div>
+        <div className="text-sm font-bold mt-2">Total: {formatRupiah(row.final_total ?? row.grand_total)}</div>
         {row.status === "DITOLAK" && row.catatan_penolakan && <p className="text-xs text-gray-600 mt-2">Catatan Admin: {row.catatan_penolakan}</p>}
         {row.status === "DITOLAK" && <button onClick={onGoToBooking} className="sules-primary mt-3 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{backgroundColor:"#18324B"}}>BOOKING LAGI</button>}
         {shouldShowGoogleReview(row.status) && <a href="https://g.page/r/CWXCZycYzhXqEBE/review" target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", backgroundColor:"white", border:"1px solid #2F6F9F", color:"#18324B", borderRadius:"12px", padding:"10px", fontWeight:"bold" }} className="mt-3 text-sm">⭐ Beri Penilaian di Google Maps</a>}
@@ -3731,7 +3745,12 @@ function PackagePricingAdminPanel() {
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
-  const edit = (key, field, value) => setRows(current => current.map(row => row.package_key === key ? { ...row, [field]: value } : row));
+  const edit = (key, field, value) => setRows(current => current.map(row => {
+    if (row.package_key !== key) return row;
+    if (field === "promo_type" && value === "none") return { ...row, promo_type: "none", promo_value: 0, promo_start_date: null, promo_end_date: null };
+    if (field === "promo_type" && value !== "none" && row.promo_type === "none") return { ...row, promo_type: value, promo_value: value === "percent" ? 10 : 10000, promo_start_date: localDateKey(new Date()), promo_end_date: localDateKey(new Date()) };
+    return { ...row, [field]: value };
+  }));
   const save = async (row) => {
     setSavingKey(row.package_key); setMessage(""); setError("");
     try {
