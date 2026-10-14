@@ -1501,15 +1501,12 @@
 </script>
 <script>
 (async function loadPublicTieredPrices() {
-  const root = "https://tzupkourtcmqemymszgt.supabase.co";
-  const key = "sb_publishable_-0r7zhfsw4-3UPh8ReG6Ag_dwOQQ2K9";
   try {
-    const response = await fetch(root + "/rest/v1/package_pricing_config?select=package_key,active_level,promo_type,promo_value,promo_start_date,promo_end_date", {
-      headers: { apikey: key, Authorization: "Bearer " + key }
-    });
-    if (!response.ok) return;
-    const rows = await response.json();
-    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
+    if (!window.bookingService || typeof window.bookingService.getPackagePricingConfig !== "function") return;
+    const rows = await window.bookingService.getPackagePricingConfig();
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+    const part = type => parts.find(item => item.type === type)?.value || "";
+    const today = part("year") + "-" + part("month") + "-" + part("day");
     const bases = { "sules-90m-1":60000, "sules-120m-1":80000, "home-90m-1":60000, "home-120m-1":80000, "home-90m-2":120000 };
     document.querySelectorAll("[data-sules-price-key]").forEach(node => {
       const id = node.getAttribute("data-sules-price-key");
