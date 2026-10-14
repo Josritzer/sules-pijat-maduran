@@ -148,9 +148,10 @@ BEGIN
 
   SELECT * INTO v_config FROM public.package_pricing_config WHERE package_key = v_package_key;
   v_level := coalesce(v_config.active_level, 1);
-  -- Level 1 remains base; evenly spaced increments hit the approved level-5 targets.
-  v_package_price := v_base_price + (v_level - 1) *
-    CASE WHEN v_package_key = 'home-90m-2' THEN 25000 ELSE 12500 END;
+  -- Base price is not Level 1: Level 1 adds 10,000 (standard packages) or 20,000 (2-person package).
+  -- Level 5 therefore reaches 110,000 / 130,000 / 110,000 / 130,000 / 220,000.
+  v_package_price := v_base_price + v_level *
+    CASE WHEN v_package_key = 'home-90m-2' THEN 20000 ELSE 10000 END;
 
   v_durasi_menit := CASE
     WHEN p_tipe_lokasi = 'HOME_SERVICE' AND p_service_id = '90m' AND p_jumlah_orang = 2 THEN 180
