@@ -238,3 +238,40 @@ $function$;
 
 REVOKE ALL ON FUNCTION public.create_booking_server(uuid,text,text,text,smallint,date,time without time zone,public.tipe_lokasi,text,double precision,double precision,numeric) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_booking_server(uuid,text,text,text,smallint,date,time without time zone,public.tipe_lokasi,text,double precision,double precision,numeric) TO service_role;
+
+ 
+-- Keep the legacy authenticated RPC aligned with the same authoritative price engine.
+-- The Edge Function calls create_booking_server only after calculating Google Routes distance.
+CREATE OR REPLACE FUNCTION public.create_booking(
+  p_nama text,
+  p_wa text,
+  p_service_id text,
+  p_jumlah_orang smallint,
+  p_tanggal date,
+  p_jam_mulai time without time zone,
+  p_tipe_lokasi public.tipe_lokasi,
+  p_alamat text DEFAULT NULL,
+  p_lat double precision DEFAULT NULL,
+  p_lng double precision DEFAULT NULL,
+  p_jarak_meter numeric DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'pg_catalog', 'public'
+AS $legacy$
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Anda harus login (verifikasi email) terlebih dahulu sebelum membuat booking'
+      USING errcode = '28000';
+  END IF;
+
+  RETURN public.create_booking_server(
+    auth.uid(), p_nama, p_wa, p_service_id, p_jumlah_orang,
+    p_tanggal, p_jam_mulai, p_tipe_lokasi, p_alamat, p_lat, p_lng, p_jarak_meter
+  );
+END;
+$legacy$;
+
+REVOKE ALL ON FUNCTION public.create_booking(text,text,text,smallint,date,time without time zone,public.tipe_lokasi,text,double precision,double precision,numeric) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.create_booking(text,text,text,smallint,date,time without time zone,public.tipe_lokasi,text,double precision,double precision,numeric) TO authenticated;
