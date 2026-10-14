@@ -148,8 +148,9 @@ BEGIN
 
   SELECT * INTO v_config FROM public.package_pricing_config WHERE package_key = v_package_key;
   v_level := coalesce(v_config.active_level, 1);
+  -- Level 1 remains base; evenly spaced increments hit the approved level-5 targets.
   v_package_price := v_base_price + (v_level - 1) *
-    CASE WHEN v_package_key = 'home-90m-2' THEN 20000 ELSE 10000 END;
+    CASE WHEN v_package_key = 'home-90m-2' THEN 25000 ELSE 12500 END;
 
   v_durasi_menit := CASE
     WHEN p_tipe_lokasi = 'HOME_SERVICE' AND p_service_id = '90m' AND p_jumlah_orang = 2 THEN 180
