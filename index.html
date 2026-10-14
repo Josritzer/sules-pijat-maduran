@@ -72,6 +72,30 @@
     return wrapped;
   }
 
+  async function getPackagePricingConfig() {
+    const { data, error } = await supabaseClient.from("package_pricing_config")
+      .select("package_key,active_level,promo_type,promo_value,promo_start_date,promo_end_date,updated_at")
+      .order("package_key");
+    if (error) throw error;
+    return data || [];
+  }
+  async function savePackagePricingConfig(packageKey, values) {
+    const { data, error } = await supabaseClient.from("package_pricing_config")
+      .update({
+        active_level: Number(values.active_level),
+        promo_type: values.promo_type,
+        promo_value: Number(values.promo_value || 0),
+        promo_start_date: values.promo_type === "none" ? null : values.promo_start_date,
+        promo_end_date: values.promo_type === "none" ? null : values.promo_end_date,
+        updated_at: new Date().toISOString()
+      })
+      .eq("package_key", packageKey)
+      .select("package_key,active_level,promo_type,promo_value,promo_start_date,promo_end_date")
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   async function createBooking({ serviceId, jumlahOrang, tanggal, jamMulai, tipeLokasi, alamat, lat, lng }) {
     const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
     if (sessionError) {
@@ -467,7 +491,7 @@
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+  window.bookingService = { getPackagePricingConfig, savePackagePricingConfig, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -1498,6 +1522,25 @@ const SERVICE_PACKAGES = [
   { id: "home-120m-1", label: "Pijat 2 Jam ke Rumah", location: "ke Rumah", serviceId: "120m", people: 1, type: "HOME_SERVICE", price: 80000 },
   { id: "home-90m-2", label: "Pijat 2 Orang ke Rumah", location: "ke Rumah", serviceId: "90m", people: 2, type: "HOME_SERVICE", price: 120000 }
 ];
+function getPackagePrice(item, configRows = []) {
+  const config = configRows.find(row => row.package_key === item.id);
+  const level = Math.min(5, Math.max(1, Number(config && config.active_level) || 1));
+  const step = item.id === "home-90m-2" ? 20000 : 10000;
+  return Number(item.price) + (level - 1) * step;
+}
+function getActivePackagePromo(item, configRows = [], subtotal = 0, dateKey = localDateKey(new Date())) {
+  const config = configRows.find(row => row.package_key === item.id);
+  if (!config || config.promo_type === "none" || !config.promo_start_date || !config.promo_end_date ||
+      dateKey < config.promo_start_date || dateKey > config.promo_end_date) {
+    return { type: "none", value: 0, discount: 0 };
+  }
+  const value = Math.max(0, Number(config.promo_value) || 0);
+  const discount = config.promo_type === "percent"
+    ? Math.min(subtotal, Math.round(subtotal * value / 100))
+    : config.promo_type === "nominal" ? Math.min(subtotal, Math.round(value)) : 0;
+  return { type: config.promo_type, value, discount };
+}
+
 const LAST_BOOKING_ID_KEY = "sules_last_booking_id"; // pointer nonrahasia; otorisasi tetap melalui session Supabase/RLS
 try { localStorage.removeItem("sules_last_booking_token"); } catch (_) {} // hapus token booking lama dari browser yang sudah pernah menyimpannya
 
@@ -2988,8 +3031,15 @@ function ServicePackageCard({ item, onBookPackage, compact = false, catalog = fa
 }
 
 function ServicePackageList({ onBookPackage, compact = false, packages = SERVICE_PACKAGES, catalog = false }) {
+  const [pricingRows, setPricingRows] = useState([]);
+  useEffect(() => {
+    let active = true;
+    window.bookingService.getPackagePricingConfig().then(rows => { if (active) setPricingRows(rows); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+  const displayPackages = packages.map(item => ({ ...item, price: getPackagePrice(item, pricingRows) }));
   return <div className={compact ? "sules-service-rail" : "sules-catalog-grid"}>
-    {packages.map(item => <ServicePackageCard key={item.id} item={item} onBookPackage={onBookPackage} compact={compact} catalog={catalog} />)}
+    {displayPackages.map(item => <ServicePackageCard key={item.id} item={item} onBookPackage={onBookPackage} compact={compact} catalog={catalog} />)}
   </div>;
 }
 
