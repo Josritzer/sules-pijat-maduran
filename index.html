@@ -3120,13 +3120,12 @@ function HomeDiscountBanner() {
     return { item, price, promo, finalPrice: Math.max(0, price - promo.discount) };
   }).filter(row => row.promo.discount > 0);
   if (!activeDiscounts.length) return null;
-  return <section aria-label="Diskon harga aktif" className="mx-4 mt-4 mb-2 overflow-hidden rounded-2xl border-2 border-amber-300 shadow-lg" style={{background:"linear-gradient(135deg,#18324B 0%,#234F70 62%,#2F6F9F 100%)",color:"#fff"}}>
-    <div className="px-4 pt-4 pb-3" style={{background:"radial-gradient(circle at 100% 0%,rgba(255,208,92,.28),transparent 42%)"}}>
+  return <section aria-label="Diskon harga aktif" className="mx-4 mt-4 mb-2 overflow-hidden rounded-2xl border shadow-lg" style={{borderColor:"#C6A86A",background:"linear-gradient(135deg,#101827 0%,#18263B 58%,#24334A 100%)",color:"#FFFDF7"}}>
+    <div className="px-4 pt-4 pb-3" style={{background:"radial-gradient(circle at 100% 0%,rgba(198,168,106,.24),transparent 46%)"}}>
       <div className="flex items-center gap-2">
-        <span aria-hidden="true" className="inline-flex items-center justify-center rounded-full px-2 py-1 text-xs font-black tracking-wide" style={{background:"#FFD166",color:"#18324B"}}>HEMAT</span>
-        <p className="text-xs font-extrabold tracking-widest" style={{color:"#FFE6A3"}}>DISKON HARGA AKTIF</p>
+        <span aria-hidden="true" className="inline-flex items-center justify-center rounded-full px-2 py-1 text-xs font-black tracking-wide" style={{background:"#F2E5C8",color:"#182235"}}>DISKON</span>
+        <p className="text-xs font-extrabold tracking-widest" style={{color:"#E5D0A0"}}>DISKON HARGA AKTIF</p>
       </div>
-      <h2 className="mt-2 text-2xl font-black leading-tight">Lebih rileks, lebih hemat.</h2>
     </div>
     <div className="px-3 pb-3 space-y-2">
       {activeDiscounts.slice(0, 3).map(({item, price, promo, finalPrice}) => (
@@ -3136,18 +3135,18 @@ function HomeDiscountBanner() {
               <p className="text-sm font-extrabold leading-snug">{item.label}</p>
               <p className="mt-1 text-xs text-gray-500">Harga normal <span className="line-through">{formatRupiah(price)}</span></p>
             </div>
-            <span className="shrink-0 rounded-lg px-2 py-1 text-sm font-black" style={{background:"#FFF0C2",color:"#8A4B00"}}>
+            <span className="shrink-0 rounded-lg px-2 py-1 text-sm font-black" style={{background:"#F2E5C8",color:"#72551D"}}>
               {promo.type === "percent" ? `-${promo.value}%` : `-${formatRupiah(promo.discount)}`}
             </span>
           </div>
           <div className="mt-2 flex items-end justify-between gap-2">
-            <div><p className="text-xs font-bold" style={{color:"#13804A"}}>HARGA SETELAH DISKON</p><p className="text-xl font-black" style={{color:"#13804A"}}>{formatRupiah(finalPrice)}</p></div>
-            <p className="text-xs font-extrabold" style={{color:"#13804A"}}>Hemat {formatRupiah(promo.discount)}</p>
+            <div><p className="text-xs font-bold" style={{color:"#8A6B2F"}}>HARGA SETELAH DISKON</p><p className="text-xl font-black" style={{color:"#8A6B2F"}}>{formatRupiah(finalPrice)}</p></div>
+            <p className="text-xs font-extrabold" style={{color:"#8A6B2F"}}>Hemat {formatRupiah(promo.discount)}</p>
           </div>
         </div>
       ))}
-      {activeDiscounts.length > 3 && <p className="text-center text-xs font-semibold" style={{color:"#EAF4FF"}}>+ {activeDiscounts.length - 3} paket diskon lainnya tersedia</p>}
-      <p className="px-1 text-xs" style={{color:"#EAF4FF"}}>Diskon berlaku pada harga paket selama periode promo. Biaya perjalanan Home Service dihitung terpisah.</p>
+      {activeDiscounts.length > 3 && <p className="text-center text-xs font-semibold" style={{color:"#E5D0A0"}}>+ {activeDiscounts.length - 3} paket diskon lainnya tersedia</p>}
+      <p className="px-1 text-xs" style={{color:"#D6DCE5"}}>Biaya perjalanan Home Service dihitung terpisah.</p>
     </div>
   </section>;
 }
