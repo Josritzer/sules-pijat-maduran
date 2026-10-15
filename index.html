@@ -74,7 +74,7 @@
 
   async function getPackagePricingConfig() {
     const { data, error } = await supabaseClient.from("package_pricing_config")
-      .select("package_key,active_level,promo_type,promo_value,promo_start_date,promo_end_date,updated_at")
+      .select("package_key,active_level,promo_type,promo_target,promo_value,promo_start_date,promo_end_date,updated_at")
       .order("package_key");
     if (error) throw error;
     return data || [];
@@ -84,13 +84,14 @@
       .update({
         active_level: Number(values.active_level),
         promo_type: values.promo_type,
+        promo_target: values.promo_target === "base" ? "base" : "active_level",
         promo_value: Number(values.promo_value || 0),
         promo_start_date: values.promo_type === "none" ? null : values.promo_start_date,
         promo_end_date: values.promo_type === "none" ? null : values.promo_end_date,
         updated_at: new Date().toISOString()
       })
       .eq("package_key", packageKey)
-      .select("package_key,active_level,promo_type,promo_value,promo_start_date,promo_end_date")
+      .select("package_key,active_level,promo_type,promo_target,promo_value,promo_start_date,promo_end_date")
       .single();
     if (error) throw error;
     return data;
@@ -126,7 +127,7 @@
     const customerId = sessionData && sessionData.session && sessionData.session.user && sessionData.session.user.id;
     if (!customerId) return null;
     const { data, error } = await supabaseClient.from("bookings")
-      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,package_key,base_price,price_level,package_price,subtotal,promo_type,promo_value,promo_discount,final_total,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
+      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,package_key,base_price,price_level,package_price,subtotal,promo_type,promo_target,promo_value,promo_discount,final_total,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
       .eq("id", id)
       .eq("customer_id", customerId)
       .is("disembunyikan_pelanggan_at", null)
@@ -142,7 +143,7 @@
     }
     const start = Number.isInteger(offset) && offset >= 0 ? offset : 0;
     const { data, error } = await supabaseClient.from("bookings")
-      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,package_key,base_price,price_level,package_price,subtotal,promo_type,promo_value,promo_discount,final_total,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
+      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,package_key,base_price,price_level,package_price,subtotal,promo_type,promo_target,promo_value,promo_discount,final_total,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
       .eq("customer_id", id)
       .is("disembunyikan_pelanggan_at", null)
       .order("created_at", { ascending: false })
@@ -1554,17 +1555,19 @@ function getPackagePrice(item, configRows = []) {
   const level = Math.min(5, Math.max(1, Number(config && config.active_level) || 1));
   return Math.round(Number(item.price) * (1 + 0.10 * level));
 }
-function getActivePackagePromo(item, configRows = [], subtotal = 0, dateKey = localDateKey(new Date())) {
+function getActivePackagePromo(item, configRows = [], packagePrice = 0, dateKey = localDateKey(new Date())) {
   const config = configRows.find(row => row.package_key === item.id);
   if (!config || config.promo_type === "none" || !config.promo_start_date || !config.promo_end_date ||
       dateKey < config.promo_start_date || dateKey > config.promo_end_date) {
-    return { type: "none", value: 0, discount: 0 };
+    return { type: "none", target: "active_level", value: 0, discount: 0 };
   }
+  const target = config.promo_target === "base" ? "base" : "active_level";
+  const basis = target === "base" ? Math.max(0, Number(item.price) || 0) : Math.max(0, Number(packagePrice) || 0);
   const value = Math.max(0, Number(config.promo_value) || 0);
   const discount = config.promo_type === "percent"
-    ? Math.min(subtotal, Math.round(subtotal * value / 100))
-    : config.promo_type === "nominal" ? Math.min(subtotal, Math.round(value)) : 0;
-  return { type: config.promo_type, value, discount };
+    ? Math.min(basis, Math.round(basis * value / 100))
+    : config.promo_type === "nominal" ? Math.min(basis, Math.round(value)) : 0;
+  return { type: config.promo_type, target, value, discount };
 }
 
 const LAST_BOOKING_ID_KEY = "sules_last_booking_id"; // pointer nonrahasia; otorisasi tetap melalui session Supabase/RLS
@@ -2328,7 +2331,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   const transport = tipeLokasi === "HOME_SERVICE" && jarak !== null ? Math.round(hitungTransport(jarak)) : 0;
   const biayaLayanan = getPackagePrice(paketTerpilih, pricingRows);
   const subtotalEstimasi = biayaLayanan + transport;
-  const promoEstimasi = getActivePackagePromo(paketTerpilih, pricingRows, subtotalEstimasi, tanggal || localDateKey(new Date()));
+  const promoEstimasi = getActivePackagePromo(paketTerpilih, pricingRows, biayaLayanan, tanggal || localDateKey(new Date()));
   const total = Math.max(0, subtotalEstimasi - promoEstimasi.discount);
   const detailBookingSiap = tipeLokasi !== "HOME_SERVICE" || (lat !== null && lng !== null && jarak !== null && sumberJarak === "road");
   const bookingJourneyStep = !tanggal ? 2 : !jam ? 3 : !detailBookingSiap ? 4 : 5;
@@ -3777,7 +3780,7 @@ function PackagePricingAdminPanel() {
   const edit = (key, field, value) => setRows(current => current.map(row => {
     if (row.package_key !== key) return row;
     if (field === "promo_type" && value === "none") return { ...row, promo_type: "none", promo_value: 0, promo_start_date: null, promo_end_date: null };
-    if (field === "promo_type" && value !== "none" && row.promo_type === "none") return { ...row, promo_type: value, promo_value: value === "percent" ? 10 : 10000, promo_start_date: localDateKey(new Date()), promo_end_date: localDateKey(new Date()) };
+    if (field === "promo_type" && value !== "none" && row.promo_type === "none") return { ...row, promo_type: value, promo_target: row.promo_target || "active_level", promo_value: value === "percent" ? 10 : 10000, promo_start_date: localDateKey(new Date()), promo_end_date: localDateKey(new Date()) };
     return { ...row, [field]: value };
   }));
   const save = async (row) => {
@@ -3816,6 +3819,7 @@ function PackagePricingAdminPanel() {
                 <option value="none">Tanpa promo</option><option value="percent">Persentase</option><option value="nominal">Potongan rupiah</option>
               </select>
             </label>
+            {row.promo_type !== "none" && <div className="col-span-2"><div className="text-xs font-semibold mb-1">Promo diterapkan ke (pilih satu)</div><div className="grid grid-cols-2 gap-2"><button type="button" aria-pressed={(row.promo_target || "active_level") === "base"} onClick={()=>edit(row.package_key,"promo_target","base")} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${(row.promo_target || "active_level") === "base" ? "border-blue-700 bg-blue-50 text-blue-800" : "border-gray-300 bg-white text-gray-600"}`}>Harga Dasar</button><button type="button" aria-pressed={(row.promo_target || "active_level") === "active_level"} onClick={()=>edit(row.package_key,"promo_target","active_level")} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${(row.promo_target || "active_level") === "active_level" ? "border-blue-700 bg-blue-50 text-blue-800" : "border-gray-300 bg-white text-gray-600"}`}>Harga Level Aktif</button></div><p className="text-xs text-gray-500 mt-1">Diskon hanya menghitung target yang dipilih. Biaya perjalanan tidak didiskon.</p></div>}
             {row.promo_type !== "none" && <label className="text-xs font-semibold col-span-2">{row.promo_type === "percent" ? "Diskon (%)" : "Diskon (Rp)"}
               {row.promo_type === "percent" ? <select value={row.promo_value} onChange={e=>edit(row.package_key,"promo_value",Number(e.target.value))} className="block w-full border rounded-lg p-2 mt-1 text-sm">
                 {[5,10,15,20,25,30].map(value=><option key={value} value={value}>{value}%</option>)}
