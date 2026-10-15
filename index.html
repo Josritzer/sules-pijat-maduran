@@ -1552,7 +1552,6 @@ const SERVICE_PACKAGES = [
 function getPackagePrice(item, configRows = []) {
   const config = configRows.find(row => row.package_key === item.id);
   const level = Math.min(5, Math.max(1, Number(config && config.active_level) || 1));
-  const step = item.id === "home-90m-2" ? 20000 : 10000;
   return Number(item.price) + (level - 1) * (item.id === "home-90m-2" ? 25000 : 12500);
 }
 function getActivePackagePromo(item, configRows = [], subtotal = 0, dateKey = localDateKey(new Date())) {
