@@ -3807,7 +3807,21 @@ function PackagePricingAdminPanel() {
         const price = getPackagePrice(item, rows);
         return <div key={row.package_key} className="rounded-xl border border-gray-200 p-3">
           <div className="font-semibold text-sm">{item.label}</div>
-          <div className="text-xs text-gray-500 mb-3">Harga paket saat ini: <strong>{formatRupiah(price)}</strong> · Level 0 = harga dasar; Level 1–5 naik 10% per level</div>
+          <div className="text-xs text-gray-600 mb-3 space-y-1">
+            <div>Harga dasar (Level 0): <strong className="text-gray-900">{formatRupiah(item.price)}</strong></div>
+            <div>Harga Level aktif: <strong className="text-gray-900">{formatRupiah(price)}</strong></div>
+            <div>Level 0 sebagai harga dasar; Level 1–5 masing-masing naik 10% dari harga dasar.</div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            {Array.from({ length: 6 }, (_, level) => {
+              const levelPrice = Math.round(Number(item.price) * (1 + level * 0.10));
+              const active = level === Number(row.active_level);
+              return <div key={level} className={"rounded-lg border p-2 " + (active ? "border-blue-600 bg-blue-50" : "border-gray-200 bg-gray-50")}>
+                <div className="text-xs text-gray-500">Level {level}{active ? " · Aktif" : ""}</div>
+                <div className="text-sm font-bold text-gray-900">{formatRupiah(levelPrice)}</div>
+              </div>;
+            })}
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <label className="text-xs font-semibold">Level aktif
               <select value={row.active_level} onChange={e=>edit(row.package_key,"active_level",Number(e.target.value))} className="block w-full border rounded-lg p-2 mt-1 text-sm">
