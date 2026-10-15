@@ -1508,13 +1508,13 @@
     const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
     const part = type => parts.find(item => item.type === type)?.value || "";
     const today = part("year") + "-" + part("month") + "-" + part("day");
-    const bases = { "sules-90m-1":75000, "sules-120m-1":100000, "home-90m-1":75000, "home-120m-1":100000, "home-90m-2":150000 };
+    const bases = { "sules-90m-1":60000, "sules-120m-1":80000, "home-90m-1":60000, "home-120m-1":80000, "home-90m-2":120000 };
     document.querySelectorAll("[data-sules-price-key]").forEach(node => {
       const id = node.getAttribute("data-sules-price-key");
       const row = rows.find(item => item.package_key === id);
       if (!row || !bases[id]) return;
       const level = Math.max(1, Math.min(5, Number(row.active_level) || 1));
-      const price = Math.round(bases[id] * (1 + 0.10 * level));
+      const price = bases[id] + (level - 1) * (id === "home-90m-2" ? 25000 : 12500);
       node.textContent = "Rp" + price.toLocaleString("id-ID");
       const promoActive = row.promo_type !== "none" && row.promo_start_date && row.promo_end_date && today >= row.promo_start_date && today <= row.promo_end_date;
       if (promoActive) {
@@ -1541,19 +1541,19 @@ const GPS_MAX_ACCURACY_M = 100; // posisi dengan akurasi lebih buruk dari ini di
 const GPS_TAHAP1_MS = 12000;    // tahap 1: hanya GPS akurat
 const GPS_TAHAP2_MS = 15000;    // tahap 2: GPS + lokasi jaringan sebagai cadangan
 const GPS_TOLAK_DI_ATAS_M = 500; // lebih kasar dari ini ditolak; antara 100-500 m perlu konfirmasi pelanggan
-const HARGA = { "90m": 75000, "120m": 100000 };
+const HARGA = { "90m": 60000, "120m": 80000 };
 const DURASI = { "90m": 90, "120m": 120 };
 const SERVICE_PACKAGES = [
-  { id: "sules-90m-1", label: "Pijat 90 Menit", location: "Di Sules", serviceId: "90m", people: 1, type: "DI_TEMPAT", price: 75000 },
-  { id: "sules-120m-1", label: "Pijat 2 Jam", location: "Di Sules", serviceId: "120m", people: 1, type: "DI_TEMPAT", price: 100000 },
-  { id: "home-90m-1", label: "Pijat 90 Menit ke Rumah", location: "ke Rumah", serviceId: "90m", people: 1, type: "HOME_SERVICE", price: 75000 },
-  { id: "home-120m-1", label: "Pijat 2 Jam ke Rumah", location: "ke Rumah", serviceId: "120m", people: 1, type: "HOME_SERVICE", price: 100000 },
-  { id: "home-90m-2", label: "Pijat 2 Orang ke Rumah", location: "ke Rumah", serviceId: "90m", people: 2, type: "HOME_SERVICE", price: 150000 }
+  { id: "sules-90m-1", label: "Pijat 90 Menit", location: "Di Sules", serviceId: "90m", people: 1, type: "DI_TEMPAT", price: 60000 },
+  { id: "sules-120m-1", label: "Pijat 2 Jam", location: "Di Sules", serviceId: "120m", people: 1, type: "DI_TEMPAT", price: 80000 },
+  { id: "home-90m-1", label: "Pijat 90 Menit ke Rumah", location: "ke Rumah", serviceId: "90m", people: 1, type: "HOME_SERVICE", price: 60000 },
+  { id: "home-120m-1", label: "Pijat 2 Jam ke Rumah", location: "ke Rumah", serviceId: "120m", people: 1, type: "HOME_SERVICE", price: 80000 },
+  { id: "home-90m-2", label: "Pijat 2 Orang ke Rumah", location: "ke Rumah", serviceId: "90m", people: 2, type: "HOME_SERVICE", price: 120000 }
 ];
 function getPackagePrice(item, configRows = []) {
   const config = configRows.find(row => row.package_key === item.id);
   const level = Math.min(5, Math.max(1, Number(config && config.active_level) || 1));
-  return Math.round(Number(item.price) * (1 + 0.10 * level));
+  return Number(item.price) + (level - 1) * (item.id === "home-90m-2" ? 25000 : 12500);
 }
 function getActivePackagePromo(item, configRows = [], packagePrice = 0, dateKey = localDateKey(new Date())) {
   const config = configRows.find(row => row.package_key === item.id);
@@ -3807,7 +3807,7 @@ function PackagePricingAdminPanel() {
         const price = getPackagePrice(item, rows);
         return <div key={row.package_key} className="rounded-xl border border-gray-200 p-3">
           <div className="font-semibold text-sm">{item.label}</div>
-          <div className="text-xs text-gray-500 mb-3">Harga paket saat ini: <strong>{formatRupiah(price)}</strong>" · kenaikan 10% dari harga dasar per level"</div>
+          <div className="text-xs text-gray-500 mb-3">Harga paket saat ini: <strong>{formatRupiah(price)}</strong>" · Level 1 = harga dasar; kenaikan Rp12.500 per level (paket 2 orang Rp25.000)"</div>
           <div className="grid grid-cols-2 gap-2">
             <label className="text-xs font-semibold">Level aktif
               <select value={row.active_level} onChange={e=>edit(row.package_key,"active_level",Number(e.target.value))} className="block w-full border rounded-lg p-2 mt-1 text-sm">
