@@ -26,9 +26,75 @@ REVOKE ALL ON FUNCTION public.list_bookings_admin(booking_status) FROM PUBLIC, a
 GRANT EXECUTE ON FUNCTION public.list_bookings_admin(booking_status) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION public.list_bookings_admin_period(date,date,booking_status) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.list_bookings_admin_period(date,date,booking_status) TO authenticated, service_role;
--- create_booking lama (definisi produksi) agar dapat diuji
-CREATE OR REPLACE FUNCTION public.create_booking(p_nama text, p_wa text, p_service_id text, p_jumlah_orang smallint, p_tanggal date, p_jam_mulai time without time zone, p_tipe_lokasi tipe_lokasi, p_alamat text DEFAULT NULL, p_lat double precision DEFAULT NULL, p_lng double precision DEFAULT NULL, p_jarak_meter numeric DEFAULT NULL)
- RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $f$ begin return '{}'::jsonb; end; $f$;
+-- create_booking lama (definisi produksi, disalin dari pg_get_functiondef)
+CREATE OR REPLACE FUNCTION public.create_booking(p_nama text, p_wa text, p_service_id text, p_jumlah_orang smallint, p_tanggal date, p_jam_mulai time without time zone, p_tipe_lokasi tipe_lokasi, p_alamat text DEFAULT NULL::text, p_lat double precision DEFAULT NULL::double precision, p_lng double precision DEFAULT NULL::double precision, p_jarak_meter numeric DEFAULT NULL::numeric)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_service services%rowtype;
+  v_customer_id uuid;
+  v_gratis_meter numeric;
+  v_tarif numeric;
+  v_service_price numeric;
+  v_travel_fee numeric;
+  v_booking bookings%rowtype;
+begin
+  if auth.uid() is null then
+    raise exception 'Anda harus login (verifikasi email) terlebih dahulu sebelum membuat booking' using errcode='28000';
+  end if;
+  if p_nama is null or btrim(p_nama)='' then raise exception 'Nama pelanggan wajib diisi'; end if;
+  if p_wa is null or btrim(p_wa)='' then raise exception 'Nomor WA wajib diisi'; end if;
+  if p_jumlah_orang < 1 or p_jumlah_orang > 2 then raise exception 'Jumlah orang harus 1 atau 2'; end if;
+
+  select * into v_service from services where id=p_service_id and aktif=true;
+  if not found then raise exception 'Layanan tidak ditemukan: %', p_service_id; end if;
+
+  if p_jumlah_orang = 2
+     and not (p_tipe_lokasi = 'HOME_SERVICE' and p_service_id = '90m') then
+    raise exception 'Paket 2 orang hanya tersedia untuk Pijat 90 Menit ke Rumah';
+  end if;
+
+  if not _dalam_jam_operasional(p_jam_mulai,v_service.durasi_menit) then
+    raise exception 'Jam di luar jam operasional atau melewati jam tutup';
+  end if;
+  if p_tipe_lokasi='HOME_SERVICE' and (p_lat is null or p_lng is null) then
+    raise exception 'Home Service wajib menyertakan lokasi (lat/lng)';
+  end if;
+
+  insert into customers(id,nama,wa) values(auth.uid(),btrim(p_nama),btrim(p_wa))
+  on conflict(id) do update set nama=excluded.nama,wa=excluded.wa returning id into v_customer_id;
+
+  if p_tipe_lokasi='HOME_SERVICE' and p_service_id='90m' and p_jumlah_orang=2 then
+    v_service_price := 120000;
+  else
+    v_service_price := v_service.harga * p_jumlah_orang;
+  end if;
+
+  select (value)::numeric into v_gratis_meter from operational_settings where key='travel_gratis_meter';
+  select (value)::numeric into v_tarif from operational_settings where key='travel_tarif_per_meter';
+
+  if p_tipe_lokasi='DI_TEMPAT' then
+    v_travel_fee:=0;
+  else
+    if p_jarak_meter is null then raise exception 'Jarak tempuh wajib untuk Home Service'; end if;
+    v_travel_fee:=greatest(p_jarak_meter-v_gratis_meter,0)*v_tarif;
+  end if;
+
+  insert into bookings(
+    customer_id,nama_pelanggan,wa_pelanggan,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,
+    tipe_lokasi,alamat,lat,lng,jarak_meter,service_price,travel_fee,status
+  ) values(
+    v_customer_id,btrim(p_nama),btrim(p_wa),p_service_id,p_jumlah_orang,p_tanggal,p_jam_mulai,v_service.durasi_menit,
+    p_tipe_lokasi,p_alamat,p_lat,p_lng,p_jarak_meter,v_service_price,v_travel_fee,'MENUNGGU'
+  ) returning * into v_booking;
+
+  return jsonb_build_object('booking_id',v_booking.id,'access_token',v_booking.access_token,'status',v_booking.status,
+    'service_price',v_booking.service_price,'travel_fee',v_booking.travel_fee,'grand_total',v_booking.grand_total);
+end;
+$function$;
 -- 3 booking "lama" sebelum migrasi (untuk uji kompatibilitas)
 insert into customers values ('11111111-1111-1111-1111-111111111111','Uji','081') on conflict do nothing;
 insert into bookings(customer_id,nama_pelanggan,wa_pelanggan,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,service_price,travel_fee,status)

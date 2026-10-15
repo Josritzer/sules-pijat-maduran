@@ -35,8 +35,22 @@ ALTER TABLE public.bookings DROP COLUMN grand_total;
 ALTER TABLE public.bookings
   ADD COLUMN subtotal    numeric GENERATED ALWAYS AS (service_price + travel_fee) STORED,
   ADD COLUMN grand_total numeric GENERATED ALWAYS AS (service_price + travel_fee - diskon) STORED;
+-- Konsistensi snapshot: diskon & level harus cocok dengan rumus server (menolak data menyimpang walau lewat SQL langsung).
+-- grand_total (GENERATED) otomatis = service_price + travel_fee - diskon, sehingga total akhir tidak bisa menyimpang.
 ALTER TABLE public.bookings
-  ADD CONSTRAINT bookings_diskon_max_check CHECK (diskon <= service_price + travel_fee);
+  ADD CONSTRAINT bookings_diskon_max_check CHECK (diskon <= service_price + travel_fee),
+  ADD CONSTRAINT bookings_snapshot_level_check CHECK (
+    (harga_dasar IS NULL) = (level_harga IS NULL)
+    AND (level_harga IS NULL
+         OR service_price = harga_dasar + level_harga * CASE WHEN jumlah_orang = 2 THEN 20000 ELSE 10000 END)),
+  ADD CONSTRAINT bookings_promo_konsisten_check CHECK (
+    (promo_tipe IS NULL AND promo_nilai IS NULL AND promo_mulai IS NULL AND promo_akhir IS NULL AND diskon = 0)
+    OR (promo_tipe = 'PERSEN' AND promo_nilai IN (5,10,15,20,25,30)
+        AND promo_mulai IS NOT NULL AND promo_akhir IS NOT NULL AND promo_akhir >= promo_mulai
+        AND diskon = least(service_price + travel_fee, round((service_price + travel_fee) * promo_nilai / 100, 0)))
+    OR (promo_tipe = 'NOMINAL' AND promo_nilai > 0 AND promo_nilai = trunc(promo_nilai)
+        AND promo_mulai IS NOT NULL AND promo_akhir IS NOT NULL AND promo_akhir >= promo_mulai
+        AND diskon = least(service_price + travel_fee, promo_nilai)));
 
 -- 3. Konfigurasi awal: 5 paket, level Dasar, tanpa promo.
 INSERT INTO public.operational_settings (key, value) VALUES
@@ -369,6 +383,11 @@ begin
     'diskon',v_booking.diskon,'grand_total',v_booking.grand_total);
 end;
 $function$;
+
+-- Keamanan: booking pelanggan HANYA lewat Edge Function create-booking (validasi profil + jarak Google Routes).
+-- Kedua RPC tidak boleh dieksekusi anon/authenticated (sama dengan produksi saat ini; di sini ditegaskan eksplisit).
+REVOKE ALL ON FUNCTION public.create_booking_server(uuid, text, text, text, smallint, date, time without time zone, tipe_lokasi, text, double precision, double precision, numeric) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.create_booking(text, text, text, smallint, date, time without time zone, tipe_lokasi, text, double precision, double precision, numeric) FROM PUBLIC, anon, authenticated;
 
 -- 9. Daftar booking Admin: tambah kolom rincian harga. Tipe kembalian berubah => DROP + CREATE, hak akses dipulihkan
 --    persis seperti produksi (authenticated + service_role; tanpa anon/PUBLIC). is_admin() tetap dicek di dalam.

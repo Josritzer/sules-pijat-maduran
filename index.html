@@ -102,7 +102,7 @@
     const customerId = sessionData && sessionData.session && sessionData.session.user && sessionData.session.user.id;
     if (!customerId) return null;
     const { data, error } = await supabaseClient.from("bookings")
-      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
+      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,service_price,travel_fee,grand_total,harga_dasar,level_harga,promo_tipe,promo_nilai,diskon,subtotal,status,catatan_penolakan,created_at,updated_at")
       .eq("id", id)
       .eq("customer_id", customerId)
       .is("disembunyikan_pelanggan_at", null)
@@ -118,7 +118,7 @@
     }
     const start = Number.isInteger(offset) && offset >= 0 ? offset : 0;
     const { data, error } = await supabaseClient.from("bookings")
-      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
+      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,service_price,travel_fee,grand_total,harga_dasar,level_harga,promo_tipe,promo_nilai,diskon,subtotal,status,catatan_penolakan,created_at,updated_at")
       .eq("customer_id", id)
       .is("disembunyikan_pelanggan_at", null)
       .order("created_at", { ascending: false })
@@ -467,7 +467,27 @@
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+  async function getHargaPaket() {
+    const { data, error } = await supabaseClient.rpc("harga_paket_aktif");
+    if (error) throw error;
+    return Array.isArray(data) ? data : [];
+  }
+  async function hitungHargaBooking({ serviceId, tipeLokasi, jumlahOrang, jarakMeter }) {
+    const { data, error } = await supabaseClient.rpc("hitung_harga_booking", {
+      p_service_id: serviceId, p_tipe_lokasi: tipeLokasi, p_jumlah_orang: jumlahOrang, p_jarak_meter: jarakMeter ?? null
+    });
+    if (error) throw error;
+    return data;
+  }
+  async function setHargaPaketAdmin({ paketId, level, promoTipe, promoNilai, promoMulai, promoAkhir }) {
+    const { data, error } = await supabaseClient.rpc("admin_set_harga_paket", {
+      p_paket_id: paketId, p_level: level, p_promo_tipe: promoTipe || null,
+      p_promo_nilai: promoTipe ? promoNilai : null, p_promo_mulai: promoTipe ? promoMulai : null, p_promo_akhir: promoTipe ? promoAkhir : null
+    });
+    if (error) throw error;
+    return data;
+  }
+  window.bookingService = { getHargaPaket, hitungHargaBooking, setHargaPaketAdmin, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -1136,6 +1156,8 @@
   #root button.sules-danger { color:#913A61 !important; background:#FCF1F5 !important; border-color:#E8C7D6 !important; }
   #root button.text-red-600 { color:#913A61 !important; }
   /* Tombol Tutup Sesi / Buka Kembali (Admin): lebih spesifik dari #root button agar warna tidak ditimpa putih. */
+  #root button.sules-harga-save { color:#FFFFFF !important; background:#18324B !important; border-color:#18324B !important; }
+  .sules-promo-chip { display:inline-block; margin-top:6px; padding:3px 9px; border-radius:999px; background:#EAF3EC; color:#166534; font-size:11px; font-weight:700; letter-spacing:.02em; }
   #root button.sules-session-close { color:#FFFFFF !important; background:#B45309 !important; border-color:#92400E !important; }
   #root button.sules-session-open { color:#FFFFFF !important; background:#166534 !important; border-color:#14532D !important; }
   #root .sules-status-badge { border-radius:999px !important; font-weight:750 !important; }
@@ -1285,9 +1307,9 @@
         </header>
         <aside class="sules-catalog-travel-note"><span>INFORMASI BIAYA PERJALANAN</span><p>Biaya perjalanan terpisah dari harga paket dan dihitung satu kali per booking, bukan per orang. 1.000 meter pertama gratis; selanjutnya mengikuti jarak jalan.</p></aside>
         <div class="package-grid sules-catalog-public-grid">
-          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">90 MENIT · KE RUMAH</p><h3>Pijat 90 Menit ke Rumah</h3><p class="public-muted">1 orang · layanan ke Rumah</p><div class="sules-catalog-public-price">Rp60.000 <small>+ biaya perjalanan</small></div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="home-90m-1" aria-label="Pilih paket Pijat 90 Menit ke Rumah">Pilih Paket</a></article>
-          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">120 MENIT · KE RUMAH</p><h3>Pijat 2 Jam ke Rumah</h3><p class="public-muted">1 orang · layanan ke Rumah</p><div class="sules-catalog-public-price">Rp80.000 <small>+ biaya perjalanan</small></div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="home-120m-1" aria-label="Pilih paket Pijat 2 Jam ke Rumah">Pilih Paket</a></article>
-          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">180 MENIT TOTAL · KE RUMAH</p><h3>Pijat 2 Orang ke Rumah</h3><p class="public-muted">2 orang · 90 menit per orang, berurutan</p><div class="sules-catalog-public-price">Rp120.000 <small>+ biaya perjalanan</small></div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="home-90m-2" aria-label="Pilih paket Pijat 2 Orang ke Rumah">Pilih Paket</a></article>
+          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">90 MENIT · KE RUMAH</p><h3>Pijat 90 Menit ke Rumah</h3><p class="public-muted">1 orang · layanan ke Rumah</p><div class="sules-catalog-public-price"><span data-sules-price="home-90m-1">Rp60.000</span> <small>+ biaya perjalanan</small></div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="home-90m-1" aria-label="Pilih paket Pijat 90 Menit ke Rumah">Pilih Paket</a></article>
+          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">120 MENIT · KE RUMAH</p><h3>Pijat 2 Jam ke Rumah</h3><p class="public-muted">1 orang · layanan ke Rumah</p><div class="sules-catalog-public-price"><span data-sules-price="home-120m-1">Rp80.000</span> <small>+ biaya perjalanan</small></div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="home-120m-1" aria-label="Pilih paket Pijat 2 Jam ke Rumah">Pilih Paket</a></article>
+          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">180 MENIT TOTAL · KE RUMAH</p><h3>Pijat 2 Orang ke Rumah</h3><p class="public-muted">2 orang · 90 menit per orang, berurutan</p><div class="sules-catalog-public-price"><span data-sules-price="home-90m-2">Rp120.000</span> <small>+ biaya perjalanan</small></div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="home-90m-2" aria-label="Pilih paket Pijat 2 Orang ke Rumah">Pilih Paket</a></article>
         </div>
       </section>
       <section class="sules-catalog-group sules-catalog-group-public-place" aria-labelledby="public-catalog-place-title">
@@ -1296,8 +1318,8 @@
           <span class="sules-catalog-group-count">2 paket</span>
         </header>
         <div class="package-grid sules-catalog-public-grid">
-          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">90 MENIT · DI SULES</p><h3>Pijat 90 Menit</h3><p class="public-muted">1 orang · layanan di tempat</p><div class="sules-catalog-public-price">Rp60.000</div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="sules-90m-1" aria-label="Pilih paket Pijat 90 Menit">Pilih Paket</a></article>
-          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">120 MENIT · DI SULES</p><h3>Pijat 2 Jam</h3><p class="public-muted">1 orang · layanan di tempat</p><div class="sules-catalog-public-price">Rp80.000</div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="sules-120m-1" aria-label="Pilih paket Pijat 2 Jam">Pilih Paket</a></article>
+          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">90 MENIT · DI SULES</p><h3>Pijat 90 Menit</h3><p class="public-muted">1 orang · layanan di tempat</p><div class="sules-catalog-public-price"><span data-sules-price="sules-90m-1">Rp60.000</span></div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="sules-90m-1" aria-label="Pilih paket Pijat 90 Menit">Pilih Paket</a></article>
+          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">120 MENIT · DI SULES</p><h3>Pijat 2 Jam</h3><p class="public-muted">1 orang · layanan di tempat</p><div class="sules-catalog-public-price"><span data-sules-price="sules-120m-1">Rp80.000</span></div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="sules-120m-1" aria-label="Pilih paket Pijat 2 Jam">Pilih Paket</a></article>
         </div>
       </section>
     </div>
@@ -1477,6 +1499,28 @@
 </script>
 <footer class="public-footer">© SULES PIJAT MADURAN · <a href="#syarat-ketentuan">Syarat</a> · <a href="#kebijakan-privasi">Privasi</a> · <a href="#kontak">Kontak</a><span class="public-social-links"><a class="public-social-link" href="https://www.facebook.com/share/1DHCpxtGmC/" target="_blank" rel="noopener noreferrer" aria-label="Facebook SULES PIJAT MADURAN"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073c0 6.019 4.388 11.019 10.125 11.926v-8.437H7.078v-3.489h3.047V9.414c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.953h-1.513c-1.491 0-1.956.93-1.956 1.885v2.262h3.328l-.532 3.489h-2.796v8.437C19.612 23.092 24 18.092 24 12.073z"/></svg></a><a class="public-social-link" href="https://www.instagram.com/sulesmaduran/" target="_blank" rel="noopener noreferrer" aria-label="Instagram SULES PIJAT MADURAN"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></svg></a><a class="public-social-link" href="https://vm.tiktok.com/ZS9DxyhqUxShb-3vgHc/" target="_blank" rel="noopener noreferrer" aria-label="TikTok SULES PIJAT MADURAN"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.9 2.9 0 0 1-2.9 2.9 2.9 2.9 0 0 1-2.9-2.9 2.9 2.9 0 0 1 2.9-2.9c.3 0 .6.05.88.14V9.38a6.3 6.3 0 0 0-.88-.06 6.36 6.36 0 1 0 6.36 6.36V8.72a8.24 8.24 0 0 0 4.82 1.55V6.82a4.85 4.85 0 0 1-1.06-.13z"/></svg></a></span></footer>
 
+<script>
+(function muatHargaKatalogPublik() {
+  function rp(n) { return "Rp" + Math.round(Number(n)).toLocaleString("id-ID"); }
+  function tgl(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "")); return m ? m[3] + "-" + m[2] + "-" + m[1] : ""; }
+  try {
+    if (!window.bookingService || typeof window.bookingService.getHargaPaket !== "function") return;
+    window.bookingService.getHargaPaket().then(function (rows) {
+      document.querySelectorAll("[data-sules-price]").forEach(function (node) {
+        var r = rows.filter(function (x) { return x.paket_id === node.getAttribute("data-sules-price"); })[0];
+        if (!r) return;
+        node.textContent = rp(r.harga_level);
+        if (r.promo_aktif) {
+          var chip = document.createElement("small");
+          chip.className = "sules-promo-chip";
+          chip.textContent = (r.promo_tipe === "PERSEN" ? "Promo " + Number(r.promo_nilai) + "%" : "Potongan " + rp(r.promo_nilai)) + " · sampai " + tgl(r.promo_akhir);
+          node.parentElement.appendChild(chip);
+        }
+      });
+    }).catch(function () { /* gagal baca: tampil harga Dasar statis (sama dengan default server) */ });
+  } catch (_) {}
+})();
+</script>
 <script type="text/babel">
 const { useState, useEffect, useLayoutEffect, useRef } = React;
 
@@ -1520,6 +1564,47 @@ function formatRupiah(n) {
 function hitungTransport(jarakMeter) {
   if (jarakMeter <= GRATIS_METER) return 0;
   return (jarakMeter - GRATIS_METER) * TARIF_PER_METER;
+}
+/* ===== Harga bertingkat & promo: angka SELALU dari server (harga_paket_aktif / hitung_harga_booking / kolom booking) ===== */
+function labelLevelHarga(level) { return Number(level) > 0 ? `Level ${Number(level)}` : "Dasar"; }
+function labelPromo(tipe, nilai) {
+  if (tipe === "PERSEN") return `Promo ${Number(nilai)}%`;
+  if (tipe === "NOMINAL") return `Potongan ${formatRupiah(nilai)}`;
+  return "";
+}
+function tglIndo(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ""));
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : "";
+}
+function useHargaPaket() {
+  const [rows, setRows] = useState(() => (typeof window !== "undefined" && window.__sulesHargaPaket) || null);
+  useEffect(() => {
+    let active = true;
+    window.bookingService.getHargaPaket()
+      .then(data => { window.__sulesHargaPaket = data; if (active) setRows(data); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+  const map = {};
+  (rows || []).forEach(r => { map[r.paket_id] = r; });
+  return map;
+}
+/* Rincian harga seragam: katalog tidak memakainya; form booking, layar status, riwayat, dan Admin memakainya.
+   Booking lama (tanpa level/diskon) tampil seperti sebelumnya: harga paket, perjalanan, total. */
+function RincianHarga({ hargaPaket, level, travel, diskon, promoTipe, promoNilai, total, travelLabel = "Biaya perjalanan", totalLabel = "TOTAL", tampilkanTravel = true, kecil = false, catatanTravel = null }) {
+  const d = Number(diskon) || 0;
+  const t = Number(travel) || 0;
+  const subtotal = Number(hargaPaket) + t;
+  const baris = kecil ? "flex justify-between gap-2 text-xs" : "flex justify-between text-sm mb-1";
+  return <div data-rincian-harga>
+    <div className={baris}><span>Harga paket{level !== null && level !== undefined && level !== "" ? ` · ${labelLevelHarga(level)}` : ""}</span><span>{formatRupiah(hargaPaket)}</span></div>
+    {tampilkanTravel && <div className={baris}><span>{travelLabel}</span><span>{catatanTravel || formatRupiah(t)}</span></div>}
+    {d > 0 && <div className={baris}><span>Subtotal</span><span>{formatRupiah(subtotal)}</span></div>}
+    {d > 0 && <div className={baris + " text-green-700"} data-rincian-promo><span>{labelPromo(promoTipe, promoNilai) || "Promo"}</span><span>−{formatRupiah(d)}</span></div>}
+    <div className={kecil ? "flex justify-between gap-2 font-bold text-sm mt-1 pt-1 border-t border-gray-200" : "flex justify-between font-bold text-base mt-2 pt-2 border-t border-gray-200"}>
+      <span>{totalLabel}</span><span className="sules-price">{formatRupiah(total)}</span>
+    </div>
+  </div>;
 }
 const CUSTOMER_READ_TIMEOUT_MS = 45000;
 function withCustomerReadTimeout(request, timeoutMs = CUSTOMER_READ_TIMEOUT_MS) {
@@ -1750,6 +1835,18 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   const lngRef = useRef(null);
   const [jarak, setJarak] = useState(null);
   const [sumberJarak, setSumberJarak] = useState(null);
+  const hargaMap = useHargaPaket();
+  const [quote, setQuote] = useState(null);
+  const [quoteError, setQuoteError] = useState(false);
+  useEffect(() => {
+    let active = true;
+    setQuote(null); setQuoteError(false);
+    const jarakHarga = tipeLokasi === "HOME_SERVICE" && jarak !== null && sumberJarak === "road" ? jarak : null;
+    window.bookingService.hitungHargaBooking({ serviceId: layanan, tipeLokasi, jumlahOrang: orang, jarakMeter: jarakHarga })
+      .then(q => { if (active) setQuote(q); })
+      .catch(() => { if (active) setQuoteError(true); });
+    return () => { active = false; };
+  }, [layanan, tipeLokasi, orang, jarak, sumberJarak]);
   const [loadingGPS, setLoadingGPS] = useState(false);
   const [gpsMsg, setGpsMsg] = useState("");
   const [gpsAkurasi, setGpsAkurasi] = useState(null);
@@ -2019,7 +2116,8 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
         booking_id: b.id, layanan: b.service_id, orang: b.jumlah_orang,
         tanggal: b.tanggal, jam: b.jam_mulai, tipeLokasi: b.tipe_lokasi, alamat: b.alamat,
         service_price: b.service_price, travel_fee: b.travel_fee,
-        grand_total: b.grand_total, status: b.status
+        grand_total: b.grand_total, status: b.status,
+        level_harga: b.level_harga, diskon: b.diskon, promo_tipe: b.promo_tipe, promo_nilai: b.promo_nilai
       });
       setScreen("status");
     }).catch(() => {
@@ -2254,9 +2352,9 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
     setLoadingJarak(false);
   };
 
-  const transport = tipeLokasi === "HOME_SERVICE" && jarak !== null ? hitungTransport(jarak) : 0;
-  const biayaLayanan = HARGA[layanan] * orang;
-  const total = biayaLayanan + transport;
+  const transport = quote ? Number(quote.travel_fee) : 0;
+  const biayaLayanan = quote ? Number(quote.harga_level) : HARGA[layanan] * orang;
+  const total = quote ? Number(quote.total) : biayaLayanan + transport;
   const detailBookingSiap = tipeLokasi !== "HOME_SERVICE" || (lat !== null && lng !== null && jarak !== null && sumberJarak === "road");
   const bookingJourneyStep = !tanggal ? 2 : !jam ? 3 : !detailBookingSiap ? 4 : 5;
   const bookingJourneyLabels = ["Layanan", "Tanggal", "Waktu", "Lokasi", "Kirim"];
@@ -2294,7 +2392,8 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
         booking_id: result.booking_id,
         layanan, orang, tanggal, jam, tipeLokasi, alamat: alamatText,
         service_price: result.service_price, travel_fee: result.travel_fee,
-        grand_total: result.grand_total, status: result.status
+        grand_total: result.grand_total, status: result.status,
+        level_harga: result.level_harga, diskon: result.diskon, promo_tipe: result.promo_tipe, promo_nilai: result.promo_nilai
       });
       setScreen("status");
       setTanggal(""); setJam("");
@@ -2608,9 +2707,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
 
         <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
           <div className="text-sm font-semibold mb-2">Rincian Biaya</div>
-          <div className="flex justify-between text-sm mb-1"><span>Harga Layanan</span><span>{formatRupiah(b.service_price)}</span></div>
-          <div className="flex justify-between text-sm mb-1"><span>Travel Fee</span><span>{formatRupiah(b.travel_fee)}</span></div>
-          <div className="flex justify-between font-bold text-base mt-2 pt-2 border-t border-gray-200"><span>Total</span><span>{formatRupiah(b.grand_total)}</span></div>
+          <RincianHarga hargaPaket={b.service_price} level={b.level_harga} travel={b.travel_fee} diskon={b.diskon} promoTipe={b.promo_tipe} promoNilai={b.promo_nilai} total={b.grand_total} travelLabel="Travel Fee" totalLabel="Total" />
         </div>
 
         {typeof onGoToOrders === "function" && <button type="button" onClick={onGoToOrders}
@@ -2712,7 +2809,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
               style={{ backgroundColor: paketId === p.id ? "#18324B" : "white", color: paketId === p.id ? "white" : "#18324B", border: paketId === p.id ? "2px solid #2F6F9F" : "1px solid #D1D5DB", borderRadius:"12px", padding:"12px", textAlign:"left" }}>
               <span className="block font-semibold text-sm">{p.label}</span>
               <span className="block text-xs opacity-80 mt-1">{p.location} · {p.people} orang</span>
-              <span className="block text-sm font-bold mt-2">{formatRupiah(p.price)}{p.type === "HOME_SERVICE" ? " + travel" : ""}</span>
+              <span className="block text-sm font-bold mt-2">{formatRupiah(hargaMap[p.id] ? Number(hargaMap[p.id].harga_level) : p.price)}{p.type === "HOME_SERVICE" ? " + travel" : ""}{hargaMap[p.id] && hargaMap[p.id].promo_aktif && <small className="sules-promo-chip"> · {labelPromo(hargaMap[p.id].promo_tipe, hargaMap[p.id].promo_nilai)}</small>}</span>
             </button>
           ))}
         </div>
@@ -2817,25 +2914,18 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
           <div className="mb-1"><span className="text-gray-600">Waktu:</span> <strong>{jam || "Belum dipilih"}</strong></div>
           <div><span className="text-gray-600">Lokasi:</span> <strong>{paketTerpilih.location}</strong>{tipeLokasi === "HOME_SERVICE" && <span> · {alamatText.trim() || (lat !== null && lng !== null ? `Koordinat ${lat.toFixed(5)}, ${lng.toFixed(5)}` : "Lokasi belum dipilih")}</span>}</div>
         </div>
-        <div className="flex justify-between text-sm mb-1">
-          <span>Layanan: {tipeLokasi === "HOME_SERVICE" && layanan === "90m" && orang === 2 ? "180 Menit total (90 Menit per orang)" : `${layanan === "90m" ? "90 Menit" : "2 Jam"} x ${orang}`}</span>
-          <span>{formatRupiah(biayaLayanan)}</span>
-        </div>
+        <div className="text-xs text-gray-500 mb-1">{tipeLokasi === "HOME_SERVICE" && layanan === "90m" && orang === 2 ? "Layanan: 180 Menit total (90 Menit per orang)" : `Layanan: ${layanan === "90m" ? "90 Menit" : "2 Jam"} x ${orang}`}</div>
         {tipeLokasi === "HOME_SERVICE" && jarak !== null && (
           <div className="text-xs text-gray-500 mb-1">
             Jarak Jalan {jarak}m (Google Routes) {jarak > GRATIS_METER ? `- Gratis ${GRATIS_METER}m = ${jarak-GRATIS_METER}m x Rp3,50 = ${formatRupiah(transport)}` : "(dalam radius gratis)"}
           </div>
         )}
-        {tipeLokasi === "HOME_SERVICE" && (
-          <div className="flex justify-between text-sm mb-1">
-            <span>Transport</span>
-            <span>{jarak !== null && sumberJarak === "road" ? formatRupiah(transport) : "Belum dihitung"}</span>
-          </div>
-        )}
-        <div className="flex justify-between font-bold text-base mt-2 pt-2 border-t border-gray-200">
-          <span>{tipeLokasi === "HOME_SERVICE" && (jarak === null || sumberJarak !== "road") ? "TOTAL (belum termasuk transport)" : "TOTAL"}</span>
-          <span className="sules-price">{formatRupiah(total)}</span>
-        </div>
+        {quote ? <RincianHarga hargaPaket={quote.harga_level} level={quote.level} travel={quote.travel_fee} diskon={quote.diskon} promoTipe={quote.promo_tipe} promoNilai={quote.promo_nilai}
+            total={quote.total} travelLabel="Transport" tampilkanTravel={tipeLokasi === "HOME_SERVICE"}
+            catatanTravel={tipeLokasi === "HOME_SERVICE" && (jarak === null || sumberJarak !== "road") ? "Belum dihitung" : null}
+            totalLabel={tipeLokasi === "HOME_SERVICE" && (jarak === null || sumberJarak !== "road") ? "TOTAL (belum termasuk transport)" : "TOTAL"} />
+          : <div className="text-sm text-gray-500" role="status">{quoteError ? "Rincian harga belum dapat dimuat. Harga final tetap dihitung server saat booking dikirim." : "Menghitung harga…"}</div>}
+        {quote && quote.promo_aktif && <p className="text-xs text-green-700 mt-1">{labelPromo(quote.promo_tipe, quote.promo_nilai)} berlaku sampai {tglIndo(quote.promo_akhir)}. Diskon dihitung dari subtotal (harga paket + transport).</p>}
         <p className="text-xs text-gray-600 mt-3">Setelah dikirim, status awal booking adalah MENUNGGU. Admin akan memproses booking Anda.</p>
       </div>
 
@@ -2967,8 +3057,9 @@ function RevenueChart({ days = [] }) {
   );
 }
 
-function ServicePackageCard({ item, onBookPackage, compact = false, catalog = false }) {
+function ServicePackageCard({ item, onBookPackage, compact = false, catalog = false, harga = null }) {
   const homeService = item.type === "HOME_SERVICE";
+  const hargaTampil = harga ? Number(harga.harga_level) : item.price;
   const paket5 = homeService && item.serviceId === "90m" && item.people === 2;
   const durasiMenit = paket5 ? 180 : DURASI[item.serviceId];
   return <article className={`sules-service-card${catalog ? " sules-service-card-catalog" : ""}`}>
@@ -2978,7 +3069,8 @@ function ServicePackageCard({ item, onBookPackage, compact = false, catalog = fa
     <h3>{item.label}</h3>
     <p className="sules-service-meta">{item.people} orang{paket5 ? " · 90 Menit per orang, berurutan" : ""} · {homeService ? "Layanan ke Rumah" : "Layanan di tempat Sules"}</p>
     <div className="sules-service-price-block">
-      <div className="sules-service-price">{formatRupiah(item.price)}{homeService && <small>+ biaya perjalanan</small>}</div>
+      <div className="sules-service-price">{formatRupiah(hargaTampil)}{homeService && <small>+ biaya perjalanan</small>}</div>
+      {harga && harga.promo_aktif && <div className="sules-promo-chip" data-promo-aktif>{labelPromo(harga.promo_tipe, harga.promo_nilai)} · sampai {tglIndo(harga.promo_akhir)}</div>}
       {catalog && <span className="sules-service-price-caption">Harga paket</span>}
     </div>
     {homeService && !catalog && <p className="sules-service-meta sules-service-travel">Biaya perjalanan dihitung satu kali per booking.</p>}
@@ -2988,8 +3080,9 @@ function ServicePackageCard({ item, onBookPackage, compact = false, catalog = fa
 }
 
 function ServicePackageList({ onBookPackage, compact = false, packages = SERVICE_PACKAGES, catalog = false }) {
+  const hargaMap = useHargaPaket();
   return <div className={compact ? "sules-service-rail" : "sules-catalog-grid"}>
-    {packages.map(item => <ServicePackageCard key={item.id} item={item} onBookPackage={onBookPackage} compact={compact} catalog={catalog} />)}
+    {packages.map(item => <ServicePackageCard key={item.id} item={item} harga={hargaMap[item.id] || null} onBookPackage={onBookPackage} compact={compact} catalog={catalog} />)}
   </div>;
 }
 
@@ -3546,7 +3639,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
           <div className="flex items-start justify-between gap-2"><strong className="text-base">{SERVICE_LABEL[booking.service_id] || booking.service_id} · {booking.jumlah_orang} orang</strong><StatusBadge status={booking.status} /></div>
           <div className="grid grid-cols-2 gap-3 mt-4 text-sm"><div><span className="text-gray-500 block text-xs">Tanggal</span>{booking.tanggal}</div><div><span className="text-gray-500 block text-xs">Waktu</span>{String(booking.jam_mulai).slice(0,5)}</div></div>
           <div className="text-sm text-gray-500 mt-3">{booking.tipe_lokasi === "HOME_SERVICE" ? "Ke Rumah" : "Di Sules"}</div>
-          <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-gray-200"><span className="text-xs text-gray-500">TOTAL</span><strong className="sules-price">{formatRupiah(booking.grand_total)}</strong></div>
+          <div className="mt-4 pt-3 border-t border-gray-200 text-gray-600"><RincianHarga kecil hargaPaket={booking.service_price} level={booking.level_harga} travel={booking.travel_fee} diskon={booking.diskon} promoTipe={booking.promo_tipe} promoNilai={booking.promo_nilai} total={booking.grand_total} tampilkanTravel={booking.tipe_lokasi === "HOME_SERVICE"} /></div>
         </div>}
         {sessionError && <div className="sules-home-error" role="alert"><div>{sessionError}</div><button type="button" onClick={retryCustomerSessionCheck}>Coba lagi</button></div>}
       </section>
@@ -3575,7 +3668,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
         <div className="flex items-start justify-between gap-2 mb-2"><strong>{SERVICE_LABEL[row.service_id] || row.service_id} · {row.jumlah_orang} orang</strong><div className="flex items-center gap-2"><StatusBadge status={row.status} />{view === "history" && (row.status === "SELESAI" || row.status === "DITOLAK") && <button type="button" aria-label={hidingBookingId === row.id ? "Menyembunyikan dari riwayat" : "Sembunyikan dari riwayat"} title={hidingBookingId === row.id ? "Sedang memproses" : "Sembunyikan dari riwayat"} aria-busy={hidingBookingId === row.id} disabled={Boolean(hidingBookingId)} onClick={() => void hideHistoryBooking(row)} className="rounded-full border border-gray-300 text-gray-500 hover:text-red-700 hover:border-red-300 disabled:opacity-50" style={{ width: 28, height: 28, lineHeight: "24px", fontSize: 18 }}>{hidingBookingId === row.id ? "…" : "×"}</button>}</div></div>
         <div className="grid grid-cols-2 gap-2 text-xs mb-2"><div><span className="text-gray-500 block">Tanggal</span>{row.tanggal}</div><div><span className="text-gray-500 block">Jam</span>{String(row.jam_mulai).slice(0,5)}</div></div>
         <div className="text-xs text-gray-600 mb-2">{row.tipe_lokasi === "HOME_SERVICE" ? "ke Rumah" : "Di Sules"} · {row.durasi_menit} menit</div>
-        <div className="text-sm font-bold">Total: {formatRupiah(row.grand_total)}</div>
+        <div className="mt-2 text-gray-600"><RincianHarga kecil hargaPaket={row.service_price} level={row.level_harga} travel={row.travel_fee} diskon={row.diskon} promoTipe={row.promo_tipe} promoNilai={row.promo_nilai} total={row.grand_total} tampilkanTravel={row.tipe_lokasi === "HOME_SERVICE"} totalLabel="Total" /></div>
         {row.status === "DITOLAK" && row.catatan_penolakan && <p className="text-xs text-gray-600 mt-2">Catatan Admin: {row.catatan_penolakan}</p>}
         {row.status === "DITOLAK" && <button onClick={onGoToBooking} className="sules-primary mt-3 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{backgroundColor:"#18324B"}}>BOOKING LAGI</button>}
         {shouldShowGoogleReview(row.status) && <a href="https://g.page/r/CWXCZycYzhXqEBE/review" target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", backgroundColor:"white", border:"1px solid #2F6F9F", color:"#18324B", borderRadius:"12px", padding:"10px", fontWeight:"bold" }} className="mt-3 text-sm">⭐ Beri Penilaian di Google Maps</a>}
@@ -3583,6 +3676,100 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
     </div>
     {hasMore && <button onClick={()=>void loadMore()} disabled={loadingMore} className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 mt-4 font-semibold disabled:opacity-60">{loadingMore ? "Memuat…" : `Muat ${view === "active" ? "pesanan aktif" : "riwayat"} berikutnya (hingga ${pageSize} per halaman)`}</button>}
   </div>;
+}
+
+const PAKET_ADMIN = [
+  { id: "sules-90m-1", label: "Di Sules · 90 menit", dasar: 60000, step: 10000 },
+  { id: "sules-120m-1", label: "Di Sules · 2 jam", dasar: 80000, step: 10000 },
+  { id: "home-90m-1", label: "Ke Rumah · 90 menit", dasar: 60000, step: 10000 },
+  { id: "home-120m-1", label: "Ke Rumah · 2 jam", dasar: 80000, step: 10000 },
+  { id: "home-90m-2", label: "Ke Rumah · 2 orang 90 menit", dasar: 120000, step: 20000 }
+];
+function HargaAdminPanel() {
+  const [rows, setRows] = useState([]);
+  const [form, setForm] = useState({});
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+  const [loading, setLoading] = useState(true);
+  const muat = async () => {
+    setLoading(true);
+    try {
+      const data = await window.bookingService.getHargaPaket();
+      setRows(data);
+      const f = {};
+      data.forEach(r => {
+        const c = r.promo_konfigurasi || {};
+        f[r.paket_id] = { level: Number(r.level) || 0, tipe: c.tipe || "", nilai: c.nilai ?? "", mulai: c.mulai || "", akhir: c.akhir || "" };
+      });
+      setForm(f); setError("");
+    } catch (e) { setError("Pengaturan harga belum dapat dimuat dari server."); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { muat(); }, []);
+  const ubah = (id, k, v) => setForm(prev => ({ ...prev, [id]: { ...prev[id], [k]: v, ...(k === "tipe" ? { nilai: v === "PERSEN" ? 10 : v === "NOMINAL" ? 5000 : "" } : {}) } }));
+  const simpan = async (p) => {
+    const f = form[p.id];
+    setBusy(p.id); setError(""); setInfo("");
+    try {
+      await window.bookingService.setHargaPaketAdmin({ paketId: p.id, level: f.level, promoTipe: f.tipe || null, promoNilai: f.nilai === "" ? null : Number(f.nilai), promoMulai: f.mulai || null, promoAkhir: f.akhir || null });
+      window.__sulesHargaPaket = null;
+      await muat();
+      setInfo(`${p.label} tersimpan. Berlaku untuk booking baru; riwayat lama tidak berubah.`);
+    } catch (e) { setError("Gagal menyimpan: " + ((e && e.message) || "coba lagi")); }
+    finally { setBusy(""); }
+  };
+  return (
+    <div className="bg-white rounded-xl p-3 border border-gray-200 mb-3" aria-label="Harga bertingkat dan promo" data-harga-admin>
+      <div className="text-sm font-bold">Harga Bertingkat & Promo</div>
+      <div className="text-xs text-gray-500 mb-2">Level Dasar atau 1–5. Promo dihitung dari subtotal (harga paket + biaya perjalanan). Angka final selalu dihitung server.</div>
+      {loading && <div role="status" className="text-xs text-gray-500">Memuat…</div>}
+      {error && <div role="alert" className="text-xs text-red-700 mb-2">{error}</div>}
+      {info && <div role="status" className="text-xs text-green-700 mb-2">{info}</div>}
+      {PAKET_ADMIN.map(p => {
+        const r = rows.find(x => x.paket_id === p.id);
+        const f = form[p.id];
+        if (!r || !f) return null;
+        const hargaForm = p.dasar + (Number(f.level) || 0) * p.step;
+        return (
+          <div key={p.id} data-harga-paket={p.id} className="border border-gray-200 rounded-lg p-2 mb-2">
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-sm font-semibold">{p.label}</span>
+              <span className="text-xs text-right">Aktif: <strong>{labelLevelHarga(r.level)} · {formatRupiah(r.harga_level)}</strong>{r.promo_aktif && <span className="block text-green-700">{labelPromo(r.promo_tipe, r.promo_nilai)} s.d. {tglIndo(r.promo_akhir)}</span>}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <label className="text-xs font-semibold block">Level harga
+                <select value={f.level} onChange={e=>ubah(p.id, "level", Number(e.target.value))} className="w-full border border-gray-300 rounded-lg p-2 mt-1 text-sm">
+                  {[0,1,2,3,4,5].map(l => <option key={l} value={l}>{labelLevelHarga(l)} · {formatRupiah(p.dasar + l * p.step)}</option>)}
+                </select>
+              </label>
+              <label className="text-xs font-semibold block">Promo
+                <select value={f.tipe} onChange={e=>ubah(p.id, "tipe", e.target.value)} className="w-full border border-gray-300 rounded-lg p-2 mt-1 text-sm">
+                  <option value="">Tanpa promo</option><option value="PERSEN">Diskon persen</option><option value="NOMINAL">Potongan rupiah</option>
+                </select>
+              </label>
+              {f.tipe === "PERSEN" && <label className="text-xs font-semibold block col-span-2">Persentase
+                <select value={f.nilai} onChange={e=>ubah(p.id, "nilai", Number(e.target.value))} className="w-full border border-gray-300 rounded-lg p-2 mt-1 text-sm">
+                  {[5,10,15,20,25,30].map(v => <option key={v} value={v}>{v}%</option>)}
+                </select></label>}
+              {f.tipe === "NOMINAL" && <label className="text-xs font-semibold block col-span-2">Potongan (Rp)
+                <input type="number" min="1" max="1000000" step="1" value={f.nilai} onChange={e=>ubah(p.id, "nilai", e.target.value)} className="w-full border border-gray-300 rounded-lg p-2 mt-1 text-sm" /></label>}
+              {f.tipe && <label className="text-xs font-semibold block">Mulai
+                <input type="date" value={f.mulai} onChange={e=>ubah(p.id, "mulai", e.target.value)} className="w-full border border-gray-300 rounded-lg p-2 mt-1 text-sm" /></label>}
+              {f.tipe && <label className="text-xs font-semibold block">Berakhir
+                <input type="date" value={f.akhir} min={f.mulai || undefined} onChange={e=>ubah(p.id, "akhir", e.target.value)} className="w-full border border-gray-300 rounded-lg p-2 mt-1 text-sm" /></label>}
+            </div>
+            <div className="flex items-center justify-between gap-2 mt-2">
+              <span className="text-xs text-gray-500">Harga paket setelah disimpan: {formatRupiah(hargaForm)}</span>
+              <button type="button" disabled={!!busy} onClick={()=>simpan(p)} className="sules-harga-save rounded-lg px-3 py-2 text-sm font-bold text-white" style={{ backgroundColor:"#18324B", opacity: busy ? 0.6 : 1 }}>
+                {busy === p.id ? "Menyimpan…" : "Simpan"}
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function SesiAdminPanel() {
@@ -3940,7 +4127,7 @@ function AdminTab({ onExitToApp }) {
   };
 
   const exportCSV = () => {
-    const header = ["id","nama","wa","service_id","jumlah_orang","tanggal","jam_mulai","tipe_lokasi","alamat","lat","lng","jarak_meter","service_price","travel_fee","grand_total","status","created_at"];
+    const header = ["id","nama","wa","service_id","jumlah_orang","tanggal","jam_mulai","tipe_lokasi","alamat","lat","lng","jarak_meter","level_harga","harga_dasar","service_price","travel_fee","subtotal","promo_tipe","promo_nilai","diskon","grand_total","status","created_at"];
     const rows = bookings.map(b => header.map(h => `"${(b[h] ?? "").toString().replace(/"/g,'""')}"`).join(","));
     const csv = [header.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -3966,15 +4153,14 @@ function AdminTab({ onExitToApp }) {
         </div>
         <div className="text-sm mb-1">{SERVICE_LABEL[b.service_id] || b.service_id} • {b.jumlah_orang} orang</div>
         <div className="text-xs text-gray-700 mb-1">Lokasi: {b.tipe_lokasi === "HOME_SERVICE" ? "ke Rumah" : "Di Sules"}</div>
-        <div className="text-sm font-bold mt-1">Total pembayaran: {formatRupiah(b.grand_total)}</div>
+        <div className="text-sm font-bold mt-1">Total pembayaran: {formatRupiah(b.grand_total)}{Number(b.diskon) > 0 && <span className="text-xs font-semibold text-green-700"> (promo −{formatRupiah(b.diskon)})</span>}</div>
 
         <div className="border-t border-gray-100 mt-2 pt-2 space-y-1">
           <div className="text-xs text-gray-600">WA snapshot: {b.wa}</div>
           {b.tipe_lokasi === "HOME_SERVICE" && b.alamat && <div className="text-xs text-gray-600">Alamat: {b.alamat}</div>}
           {maps && <a href={maps} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline inline-block">🗺️ Buka Google Maps</a>}
           <div className="text-xs text-gray-600 pt-1">
-            <div>Harga layanan: {formatRupiah(b.service_price)}</div>
-            <div>Travel fee: {formatRupiah(b.travel_fee)}</div>
+            <RincianHarga kecil hargaPaket={b.service_price} level={b.level_harga} travel={b.travel_fee} diskon={b.diskon} promoTipe={b.promo_tipe} promoNilai={b.promo_nilai} total={b.grand_total} tampilkanTravel totalLabel="Total akhir" />
           </div>
         </div>
 
@@ -4008,6 +4194,7 @@ function AdminTab({ onExitToApp }) {
       <div className="sules-admin-dashboard pb-8">
 
       <SesiAdminPanel />
+      <HargaAdminPanel />
 
       <div className="bg-white rounded-xl p-3 border border-gray-200 mb-3">
         <label htmlFor="dashboard-period" className="text-sm font-semibold block mb-1">Periode Dashboard</label>

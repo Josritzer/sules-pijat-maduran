@@ -106,6 +106,22 @@ select chk(7,'ACL: anon TIDAK bisa eksekusi admin_set_harga_paket/_hitung_harga/
   and has_function_privilege('anon','public.harga_paket_aktif()','execute')
   and not has_function_privilege('anon','public.list_bookings_admin(booking_status)','execute'), 'acl');
 
+-- 7b. create_booking & create_booking_server tidak boleh dieksekusi anon/authenticated (booking hanya lewat Edge Function)
+do $$ declare t1 text; t2 text; t3 text; begin
+  perform as_cust();
+  begin set local role authenticated;
+    perform public.create_booking('X','081','90m',1::smallint,hari()+1,'10:00','HOME_SERVICE','Jauh',-2::float8,100::float8,0); t1:='BERHASIL(SALAH)';
+  exception when others then t1:=sqlerrm; end; reset role;
+  begin set local role authenticated;
+    perform public.create_booking_server('11111111-1111-1111-1111-111111111111','X','081','90m',1::smallint,hari()+1,'10:00','DI_TEMPAT'); t2:='BERHASIL(SALAH)';
+  exception when others then t2:=sqlerrm; end; reset role;
+  begin set local role anon;
+    perform public.create_booking('X','081','90m',1::smallint,hari()+1,'10:00','DI_TEMPAT'); t3:='BERHASIL(SALAH)';
+  exception when others then t3:=sqlerrm; end; reset role;
+  perform chk(7,'authenticated TIDAK bisa create_booking / create_booking_server; anon TIDAK bisa create_booking (permission denied)',
+    t1 ilike '%permission denied%' and t2 ilike '%permission denied%' and t3 ilike '%permission denied%', t1||' | '||t2||' | '||t3);
+end $$;
+
 -- 8. Booking baru: snapshot lengkap & generated grand_total
 select reset(); select cfg(3,2,'PERSEN',10,hari(),hari()+3);
 create temp table b8 as select (book(3,6033)->>'booking_id')::uuid id;
@@ -127,6 +143,18 @@ do $$ declare t1 text; t2 text; begin
   begin update bookings set diskon = 999999 where nama_pelanggan='Lama3'; t1:='BERHASIL(SALAH)'; exception when others then t1:=sqlerrm; end;
   begin update bookings set diskon = -1 where nama_pelanggan='Lama3'; t2:='BERHASIL(SALAH)'; exception when others then t2:=sqlerrm; end;
   perform chk(10,'Constraint tabel: diskon > subtotal & diskon negatif ditolak', t1 ilike '%bookings_diskon_max_check%' and t2 ilike '%bookings_diskon_check%', t1||' | '||t2); end $$;
+-- 10b. Constraint konsistensi total akhir & diskon (tabel menolak data menyimpang walau lewat SQL langsung)
+select reset(); select cfg(3,2,'PERSEN',10,hari(),hari()+3);
+create temp table b10 as select (book(3,6033)->>'booking_id')::uuid id;
+create function try_sql(q text) returns text language plpgsql as $$ begin execute q; return 'BERHASIL(SALAH)'; exception when others then return sqlerrm; end $$;
+select chk(10,'Constraint: diskon dimanipulasi (bukan 10% dari subtotal) ditolak', try_sql('update bookings set diskon = 1 where id='''||(select id from b10)||'''') ilike '%bookings_promo_konsisten_check%', try_sql('update bookings set diskon = 1 where id='''||(select id from b10)||''''));
+select chk(10,'Constraint: promo_tipe dihapus tapi diskon tetap ditolak', try_sql('update bookings set promo_tipe=null, promo_nilai=null, promo_mulai=null, promo_akhir=null where id='''||(select id from b10)||'''') ilike '%bookings_promo_konsisten_check%', 'ok');
+select chk(10,'Constraint: persen di luar 5-30 ditolak', try_sql('update bookings set promo_nilai=7, diskon=round((service_price+travel_fee)*0.07) where id='''||(select id from b10)||'''') ilike '%bookings_promo_konsisten_check%', 'ok');
+select chk(10,'Constraint: level dimanipulasi (service_price tidak cocok dasar+level*kenaikan) ditolak', try_sql('update bookings set level_harga=4 where id='''||(select id from b10)||'''') ilike '%bookings_snapshot_level_check%', 'ok');
+select chk(10,'Constraint: diskon melebihi subtotal ditolak', try_sql('update bookings set diskon=9999999 where id='''||(select id from b10)||'''') ilike '%check%', 'ok');
+select chk(10,'grand_total (generated) tidak bisa ditulis langsung', try_sql('update bookings set grand_total=1 where id='''||(select id from b10)||'''') ilike '%DEFAULT%', try_sql('update bookings set grand_total=1 where id='''||(select id from b10)||''''));
+select chk(10,'grand_total = service_price + travel_fee - diskon pada semua baris (lama & baru)', (select bool_and(grand_total = service_price + travel_fee - diskon and subtotal = service_price + travel_fee) from bookings), (select count(*)::text from bookings));
+select reset();
 -- 11. Konfigurasi rusak -> fail-safe ke Dasar
 select reset();
 update operational_settings set value='"rusak"' where key='harga_paket_sules-90m-1';
