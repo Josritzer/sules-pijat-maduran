@@ -3126,8 +3126,15 @@ function ServicePackageCard({ item, onBookPackage, compact = false, catalog = fa
     <h3>{item.label}</h3>
     <p className="sules-service-meta">{item.people} orang{paket5 ? " · 90 Menit per orang, berurutan" : ""} · {homeService ? "Layanan ke Rumah" : "Layanan di tempat Sules"}</p>
     <div className="sules-service-price-block">
-      <div className="sules-service-price">{formatRupiah(item.price)}{homeService && <small>+ biaya perjalanan</small>}</div>
-      {catalog && <span className="sules-service-price-caption">Harga paket</span>}
+      {catalog && item.promo?.discount > 0 ? <div style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:4,minWidth:0}}>
+        <span style={{display:"inline-flex",alignItems:"center",padding:"4px 9px",borderRadius:999,background:"linear-gradient(135deg,#4A1E8A,#6B35A8)",border:"1px solid #D4AF37",color:"#FFFFFF",fontSize:10,fontWeight:900,letterSpacing:".04em",boxShadow:"0 2px 5px rgba(74,30,138,.2)"}}>
+          {item.promo.type === "percent" ? `${item.promo.value}% OFF` : `HEMAT ${formatRupiah(item.promo.discount)}`}
+        </span>
+        <span style={{color:"#777184",fontSize:12,textDecoration:"line-through"}}>Harga normal {formatRupiah(item.price)}</span>
+        <div className="sules-service-price">{formatRupiah(item.finalPrice)}{homeService && <small>+ biaya perjalanan</small>}</div>
+        <span style={{color:"#7652A8",fontSize:11,fontWeight:800}}>Hemat {formatRupiah(item.promo.discount)}</span>
+      </div> : <div className="sules-service-price">{formatRupiah(item.price)}{homeService && <small>+ biaya perjalanan</small>}</div>}
+      {catalog && <span className="sules-service-price-caption">{item.promo?.discount > 0 ? "Harga promo" : "Harga paket"}</span>}
     </div>
     {homeService && !catalog && <p className="sules-service-meta sules-service-travel">Biaya perjalanan dihitung satu kali per booking.</p>}
     </div>
@@ -3142,7 +3149,11 @@ function ServicePackageList({ onBookPackage, compact = false, packages = SERVICE
     window.bookingService.getPackagePricingConfig().then(rows => { if (active) setPricingRows(rows); }).catch(() => {});
     return () => { active = false; };
   }, []);
-  const displayPackages = packages.map(item => ({ ...item, price: getPackagePrice(item, pricingRows) }));
+  const displayPackages = packages.map(item => {
+    const price = getPackagePrice(item, pricingRows);
+    const promo = getActivePackagePromo(item, pricingRows, price, localDateKey(new Date()));
+    return { ...item, price, promo, finalPrice: Math.max(0, price - promo.discount) };
+  });
   return <div className={compact ? "sules-service-rail" : "sules-catalog-grid"}>
     {displayPackages.map(item => <ServicePackageCard key={item.id} item={item} onBookPackage={onBookPackage} compact={compact} catalog={catalog} />)}
   </div>;
