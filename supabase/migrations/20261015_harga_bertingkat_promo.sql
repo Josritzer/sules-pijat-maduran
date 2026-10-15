@@ -76,6 +76,9 @@ ALTER TABLE public.bookings
       (final_total IS NULL AND subtotal IS NULL AND promo_discount IS NULL)
       OR (
         final_total IS NOT NULL AND subtotal IS NOT NULL AND promo_discount IS NOT NULL
+        AND package_price IS NOT NULL
+        AND travel_fee IS NOT NULL
+        AND subtotal = package_price + travel_fee
         AND promo_discount <= subtotal
         AND final_total = subtotal - promo_discount
         AND grand_total = final_total
