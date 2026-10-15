@@ -1513,7 +1513,7 @@
       const row = rows.find(item => item.package_key === id);
       if (!row || !bases[id]) return;
       const level = Math.max(1, Math.min(5, Number(row.active_level) || 1));
-      const price = bases[id] + level * (id === "home-90m-2" ? 20000 : 10000);
+      const price = bases[id] + (level - 1) * (id === "home-90m-2" ? 25000 : 12500);
       node.textContent = "Rp" + price.toLocaleString("id-ID");
       const promoActive = row.promo_type !== "none" && row.promo_start_date && row.promo_end_date && today >= row.promo_start_date && today <= row.promo_end_date;
       if (promoActive) {
