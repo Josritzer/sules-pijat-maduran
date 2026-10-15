@@ -1175,6 +1175,10 @@
   #root :not(button)[style*="24, 50, 75"],#root :not(button)[style*="24,50,75"] { color:#29294F !important; }
   #root :not(button)[style*="47, 111, 159"],#root :not(button)[style*="47,111,159"] { color:#4B4B9D !important; border-color:#D1C8E3 !important; }
   #root :not(button)[style*="249, 250, 251"],#root :not(button)[style*="249,250,251"] { background-color:#F8F4F8 !important; }
+  /* Progres booking: warna per status dikunci eksplisit agar normalisasi inline di atas tidak membuat teks langkah aktif tak terbaca (teks gelap di atas latar gelap). */
+  #root .sules-journey-step[data-state="current"] { color:#FFFFFF !important; background-color:#18324B !important; border-color:#18324B !important; }
+  #root .sules-journey-step[data-state="complete"] { color:#5946A0 !important; background-color:#F3EFF8 !important; border-color:#D8CDE7 !important; }
+  #root .sules-journey-step[data-state="upcoming"] { color:#686579 !important; background-color:#F8F4F8 !important; border-color:#D9E5EF !important; }
   #root :not(button)[style*="107, 114, 128"],#root :not(button)[style*="107,114,128"] { color:#686579 !important; }
   #root .sules-admin-dashboard button[style*="4, 120, 87"],#root .sules-admin-dashboard button[style*="4,120,87"] { color:#FFFFFF !important; background:linear-gradient(115deg,#4655B7,#7652B2) !important; border-color:#7652B2 !important; }
   #root .sules-admin-dashboard button[style*="21, 128, 61"],#root .sules-admin-dashboard button[style*="21,128,61"] { color:#FFFFFF !important; background:linear-gradient(115deg,#7652B2,#AD3F83) !important; border-color:#AD3F83 !important; }
@@ -1342,7 +1346,7 @@
       <ul class="public-list">
         <li>Paket di Sules dan Home Service tersedia dalam pilihan durasi 90 menit atau 2 jam.</li>
         <li>Paket Home Service untuk 2 orang tersedia dengan durasi layanan 90 menit.</li>
-        <li>Harga dasar Level 0 dan harga Level 1–5 mengikuti konfigurasi harga yang berlaku di aplikasi; biaya perjalanan Home Service dihitung terpisah.</li>
+        <li>Harga paket mengikuti daftar harga yang berlaku di aplikasi; biaya perjalanan Home Service dihitung terpisah.</li>
       </ul>
     </details>
     <details class="public-details"><summary>Bagaimana cara mengajukan booking?</summary><p>Masuk menggunakan email dan kode OTP, pilih satu dari lima paket, tentukan tanggal dan slot yang tersedia, lalu kirim permintaan. Untuk layanan ke Rumah, masukkan lokasi agar jarak jalan dan biaya perjalanan dapat dihitung.</p></details>
@@ -2690,7 +2694,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
 
         <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
           <div className="text-sm font-semibold mb-2">Rincian Biaya</div>
-          <div className="flex justify-between text-sm mb-1"><span>Harga paket{b.price_level != null ? ` · Level ${b.price_level}` : ""}</span><span>{formatRupiah(b.package_price ?? b.service_price)}</span></div>
+          <div className="flex justify-between text-sm mb-1"><span>Harga paket</span><span>{formatRupiah(b.package_price ?? b.service_price)}</span></div>
           <div className="flex justify-between text-sm mb-1"><span>Travel Fee</span><span>{formatRupiah(b.travel_fee)}</span></div>
           {b.subtotal != null && <div className="flex justify-between text-sm mb-1"><span>Subtotal</span><span>{formatRupiah(b.subtotal)}</span></div>}
           {Number(b.promo_discount) > 0 && <div className="flex justify-between text-sm mb-1 text-green-700"><span>Diskon harga ({b.promo_type === "percent" ? `${b.promo_value}%` : "nominal"})</span><span>−{formatRupiah(b.promo_discount)}</span></div>}
@@ -2779,9 +2783,9 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
             const step = index + 1;
             const complete = step < bookingJourneyStep;
             const current = step === bookingJourneyStep;
-            return <li key={label} aria-current={current ? "step" : undefined} className="rounded-full px-3 py-1 border"
+            return <li key={label} aria-current={current ? "step" : undefined} data-state={current ? "current" : complete ? "complete" : "upcoming"} className="sules-journey-step rounded-full px-3 py-1 border"
               style={{ backgroundColor:current?"#18324B":complete?"#ECFDF5":"#F9FAFB", color:current?"white":complete?"#065F46":"#6B7280", borderColor:current?"#18324B":complete?"#10B981":"#D9E5EF" }}>
-              {complete ? "✓ " : `${step}. `}{label}
+              {complete ? "✓ " : `${step}. `}{label || `Langkah ${step}`}
             </li>;
           })}
         </ol>
@@ -2902,7 +2906,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
           <div><span className="text-gray-600">Lokasi:</span> <strong>{paketTerpilih.location}</strong>{tipeLokasi === "HOME_SERVICE" && <span> · {alamatText.trim() || (lat !== null && lng !== null ? `Koordinat ${lat.toFixed(5)}, ${lng.toFixed(5)}` : "Lokasi belum dipilih")}</span>}</div>
         </div>
         <div className="flex justify-between text-sm mb-1">
-          <span>Harga paket · Level {Math.min(5, Math.max(0, Number(pricingRows.find(row => row.package_key === paketTerpilih.id)?.active_level) || 0))}</span>
+          <span>Harga paket</span>
           <span>{formatRupiah(biayaLayanan)}</span>
         </div>
         {tipeLokasi === "HOME_SERVICE" && jarak !== null && (
@@ -3706,7 +3710,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
           <div className="grid grid-cols-2 gap-3 mt-4 text-sm"><div><span className="text-gray-500 block text-xs">Tanggal</span>{booking.tanggal}</div><div><span className="text-gray-500 block text-xs">Waktu</span>{String(booking.jam_mulai).slice(0,5)}</div></div>
           <div className="text-sm text-gray-500 mt-3">{booking.tipe_lokasi === "HOME_SERVICE" ? "Ke Rumah" : "Di Sules"}</div>
           <div className="mt-3 pt-3 border-t border-gray-200 space-y-1 text-xs text-gray-600">
-            <div className="flex justify-between gap-2"><span>Harga paket{booking.price_level != null ? ` · Level ${booking.price_level}` : ""}</span><span>{formatRupiah(booking.package_price ?? booking.service_price)}</span></div>
+            <div className="flex justify-between gap-2"><span>Harga paket</span><span>{formatRupiah(booking.package_price ?? booking.service_price)}</span></div>
             <div className="flex justify-between gap-2"><span>Biaya perjalanan</span><span>{formatRupiah(booking.travel_fee)}</span></div>
             {booking.subtotal != null && <div className="flex justify-between gap-2"><span>Subtotal</span><span>{formatRupiah(booking.subtotal)}</span></div>}
             {Number(booking.promo_discount) > 0 && <div className="flex justify-between gap-2 text-green-700"><span>Diskon harga</span><span>−{formatRupiah(booking.promo_discount)}</span></div>}
@@ -3741,7 +3745,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
         <div className="grid grid-cols-2 gap-2 text-xs mb-2"><div><span className="text-gray-500 block">Tanggal</span>{row.tanggal}</div><div><span className="text-gray-500 block">Jam</span>{String(row.jam_mulai).slice(0,5)}</div></div>
         <div className="text-xs text-gray-600 mb-2">{row.tipe_lokasi === "HOME_SERVICE" ? "ke Rumah" : "Di Sules"} · {row.durasi_menit} menit</div>
         <div className="mt-2 text-xs text-gray-600 space-y-1">
-          <div>Harga paket{row.price_level != null ? ` · Level ${row.price_level}` : ""}: {formatRupiah(row.package_price ?? row.service_price)}</div>
+          <div>Harga paket: {formatRupiah(row.package_price ?? row.service_price)}</div>
           <div>Biaya perjalanan: {formatRupiah(row.travel_fee)}</div>
           {row.subtotal != null && <div>Subtotal: {formatRupiah(row.subtotal)}</div>}
           {Number(row.promo_discount) > 0 && <div className="text-green-700">Promo: −{formatRupiah(row.promo_discount)}</div>}
