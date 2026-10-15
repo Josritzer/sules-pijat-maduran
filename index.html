@@ -1569,7 +1569,7 @@ function getActivePackagePromo(item, configRows = [], packagePrice = 0, dateKey 
   const discount = config.promo_type === "percent"
     ? Math.min(basis, Math.round(basis * value / 100))
     : config.promo_type === "nominal" ? Math.min(basis, Math.round(value)) : 0;
-  return { type: config.promo_type, target, value, discount };
+  return { type: config.promo_type, target, value, discount, startDate: config.promo_start_date, endDate: config.promo_end_date };
 }
 
 const LAST_BOOKING_ID_KEY = "sules_last_booking_id"; // pointer nonrahasia; otorisasi tetap melalui session Supabase/RLS
@@ -3134,6 +3134,7 @@ function HomeDiscountBanner() {
             <div className="min-w-0">
               <p className="text-sm font-extrabold leading-snug">{item.label}</p>
               <p className="mt-1 text-xs text-gray-500">Harga normal <span className="line-through">{formatRupiah(price)}</span></p>
+              {promo.startDate && promo.endDate && <p className="mt-1 text-xs font-semibold" style={{color:"#8A6B2F"}}>Periode promo: {new Date(`${promo.startDate}T00:00:00`).toLocaleDateString("id-ID",{day:"numeric",month:"short"})}–{new Date(`${promo.endDate}T00:00:00`).toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"})}</p>}
             </div>
             <span className="shrink-0 rounded-lg px-2 py-1 text-sm font-black" style={{background:"#F2E5C8",color:"#72551D"}}>
               {promo.type === "percent" ? `-${promo.value}%` : `-${formatRupiah(promo.discount)}`}
