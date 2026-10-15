@@ -3137,8 +3137,24 @@ function HomeDiscountBanner() {
               <p className="mt-1 text-xs text-gray-500">Harga normal <span className="line-through">{formatRupiah(price)}</span></p>
               {promo.startDate && promo.endDate && <p className="mt-1 text-xs font-semibold" style={{color:"#8A6B2F"}}>Periode promo: {new Date(`${promo.startDate}T00:00:00`).toLocaleDateString("id-ID",{day:"numeric",month:"short"})}–{new Date(`${promo.endDate}T00:00:00`).toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"})}</p>}
             </div>
-            <span className="shrink-0 rounded-lg px-2 py-1 text-sm font-black" style={{background:"#F2E5C8",color:"#72551D"}}>
-              {promo.type === "percent" ? `-${promo.value}%` : `-${formatRupiah(promo.discount)}`}
+            <span className="shrink-0 inline-flex items-center justify-center" style={{width:"clamp(76px, 24vw, 112px)", aspectRatio:"1 / 1", position:"relative", filter:"drop-shadow(0 4px 3px rgba(20,12,35,.35))"}} aria-label={promo.type === "percent" ? String(promo.value) + "% OFF DISCOUNT" : "Hemat " + formatRupiah(promo.discount) + " DISCOUNT"}>
+              <svg viewBox="0 0 120 132" width="100%" height="100%" role="img" aria-label={promo.type === "percent" ? String(promo.value) + "% OFF DISCOUNT" : "Hemat " + formatRupiah(promo.discount) + " DISCOUNT"}>
+                <defs>
+                  <linearGradient id="slSealGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#FFF0A6"/><stop offset=".22" stopColor="#D4AF37"/><stop offset=".48" stopColor="#FFF1A8"/><stop offset=".72" stopColor="#B8860B"/><stop offset="1" stopColor="#F8DE79"/></linearGradient>
+                  <radialGradient id="slSealPurple" cx=".35" cy=".2" r=".9"><stop offset="0" stopColor="#6E3BB3"/><stop offset=".55" stopColor="#4A1E8A"/><stop offset="1" stopColor="#261047"/></radialGradient>
+                  <radialGradient id="slSealCenter" cx=".3" cy=".15" r=".95"><stop offset="0" stopColor="#FFF0A6"/><stop offset=".38" stopColor="#D4AF37"/><stop offset=".78" stopColor="#A87916"/><stop offset="1" stopColor="#F3D66F"/></radialGradient>
+                </defs>
+                <polygon points="60,4 68,14 80,8 84,21 98,19 98,33 111,39 104,51 115,61 104,71 111,84 98,90 98,104 84,102 80,115 68,109 60,120 52,109 40,115 36,102 22,104 22,90 9,84 16,71 5,61 16,51 9,39 22,33 22,19 36,21 40,8 52,14" fill="#4A1E8A" stroke="url(#slSealGold)" strokeWidth="5" strokeLinejoin="round"/>
+                <polygon points="60,13 67,22 78,17 82,29 94,28 93,40 104,45 98,55 107,62 98,70 104,81 93,86 94,98 82,97 78,109 67,104 60,113 53,104 42,109 38,97 26,98 27,86 16,81 22,70 13,62 22,55 16,45 27,40 26,28 38,29 42,17 53,22" fill="url(#slSealPurple)" stroke="#D4AF37" strokeWidth="1.5" strokeLinejoin="round"/>
+                <circle cx="60" cy="59" r="29" fill="url(#slSealCenter)" stroke="#FFF0A6" strokeWidth="2"/>
+                <circle cx="60" cy="59" r="24" fill="none" stroke="#8C6413" strokeWidth="1.5"/>
+                <text x="60" y="54" textAnchor="middle" fontSize={promo.type === "percent" ? (String(promo.value).length > 2 ? "17" : "21") : "13"} fontWeight="900" fill="#FFFDF4" stroke="#6A4510" strokeWidth=".6" paintOrder="stroke" style={{filter:"drop-shadow(0 1px 1px rgba(0,0,0,.65))"}}>{promo.type === "percent" ? String(promo.value) + "%" : formatRupiah(promo.discount)}</text>
+                <text x="60" y="75" textAnchor="middle" fontSize={promo.type === "percent" ? "21" : "17"} fontWeight="900" fill="#FFFDF4" stroke="#6A4510" strokeWidth=".6" paintOrder="stroke" style={{filter:"drop-shadow(0 1px 1px rgba(0,0,0,.65))"}}>{promo.type === "percent" ? "OFF" : "HEMAT"}</text>
+                <path d="M13 91 L30 94 L32 106 L17 116 L20 104 L8 100 Z M107 91 L90 94 L88 106 L103 116 L100 104 L112 100 Z" fill="url(#slSealGold)" stroke="#A87916" strokeWidth="1"/>
+                <path d="M18 88 L102 88 L110 99 L102 109 L18 109 L10 99 Z" fill="url(#slSealGold)" stroke="#8C6413" strokeWidth="1.5"/>
+                <path d="M20 91 H100" stroke="#FFF0A6" strokeWidth="1"/>
+                <text x="60" y="102" textAnchor="middle" fontFamily="Georgia, serif" fontSize="11.5" fontWeight="700" fill="#17110A">DISCOUNT</text>
+              </svg>
             </span>
           </div>
           <div className="mt-2 flex items-end justify-between gap-2">
