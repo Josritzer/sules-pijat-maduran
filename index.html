@@ -72,6 +72,30 @@
     return wrapped;
   }
 
+  async function getPackagePricingConfig() {
+    const { data, error } = await supabaseClient.from("package_pricing_config")
+      .select("package_key,active_level,promo_type,promo_value,promo_start_date,promo_end_date,updated_at")
+      .order("package_key");
+    if (error) throw error;
+    return data || [];
+  }
+  async function savePackagePricingConfig(packageKey, values) {
+    const { data, error } = await supabaseClient.from("package_pricing_config")
+      .update({
+        active_level: Number(values.active_level),
+        promo_type: values.promo_type,
+        promo_value: Number(values.promo_value || 0),
+        promo_start_date: values.promo_type === "none" ? null : values.promo_start_date,
+        promo_end_date: values.promo_type === "none" ? null : values.promo_end_date,
+        updated_at: new Date().toISOString()
+      })
+      .eq("package_key", packageKey)
+      .select("package_key,active_level,promo_type,promo_value,promo_start_date,promo_end_date")
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   async function createBooking({ serviceId, jumlahOrang, tanggal, jamMulai, tipeLokasi, alamat, lat, lng }) {
     const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
     if (sessionError) {
@@ -102,7 +126,7 @@
     const customerId = sessionData && sessionData.session && sessionData.session.user && sessionData.session.user.id;
     if (!customerId) return null;
     const { data, error } = await supabaseClient.from("bookings")
-      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
+      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,package_key,base_price,price_level,package_price,subtotal,promo_type,promo_value,promo_discount,final_total,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
       .eq("id", id)
       .eq("customer_id", customerId)
       .is("disembunyikan_pelanggan_at", null)
@@ -118,7 +142,7 @@
     }
     const start = Number.isInteger(offset) && offset >= 0 ? offset : 0;
     const { data, error } = await supabaseClient.from("bookings")
-      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
+      .select("id,service_id,jumlah_orang,tanggal,jam_mulai,durasi_menit,tipe_lokasi,alamat,package_key,base_price,price_level,package_price,subtotal,promo_type,promo_value,promo_discount,final_total,service_price,travel_fee,grand_total,status,catatan_penolakan,created_at,updated_at")
       .eq("customer_id", id)
       .is("disembunyikan_pelanggan_at", null)
       .order("created_at", { ascending: false })
@@ -467,7 +491,7 @@
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+  window.bookingService = { getPackagePricingConfig, savePackagePricingConfig, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -1285,9 +1309,9 @@
         </header>
         <aside class="sules-catalog-travel-note"><span>INFORMASI BIAYA PERJALANAN</span><p>Biaya perjalanan terpisah dari harga paket dan dihitung satu kali per booking, bukan per orang. 1.000 meter pertama gratis; selanjutnya mengikuti jarak jalan.</p></aside>
         <div class="package-grid sules-catalog-public-grid">
-          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">90 MENIT · KE RUMAH</p><h3>Pijat 90 Menit ke Rumah</h3><p class="public-muted">1 orang · layanan ke Rumah</p><div class="sules-catalog-public-price">Rp60.000 <small>+ biaya perjalanan</small></div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="home-90m-1" aria-label="Pilih paket Pijat 90 Menit ke Rumah">Pilih Paket</a></article>
-          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">120 MENIT · KE RUMAH</p><h3>Pijat 2 Jam ke Rumah</h3><p class="public-muted">1 orang · layanan ke Rumah</p><div class="sules-catalog-public-price">Rp80.000 <small>+ biaya perjalanan</small></div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="home-120m-1" aria-label="Pilih paket Pijat 2 Jam ke Rumah">Pilih Paket</a></article>
-          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">180 MENIT TOTAL · KE RUMAH</p><h3>Pijat 2 Orang ke Rumah</h3><p class="public-muted">2 orang · 90 menit per orang, berurutan</p><div class="sules-catalog-public-price">Rp120.000 <small>+ biaya perjalanan</small></div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="home-90m-2" aria-label="Pilih paket Pijat 2 Orang ke Rumah">Pilih Paket</a></article>
+          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">90 MENIT · KE RUMAH</p><h3>Pijat 90 Menit ke Rumah</h3><p class="public-muted">1 orang · layanan ke Rumah</p><div class="sules-catalog-public-price"><span data-sules-price-key="home-90m-1">Rp60.000</span> <small>+ biaya perjalanan</small></div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="home-90m-1" aria-label="Pilih paket Pijat 90 Menit ke Rumah">Pilih Paket</a></article>
+          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">120 MENIT · KE RUMAH</p><h3>Pijat 2 Jam ke Rumah</h3><p class="public-muted">1 orang · layanan ke Rumah</p><div class="sules-catalog-public-price"><span data-sules-price-key="home-120m-1">Rp80.000</span> <small>+ biaya perjalanan</small></div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="home-120m-1" aria-label="Pilih paket Pijat 2 Jam ke Rumah">Pilih Paket</a></article>
+          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">180 MENIT TOTAL · KE RUMAH</p><h3>Pijat 2 Orang ke Rumah</h3><p class="public-muted">2 orang · 90 menit per orang, berurutan</p><div class="sules-catalog-public-price"><span data-sules-price-key="home-90m-2">Rp120.000</span> <small>+ biaya perjalanan</small></div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="home-90m-2" aria-label="Pilih paket Pijat 2 Orang ke Rumah">Pilih Paket</a></article>
         </div>
       </section>
       <section class="sules-catalog-group sules-catalog-group-public-place" aria-labelledby="public-catalog-place-title">
@@ -1296,8 +1320,8 @@
           <span class="sules-catalog-group-count">2 paket</span>
         </header>
         <div class="package-grid sules-catalog-public-grid">
-          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">90 MENIT · DI SULES</p><h3>Pijat 90 Menit</h3><p class="public-muted">1 orang · layanan di tempat</p><div class="sules-catalog-public-price">Rp60.000</div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="sules-90m-1" aria-label="Pilih paket Pijat 90 Menit">Pilih Paket</a></article>
-          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">120 MENIT · DI SULES</p><h3>Pijat 2 Jam</h3><p class="public-muted">1 orang · layanan di tempat</p><div class="sules-catalog-public-price">Rp80.000</div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="sules-120m-1" aria-label="Pilih paket Pijat 2 Jam">Pilih Paket</a></article>
+          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">90 MENIT · DI SULES</p><h3>Pijat 90 Menit</h3><p class="public-muted">1 orang · layanan di tempat</p><div class="sules-catalog-public-price"><span data-sules-price-key="sules-90m-1">Rp60.000</span></div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="sules-90m-1" aria-label="Pilih paket Pijat 90 Menit">Pilih Paket</a></article>
+          <article class="public-card sules-catalog-public-card"><p class="public-eyebrow">120 MENIT · DI SULES</p><h3>Pijat 2 Jam</h3><p class="public-muted">1 orang · layanan di tempat</p><div class="sules-catalog-public-price"><span data-sules-price-key="sules-120m-1">Rp80.000</span></div><a class="public-button secondary sules-public-package-button" href="#booking-app" data-sules-package-id="sules-120m-1" aria-label="Pilih paket Pijat 2 Jam">Pilih Paket</a></article>
         </div>
       </section>
     </div>
@@ -1475,6 +1499,33 @@
   });
 })();
 </script>
+<script>
+(async function loadPublicTieredPrices() {
+  try {
+    if (!window.bookingService || typeof window.bookingService.getPackagePricingConfig !== "function") return;
+    const rows = await window.bookingService.getPackagePricingConfig();
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+    const part = type => parts.find(item => item.type === type)?.value || "";
+    const today = part("year") + "-" + part("month") + "-" + part("day");
+    const bases = { "sules-90m-1":60000, "sules-120m-1":80000, "home-90m-1":60000, "home-120m-1":80000, "home-90m-2":120000 };
+    document.querySelectorAll("[data-sules-price-key]").forEach(node => {
+      const id = node.getAttribute("data-sules-price-key");
+      const row = rows.find(item => item.package_key === id);
+      if (!row || !bases[id]) return;
+      const level = Math.max(1, Math.min(5, Number(row.active_level) || 1));
+      const price = bases[id] + (level - 1) * (id === "home-90m-2" ? 25000 : 12500);
+      node.textContent = "Rp" + price.toLocaleString("id-ID");
+      const promoActive = row.promo_type !== "none" && row.promo_start_date && row.promo_end_date && today >= row.promo_start_date && today <= row.promo_end_date;
+      if (promoActive) {
+        const note = document.createElement("small");
+        note.textContent = row.promo_type === "percent" ? " · Promo " + row.promo_value + "%" : " · Promo potongan harga";
+        note.setAttribute("aria-label", "Promo aktif");
+        node.parentElement.appendChild(note);
+      }
+    });
+  } catch (_) { /* fallback: show verified base prices if config is temporarily unavailable */ }
+})();
+</script>
 <footer class="public-footer">© SULES PIJAT MADURAN · <a href="#syarat-ketentuan">Syarat</a> · <a href="#kebijakan-privasi">Privasi</a> · <a href="#kontak">Kontak</a><span class="public-social-links"><a class="public-social-link" href="https://www.facebook.com/share/1DHCpxtGmC/" target="_blank" rel="noopener noreferrer" aria-label="Facebook SULES PIJAT MADURAN"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073c0 6.019 4.388 11.019 10.125 11.926v-8.437H7.078v-3.489h3.047V9.414c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.953h-1.513c-1.491 0-1.956.93-1.956 1.885v2.262h3.328l-.532 3.489h-2.796v8.437C19.612 23.092 24 18.092 24 12.073z"/></svg></a><a class="public-social-link" href="https://www.instagram.com/sulesmaduran/" target="_blank" rel="noopener noreferrer" aria-label="Instagram SULES PIJAT MADURAN"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></svg></a><a class="public-social-link" href="https://vm.tiktok.com/ZS9DxyhqUxShb-3vgHc/" target="_blank" rel="noopener noreferrer" aria-label="TikTok SULES PIJAT MADURAN"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.9 2.9 0 0 1-2.9 2.9 2.9 2.9 0 0 1-2.9-2.9 2.9 2.9 0 0 1 2.9-2.9c.3 0 .6.05.88.14V9.38a6.3 6.3 0 0 0-.88-.06 6.36 6.36 0 1 0 6.36 6.36V8.72a8.24 8.24 0 0 0 4.82 1.55V6.82a4.85 4.85 0 0 1-1.06-.13z"/></svg></a></span></footer>
 
 <script type="text/babel">
@@ -1498,6 +1549,24 @@ const SERVICE_PACKAGES = [
   { id: "home-120m-1", label: "Pijat 2 Jam ke Rumah", location: "ke Rumah", serviceId: "120m", people: 1, type: "HOME_SERVICE", price: 80000 },
   { id: "home-90m-2", label: "Pijat 2 Orang ke Rumah", location: "ke Rumah", serviceId: "90m", people: 2, type: "HOME_SERVICE", price: 120000 }
 ];
+function getPackagePrice(item, configRows = []) {
+  const config = configRows.find(row => row.package_key === item.id);
+  const level = Math.min(5, Math.max(1, Number(config && config.active_level) || 1));
+  return Number(item.price) + (level - 1) * (item.id === "home-90m-2" ? 25000 : 12500);
+}
+function getActivePackagePromo(item, configRows = [], subtotal = 0, dateKey = localDateKey(new Date())) {
+  const config = configRows.find(row => row.package_key === item.id);
+  if (!config || config.promo_type === "none" || !config.promo_start_date || !config.promo_end_date ||
+      dateKey < config.promo_start_date || dateKey > config.promo_end_date) {
+    return { type: "none", value: 0, discount: 0 };
+  }
+  const value = Math.max(0, Number(config.promo_value) || 0);
+  const discount = config.promo_type === "percent"
+    ? Math.min(subtotal, Math.round(subtotal * value / 100))
+    : config.promo_type === "nominal" ? Math.min(subtotal, Math.round(value)) : 0;
+  return { type: config.promo_type, value, discount };
+}
+
 const LAST_BOOKING_ID_KEY = "sules_last_booking_id"; // pointer nonrahasia; otorisasi tetap melalui session Supabase/RLS
 try { localStorage.removeItem("sules_last_booking_token"); } catch (_) {} // hapus token booking lama dari browser yang sudah pernah menyimpannya
 
@@ -1734,6 +1803,8 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileReloadKey, setProfileReloadKey] = useState(0);
   const [paketId, setPaketId] = useState(initialPackageId);
+  const [pricingRows, setPricingRows] = useState([]);
+  useEffect(() => { let active = true; window.bookingService.getPackagePricingConfig().then(rows => { if (active) setPricingRows(rows); }).catch(() => {}); return () => { active = false; }; }, []);
   const paketTerpilih = SERVICE_PACKAGES.find(p => p.id === paketId) || SERVICE_PACKAGES[0];
   const layanan = paketTerpilih.serviceId;
   const orang = paketTerpilih.people;
@@ -2254,9 +2325,11 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
     setLoadingJarak(false);
   };
 
-  const transport = tipeLokasi === "HOME_SERVICE" && jarak !== null ? hitungTransport(jarak) : 0;
-  const biayaLayanan = HARGA[layanan] * orang;
-  const total = biayaLayanan + transport;
+  const transport = tipeLokasi === "HOME_SERVICE" && jarak !== null ? Math.round(hitungTransport(jarak)) : 0;
+  const biayaLayanan = getPackagePrice(paketTerpilih, pricingRows);
+  const subtotalEstimasi = biayaLayanan + transport;
+  const promoEstimasi = getActivePackagePromo(paketTerpilih, pricingRows, subtotalEstimasi, tanggal || localDateKey(new Date()));
+  const total = Math.max(0, subtotalEstimasi - promoEstimasi.discount);
   const detailBookingSiap = tipeLokasi !== "HOME_SERVICE" || (lat !== null && lng !== null && jarak !== null && sumberJarak === "road");
   const bookingJourneyStep = !tanggal ? 2 : !jam ? 3 : !detailBookingSiap ? 4 : 5;
   const bookingJourneyLabels = ["Layanan", "Tanggal", "Waktu", "Lokasi", "Kirim"];
@@ -2293,6 +2366,9 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       setCurrentBooking({
         booking_id: result.booking_id,
         layanan, orang, tanggal, jam, tipeLokasi, alamat: alamatText,
+        package_key: result.package_key, base_price: result.base_price, price_level: result.price_level,
+        package_price: result.package_price, subtotal: result.subtotal, promo_type: result.promo_type,
+        promo_value: result.promo_value, promo_discount: result.promo_discount, final_total: result.final_total,
         service_price: result.service_price, travel_fee: result.travel_fee,
         grand_total: result.grand_total, status: result.status
       });
@@ -2608,9 +2684,11 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
 
         <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
           <div className="text-sm font-semibold mb-2">Rincian Biaya</div>
-          <div className="flex justify-between text-sm mb-1"><span>Harga Layanan</span><span>{formatRupiah(b.service_price)}</span></div>
+          <div className="flex justify-between text-sm mb-1"><span>Harga paket{b.price_level ? ` · Level ${b.price_level}` : ""}</span><span>{formatRupiah(b.package_price ?? b.service_price)}</span></div>
           <div className="flex justify-between text-sm mb-1"><span>Travel Fee</span><span>{formatRupiah(b.travel_fee)}</span></div>
-          <div className="flex justify-between font-bold text-base mt-2 pt-2 border-t border-gray-200"><span>Total</span><span>{formatRupiah(b.grand_total)}</span></div>
+          {b.subtotal != null && <div className="flex justify-between text-sm mb-1"><span>Subtotal</span><span>{formatRupiah(b.subtotal)}</span></div>}
+          {Number(b.promo_discount) > 0 && <div className="flex justify-between text-sm mb-1 text-green-700"><span>Promo ({b.promo_type === "percent" ? `${b.promo_value}%` : "nominal"})</span><span>−{formatRupiah(b.promo_discount)}</span></div>}
+          <div className="flex justify-between font-bold text-base mt-2 pt-2 border-t border-gray-200"><span>Total</span><span>{formatRupiah(b.final_total ?? b.grand_total)}</span></div>
         </div>
 
         {typeof onGoToOrders === "function" && <button type="button" onClick={onGoToOrders}
@@ -2712,7 +2790,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
               style={{ backgroundColor: paketId === p.id ? "#18324B" : "white", color: paketId === p.id ? "white" : "#18324B", border: paketId === p.id ? "2px solid #2F6F9F" : "1px solid #D1D5DB", borderRadius:"12px", padding:"12px", textAlign:"left" }}>
               <span className="block font-semibold text-sm">{p.label}</span>
               <span className="block text-xs opacity-80 mt-1">{p.location} · {p.people} orang</span>
-              <span className="block text-sm font-bold mt-2">{formatRupiah(p.price)}{p.type === "HOME_SERVICE" ? " + travel" : ""}</span>
+              <span className="block text-sm font-bold mt-2">{formatRupiah(getPackagePrice(p, pricingRows))}{p.type === "HOME_SERVICE" ? " + travel" : ""}</span>
             </button>
           ))}
         </div>
@@ -2818,7 +2896,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
           <div><span className="text-gray-600">Lokasi:</span> <strong>{paketTerpilih.location}</strong>{tipeLokasi === "HOME_SERVICE" && <span> · {alamatText.trim() || (lat !== null && lng !== null ? `Koordinat ${lat.toFixed(5)}, ${lng.toFixed(5)}` : "Lokasi belum dipilih")}</span>}</div>
         </div>
         <div className="flex justify-between text-sm mb-1">
-          <span>Layanan: {tipeLokasi === "HOME_SERVICE" && layanan === "90m" && orang === 2 ? "180 Menit total (90 Menit per orang)" : `${layanan === "90m" ? "90 Menit" : "2 Jam"} x ${orang}`}</span>
+          <span>Harga paket · Level {Math.min(5, Math.max(1, Number(pricingRows.find(row => row.package_key === paketTerpilih.id)?.active_level) || 1))}</span>
           <span>{formatRupiah(biayaLayanan)}</span>
         </div>
         {tipeLokasi === "HOME_SERVICE" && jarak !== null && (
@@ -2832,10 +2910,13 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
             <span>{jarak !== null && sumberJarak === "road" ? formatRupiah(transport) : "Belum dihitung"}</span>
           </div>
         )}
+        <div className="flex justify-between text-sm mb-1"><span>Subtotal</span><span>{formatRupiah(subtotalEstimasi)}</span></div>
+        {promoEstimasi.discount > 0 && <div className="flex justify-between text-sm mb-1 text-green-700"><span>Promo {promoEstimasi.type === "percent" ? `(${promoEstimasi.value}%)` : "(potongan rupiah)"}</span><span>−{formatRupiah(promoEstimasi.discount)}</span></div>}
         <div className="flex justify-between font-bold text-base mt-2 pt-2 border-t border-gray-200">
-          <span>{tipeLokasi === "HOME_SERVICE" && (jarak === null || sumberJarak !== "road") ? "TOTAL (belum termasuk transport)" : "TOTAL"}</span>
+          <span>{tipeLokasi === "HOME_SERVICE" && (jarak === null || sumberJarak !== "road") ? "TOTAL (belum termasuk transport)" : "TOTAL ESTIMASI"}</span>
           <span className="sules-price">{formatRupiah(total)}</span>
         </div>
+        <p className="text-xs text-gray-500 mt-1">Harga final dihitung dan dikonfirmasi oleh server saat booking dikirim.</p>
         <p className="text-xs text-gray-600 mt-3">Setelah dikirim, status awal booking adalah MENUNGGU. Admin akan memproses booking Anda.</p>
       </div>
 
@@ -2988,8 +3069,15 @@ function ServicePackageCard({ item, onBookPackage, compact = false, catalog = fa
 }
 
 function ServicePackageList({ onBookPackage, compact = false, packages = SERVICE_PACKAGES, catalog = false }) {
+  const [pricingRows, setPricingRows] = useState([]);
+  useEffect(() => {
+    let active = true;
+    window.bookingService.getPackagePricingConfig().then(rows => { if (active) setPricingRows(rows); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+  const displayPackages = packages.map(item => ({ ...item, price: getPackagePrice(item, pricingRows) }));
   return <div className={compact ? "sules-service-rail" : "sules-catalog-grid"}>
-    {packages.map(item => <ServicePackageCard key={item.id} item={item} onBookPackage={onBookPackage} compact={compact} catalog={catalog} />)}
+    {displayPackages.map(item => <ServicePackageCard key={item.id} item={item} onBookPackage={onBookPackage} compact={compact} catalog={catalog} />)}
   </div>;
 }
 
@@ -3546,7 +3634,13 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
           <div className="flex items-start justify-between gap-2"><strong className="text-base">{SERVICE_LABEL[booking.service_id] || booking.service_id} · {booking.jumlah_orang} orang</strong><StatusBadge status={booking.status} /></div>
           <div className="grid grid-cols-2 gap-3 mt-4 text-sm"><div><span className="text-gray-500 block text-xs">Tanggal</span>{booking.tanggal}</div><div><span className="text-gray-500 block text-xs">Waktu</span>{String(booking.jam_mulai).slice(0,5)}</div></div>
           <div className="text-sm text-gray-500 mt-3">{booking.tipe_lokasi === "HOME_SERVICE" ? "Ke Rumah" : "Di Sules"}</div>
-          <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-gray-200"><span className="text-xs text-gray-500">TOTAL</span><strong className="sules-price">{formatRupiah(booking.grand_total)}</strong></div>
+          <div className="mt-3 pt-3 border-t border-gray-200 space-y-1 text-xs text-gray-600">
+            <div className="flex justify-between gap-2"><span>Harga paket{booking.price_level ? ` · Level ${booking.price_level}` : ""}</span><span>{formatRupiah(booking.package_price ?? booking.service_price)}</span></div>
+            <div className="flex justify-between gap-2"><span>Biaya perjalanan</span><span>{formatRupiah(booking.travel_fee)}</span></div>
+            {booking.subtotal != null && <div className="flex justify-between gap-2"><span>Subtotal</span><span>{formatRupiah(booking.subtotal)}</span></div>}
+            {Number(booking.promo_discount) > 0 && <div className="flex justify-between gap-2 text-green-700"><span>Promo</span><span>−{formatRupiah(booking.promo_discount)}</span></div>}
+          </div>
+          <div className="flex items-center justify-between gap-3 mt-2 pt-2 border-t border-gray-200"><span className="text-xs text-gray-500">TOTAL</span><strong className="sules-price">{formatRupiah(booking.final_total ?? booking.grand_total)}</strong></div>
         </div>}
         {sessionError && <div className="sules-home-error" role="alert"><div>{sessionError}</div><button type="button" onClick={retryCustomerSessionCheck}>Coba lagi</button></div>}
       </section>
@@ -3575,7 +3669,13 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
         <div className="flex items-start justify-between gap-2 mb-2"><strong>{SERVICE_LABEL[row.service_id] || row.service_id} · {row.jumlah_orang} orang</strong><div className="flex items-center gap-2"><StatusBadge status={row.status} />{view === "history" && (row.status === "SELESAI" || row.status === "DITOLAK") && <button type="button" aria-label={hidingBookingId === row.id ? "Menyembunyikan dari riwayat" : "Sembunyikan dari riwayat"} title={hidingBookingId === row.id ? "Sedang memproses" : "Sembunyikan dari riwayat"} aria-busy={hidingBookingId === row.id} disabled={Boolean(hidingBookingId)} onClick={() => void hideHistoryBooking(row)} className="rounded-full border border-gray-300 text-gray-500 hover:text-red-700 hover:border-red-300 disabled:opacity-50" style={{ width: 28, height: 28, lineHeight: "24px", fontSize: 18 }}>{hidingBookingId === row.id ? "…" : "×"}</button>}</div></div>
         <div className="grid grid-cols-2 gap-2 text-xs mb-2"><div><span className="text-gray-500 block">Tanggal</span>{row.tanggal}</div><div><span className="text-gray-500 block">Jam</span>{String(row.jam_mulai).slice(0,5)}</div></div>
         <div className="text-xs text-gray-600 mb-2">{row.tipe_lokasi === "HOME_SERVICE" ? "ke Rumah" : "Di Sules"} · {row.durasi_menit} menit</div>
-        <div className="text-sm font-bold">Total: {formatRupiah(row.grand_total)}</div>
+        <div className="mt-2 text-xs text-gray-600 space-y-1">
+          <div>Harga paket{row.price_level ? ` · Level ${row.price_level}` : ""}: {formatRupiah(row.package_price ?? row.service_price)}</div>
+          <div>Biaya perjalanan: {formatRupiah(row.travel_fee)}</div>
+          {row.subtotal != null && <div>Subtotal: {formatRupiah(row.subtotal)}</div>}
+          {Number(row.promo_discount) > 0 && <div className="text-green-700">Promo: −{formatRupiah(row.promo_discount)}</div>}
+        </div>
+        <div className="text-sm font-bold mt-2">Total: {formatRupiah(row.final_total ?? row.grand_total)}</div>
         {row.status === "DITOLAK" && row.catatan_penolakan && <p className="text-xs text-gray-600 mt-2">Catatan Admin: {row.catatan_penolakan}</p>}
         {row.status === "DITOLAK" && <button onClick={onGoToBooking} className="sules-primary mt-3 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{backgroundColor:"#18324B"}}>BOOKING LAGI</button>}
         {shouldShowGoogleReview(row.status) && <a href="https://g.page/r/CWXCZycYzhXqEBE/review" target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", backgroundColor:"white", border:"1px solid #2F6F9F", color:"#18324B", borderRadius:"12px", padding:"10px", fontWeight:"bold" }} className="mt-3 text-sm">⭐ Beri Penilaian di Google Maps</a>}
@@ -3661,6 +3761,78 @@ function SesiAdminPanel() {
     </div>
   );
 }
+function PackagePricingAdminPanel() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [savingKey, setSavingKey] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const load = async () => {
+    setLoading(true); setError("");
+    try { setRows(await window.bookingService.getPackagePricingConfig()); }
+    catch (e) { setError(e.message || "Konfigurasi harga belum dapat dimuat."); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+  const edit = (key, field, value) => setRows(current => current.map(row => {
+    if (row.package_key !== key) return row;
+    if (field === "promo_type" && value === "none") return { ...row, promo_type: "none", promo_value: 0, promo_start_date: null, promo_end_date: null };
+    if (field === "promo_type" && value !== "none" && row.promo_type === "none") return { ...row, promo_type: value, promo_value: value === "percent" ? 10 : 10000, promo_start_date: localDateKey(new Date()), promo_end_date: localDateKey(new Date()) };
+    return { ...row, [field]: value };
+  }));
+  const save = async (row) => {
+    setSavingKey(row.package_key); setMessage(""); setError("");
+    try {
+      const saved = await window.bookingService.savePackagePricingConfig(row.package_key, row);
+      setRows(current => current.map(item => item.package_key === row.package_key ? { ...item, ...saved } : item));
+      setMessage("Konfigurasi " + (SERVICE_PACKAGES.find(p => p.id === row.package_key)?.label || row.package_key) + " tersimpan.");
+    } catch (e) { setError(e.message || "Gagal menyimpan konfigurasi. Periksa jenis promo dan tanggal berlaku."); }
+    finally { setSavingKey(""); }
+  };
+  return <section className="bg-white rounded-2xl p-4 border border-gray-200 mb-4">
+    <div className="flex items-start justify-between gap-3 mb-3">
+      <div><div className="text-xs font-bold tracking-wider text-blue-700">PENGATURAN KOMERSIAL</div><h2 className="text-lg font-bold mt-1">Harga Bertingkat & Promo</h2><p className="text-xs text-gray-500 mt-1">Perubahan berlaku untuk booking baru. Riwayat harga lama tetap.</p></div>
+      <button type="button" onClick={load} disabled={loading} className="text-sm underline">Muat ulang</button>
+    </div>
+    {loading && <p role="status" className="text-sm text-gray-500">Memuat konfigurasi…</p>}
+    {error && <p role="alert" className="text-sm text-red-700 bg-red-50 rounded-lg p-2 mb-2">{error}</p>}
+    {message && <p role="status" className="text-sm text-green-800 bg-green-50 rounded-lg p-2 mb-2">{message}</p>}
+    <div className="space-y-3">
+      {rows.map(row => {
+        const item = SERVICE_PACKAGES.find(p => p.id === row.package_key);
+        if (!item) return null;
+        const price = getPackagePrice(item, rows);
+        return <div key={row.package_key} className="rounded-xl border border-gray-200 p-3">
+          <div className="font-semibold text-sm">{item.label}</div>
+          <div className="text-xs text-gray-500 mb-3">Harga paket saat ini: <strong>{formatRupiah(price)}</strong>{item.id === "home-90m-2" ? " · kenaikan Rp25.000 per level setelah Level 1" : " · kenaikan Rp12.500 per level setelah Level 1"}</div>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs font-semibold">Level aktif
+              <select value={row.active_level} onChange={e=>edit(row.package_key,"active_level",Number(e.target.value))} className="block w-full border rounded-lg p-2 mt-1 text-sm">
+                {[1,2,3,4,5].map(level=><option key={level} value={level}>Level {level}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-semibold">Jenis promo
+              <select value={row.promo_type} onChange={e=>edit(row.package_key,"promo_type",e.target.value)} className="block w-full border rounded-lg p-2 mt-1 text-sm">
+                <option value="none">Tanpa promo</option><option value="percent">Persentase</option><option value="nominal">Potongan rupiah</option>
+              </select>
+            </label>
+            {row.promo_type !== "none" && <label className="text-xs font-semibold col-span-2">{row.promo_type === "percent" ? "Diskon (%)" : "Diskon (Rp)"}
+              {row.promo_type === "percent" ? <select value={row.promo_value} onChange={e=>edit(row.package_key,"promo_value",Number(e.target.value))} className="block w-full border rounded-lg p-2 mt-1 text-sm">
+                {[5,10,15,20,25,30].map(value=><option key={value} value={value}>{value}%</option>)}
+              </select> : <input type="number" min="1" step="1" value={row.promo_value} onChange={e=>edit(row.package_key,"promo_value",e.target.value)} className="block w-full border rounded-lg p-2 mt-1 text-sm" />}
+            </label>}
+            {row.promo_type !== "none" && <>
+              <label className="text-xs font-semibold">Mulai promo<input type="date" value={row.promo_start_date || ""} onChange={e=>edit(row.package_key,"promo_start_date",e.target.value)} className="block w-full border rounded-lg p-2 mt-1 text-sm" /></label>
+              <label className="text-xs font-semibold">Akhir promo<input type="date" value={row.promo_end_date || ""} onChange={e=>edit(row.package_key,"promo_end_date",e.target.value)} className="block w-full border rounded-lg p-2 mt-1 text-sm" /></label>
+            </>}
+          </div>
+          <button type="button" onClick={()=>save(row)} disabled={savingKey === row.package_key} className="sules-primary w-full mt-3">{savingKey === row.package_key ? "Menyimpan…" : "Simpan pengaturan paket"}</button>
+        </div>;
+      })}
+    </div>
+  </section>;
+}
+
 function AdminTab({ onExitToApp }) {
   const [loggedIn, setLoggedIn] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -3940,7 +4112,7 @@ function AdminTab({ onExitToApp }) {
   };
 
   const exportCSV = () => {
-    const header = ["id","nama","wa","service_id","jumlah_orang","tanggal","jam_mulai","tipe_lokasi","alamat","lat","lng","jarak_meter","service_price","travel_fee","grand_total","status","created_at"];
+    const header = ["id","nama","wa","service_id","jumlah_orang","tanggal","jam_mulai","tipe_lokasi","alamat","lat","lng","jarak_meter","package_key","base_price","price_level","package_price","service_price","travel_fee","subtotal","promo_type","promo_value","promo_discount","final_total","grand_total","status","created_at"];
     const rows = bookings.map(b => header.map(h => `"${(b[h] ?? "").toString().replace(/"/g,'""')}"`).join(","));
     const csv = [header.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -3973,8 +4145,11 @@ function AdminTab({ onExitToApp }) {
           {b.tipe_lokasi === "HOME_SERVICE" && b.alamat && <div className="text-xs text-gray-600">Alamat: {b.alamat}</div>}
           {maps && <a href={maps} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline inline-block">🗺️ Buka Google Maps</a>}
           <div className="text-xs text-gray-600 pt-1">
-            <div>Harga layanan: {formatRupiah(b.service_price)}</div>
+            <div>Harga paket{b.price_level ? ` · Level ${b.price_level}` : ""}: {formatRupiah(b.package_price ?? b.service_price)}</div>
             <div>Travel fee: {formatRupiah(b.travel_fee)}</div>
+            {b.subtotal != null && <div>Subtotal: {formatRupiah(b.subtotal)}</div>}
+            {Number(b.promo_discount) > 0 && <div>Promo ({b.promo_type === "percent" ? `${b.promo_value}%` : "nominal"}): −{formatRupiah(b.promo_discount)}</div>}
+            {b.final_total != null && <div className="font-semibold">Total final: {formatRupiah(b.final_total)}</div>}
           </div>
         </div>
 
@@ -4008,6 +4183,7 @@ function AdminTab({ onExitToApp }) {
       <div className="sules-admin-dashboard pb-8">
 
       <SesiAdminPanel />
+      <PackagePricingAdminPanel />
 
       <div className="bg-white rounded-xl p-3 border border-gray-200 mb-3">
         <label htmlFor="dashboard-period" className="text-sm font-semibold block mb-1">Periode Dashboard</label>
