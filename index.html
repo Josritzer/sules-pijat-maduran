@@ -3065,7 +3065,7 @@ function ServicePackageCard({ item, onBookPackage, compact = false, catalog = fa
     <h3>{item.label}</h3>
     <p className="sules-service-meta">{item.people} orang{paket5 ? " · 90 Menit per orang, berurutan" : ""} · {homeService ? "Layanan ke Rumah" : "Layanan di tempat Sules"}</p>
     <div className="sules-service-price-block">
-      <div className="sules-service-price">{formatRupiah(item.price)}{homeService && <small>+ biaya perjalanan</small>}</div>
+      <div className="sules-service-price">{formatRupiah(getBasePackagePrice(item))}{homeService && <small>+ biaya perjalanan</small>}</div>
       {catalog && <span className="sules-service-price-caption">Harga paket</span>}
     </div>
     {homeService && !catalog && <p className="sules-service-meta sules-service-travel">Biaya perjalanan dihitung satu kali per booking.</p>}
