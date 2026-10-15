@@ -70,6 +70,16 @@ ALTER TABLE public.bookings
       (promo_discount IS NULL OR promo_discount >= 0) AND
       (final_total IS NULL OR final_total >= 0) AND
       (promo_value IS NULL OR promo_value >= 0)
+    ),
+  ADD CONSTRAINT bookings_price_totals_consistent_check
+    CHECK (
+      (final_total IS NULL AND subtotal IS NULL AND promo_discount IS NULL)
+      OR (
+        final_total IS NOT NULL AND subtotal IS NOT NULL AND promo_discount IS NOT NULL
+        AND promo_discount <= subtotal
+        AND final_total = subtotal - promo_discount
+        AND grand_total = final_total
+      )
     );
 
 CREATE OR REPLACE FUNCTION public.create_booking_server(
@@ -148,10 +158,10 @@ BEGIN
 
   SELECT * INTO v_config FROM public.package_pricing_config WHERE package_key = v_package_key;
   v_level := coalesce(v_config.active_level, 1);
-  -- Base price is not Level 1: Level 1 adds 10,000 (standard packages) or 20,000 (2-person package).
-  -- Level 5 therefore reaches 110,000 / 130,000 / 110,000 / 130,000 / 220,000.
-  v_package_price := v_base_price + v_level *
-    CASE WHEN v_package_key = 'home-90m-2' THEN 20000 ELSE 10000 END;
+  -- Level 1 is the base price. Levels 2-5 add 12,500 per level (standard packages)
+  -- or 25,000 per level (2-person package), reaching the approved Level 5 targets.
+  v_package_price := v_base_price + (v_level - 1) *
+    CASE WHEN v_package_key = 'home-90m-2' THEN 25000 ELSE 12500 END;
 
   v_durasi_menit := CASE
     WHEN p_tipe_lokasi = 'HOME_SERVICE' AND p_service_id = '90m' AND p_jumlah_orang = 2 THEN 180
@@ -274,5 +284,5 @@ BEGIN
 END;
 $legacy$;
 
-REVOKE ALL ON FUNCTION public.create_booking(text,text,text,smallint,date,time without time zone,public.tipe_lokasi,text,double precision,double precision,numeric) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.create_booking(text,text,text,smallint,date,time without time zone,public.tipe_lokasi,text,double precision,double precision,numeric) TO authenticated;
+REVOKE ALL ON FUNCTION public.create_booking(text,text,text,smallint,date,time without time zone,public.tipe_lokasi,text,double precision,double precision,numeric) FROM PUBLIC, anon, authenticated;
+-- Booking creation remains exclusively on the authenticated Edge Function -> service_role path.
