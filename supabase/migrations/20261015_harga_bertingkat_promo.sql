@@ -250,6 +250,82 @@ $function$;
 REVOKE ALL ON FUNCTION public.create_booking_server(uuid,text,text,text,smallint,date,time without time zone,public.tipe_lokasi,text,double precision,double precision,numeric) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_booking_server(uuid,text,text,text,smallint,date,time without time zone,public.tipe_lokasi,text,double precision,double precision,numeric) TO service_role;
 
+-- Expand Admin booking RPC result columns so the UI can show immutable pricing snapshots.
+-- PostgreSQL cannot change a TABLE-returning function's row type with CREATE OR REPLACE.
+DROP FUNCTION IF EXISTS public.list_bookings_admin(public.booking_status);
+DROP FUNCTION IF EXISTS public.list_bookings_admin_period(date, date, public.booking_status);
+
+CREATE FUNCTION public.list_bookings_admin(p_status public.booking_status DEFAULT NULL)
+RETURNS TABLE(
+  id uuid, nama text, wa text, service_id text, jumlah_orang smallint,
+  tanggal date, jam_mulai time without time zone, tipe_lokasi public.tipe_lokasi,
+  alamat text, lat double precision, lng double precision, jarak_meter numeric,
+  package_key text, base_price numeric, price_level smallint, package_price numeric,
+  subtotal numeric, promo_type text, promo_value numeric, promo_discount numeric,
+  final_total numeric, service_price numeric, travel_fee numeric, grand_total numeric,
+  status public.booking_status, created_at timestamptz
+)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'public'
+AS $admin$
+BEGIN
+  IF public.is_admin() IS DISTINCT FROM TRUE THEN
+    RAISE EXCEPTION 'Hanya admin yang boleh melihat daftar booking';
+  END IF;
+  RETURN QUERY
+    SELECT b.id, coalesce(b.nama_pelanggan, c.nama), coalesce(b.wa_pelanggan, c.wa),
+      b.service_id, b.jumlah_orang, b.tanggal, b.jam_mulai, b.tipe_lokasi,
+      b.alamat, b.lat, b.lng, b.jarak_meter,
+      b.package_key, b.base_price, b.price_level, b.package_price, b.subtotal,
+      b.promo_type, b.promo_value, b.promo_discount, b.final_total,
+      b.service_price, b.travel_fee, b.grand_total, b.status, b.created_at
+    FROM public.bookings b
+    JOIN public.customers c ON c.id = b.customer_id
+    WHERE p_status IS NULL OR b.status = p_status
+    ORDER BY b.created_at DESC;
+END;
+$admin$;
+
+CREATE FUNCTION public.list_bookings_admin_period(
+  p_start_date date, p_end_date date, p_status public.booking_status DEFAULT NULL
+)
+RETURNS TABLE(
+  id uuid, nama text, wa text, service_id text, jumlah_orang smallint,
+  tanggal date, jam_mulai time without time zone, tipe_lokasi public.tipe_lokasi,
+  alamat text, lat double precision, lng double precision, jarak_meter numeric,
+  package_key text, base_price numeric, price_level smallint, package_price numeric,
+  subtotal numeric, promo_type text, promo_value numeric, promo_discount numeric,
+  final_total numeric, service_price numeric, travel_fee numeric, grand_total numeric,
+  status public.booking_status, created_at timestamptz
+)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'public'
+AS $admin_period$
+BEGIN
+  IF public.is_admin() IS DISTINCT FROM TRUE THEN
+    RAISE EXCEPTION 'Hanya admin yang boleh melihat daftar booking';
+  END IF;
+  IF p_start_date IS NULL OR p_end_date IS NULL OR p_start_date > p_end_date THEN
+    RAISE EXCEPTION 'Rentang tanggal tidak valid';
+  END IF;
+  RETURN QUERY
+    SELECT b.id, coalesce(b.nama_pelanggan, c.nama), coalesce(b.wa_pelanggan, c.wa),
+      b.service_id, b.jumlah_orang, b.tanggal, b.jam_mulai, b.tipe_lokasi,
+      b.alamat, b.lat, b.lng, b.jarak_meter,
+      b.package_key, b.base_price, b.price_level, b.package_price, b.subtotal,
+      b.promo_type, b.promo_value, b.promo_discount, b.final_total,
+      b.service_price, b.travel_fee, b.grand_total, b.status, b.created_at
+    FROM public.bookings b
+    JOIN public.customers c ON c.id = b.customer_id
+    WHERE b.tanggal BETWEEN p_start_date AND p_end_date
+      AND (p_status IS NULL OR b.status = p_status)
+    ORDER BY b.created_at DESC;
+END;
+$admin_period$;
+
+REVOKE ALL ON FUNCTION public.list_bookings_admin(public.booking_status) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.list_bookings_admin(public.booking_status) TO authenticated;
+REVOKE ALL ON FUNCTION public.list_bookings_admin_period(date, date, public.booking_status) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.list_bookings_admin_period(date, date, public.booking_status) TO authenticated;
+
  
 -- Keep the legacy authenticated RPC aligned with the same authoritative price engine.
 -- The Edge Function calls create_booking_server only after calculating Google Routes distance.
