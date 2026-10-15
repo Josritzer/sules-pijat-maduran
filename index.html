@@ -1256,25 +1256,20 @@
   /* Banner diskon beranda: tombol "+ N paket diskon lainnya" + panel expand/collapse */
   .sules-discount-more-wrap { display:block; }
   #root button.sules-discount-more-btn {
-    display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:46px; padding:10px 16px;
-    border:1.5px solid #C6A86A !important; border-radius:999px !important;
-    background:rgba(198,168,106,.10) !important; color:#F2E5C8 !important;
+    display:flex; align-items:center; justify-content:center; gap:6px; width:100%; min-height:36px; padding:8px 4px;
+    border:0 !important; border-radius:0 !important;
+    background:transparent !important; color:#E5D0A0 !important;
     font-size:13px; font-weight:800; line-height:1.25; text-align:center; cursor:pointer;
     -webkit-tap-highlight-color:transparent;
-    transition:background-color .18s ease,border-color .18s ease,color .18s ease,transform .12s ease,box-shadow .18s ease;
+    transition:color .18s ease;
   }
   #root button.sules-discount-more-btn .sules-discount-more-label { text-decoration:none !important; }
   #root button.sules-discount-more-btn .sules-discount-more-chevron { flex:0 0 auto; transition:transform .3s ease; }
   #root button.sules-discount-more-btn[aria-expanded="true"] .sules-discount-more-chevron { transform:rotate(180deg); }
-  #root button.sules-discount-more-btn[aria-expanded="true"] { background:rgba(198,168,106,.18) !important; border-color:#E2C98E !important; }
   @media (hover:hover) {
-    #root button.sules-discount-more-btn:hover:not(:disabled) {
-      background:rgba(198,168,106,.22) !important; border-color:#E2C98E !important; color:#FFFDF7 !important; box-shadow:0 4px 14px rgba(198,168,106,.18);
-    }
+    #root button.sules-discount-more-btn:hover:not(:disabled) { color:#FFFDF7 !important; }
   }
-  #root button.sules-discount-more-btn:active:not(:disabled) {
-    background:rgba(198,168,106,.30) !important; border-color:#E2C98E !important; color:#FFFDF7 !important; transform:scale(.975); box-shadow:none;
-  }
+  #root button.sules-discount-more-btn:active:not(:disabled) { color:#FFFDF7 !important; }
   #root button.sules-discount-more-btn:focus-visible { outline:3px solid rgba(226,201,142,.55); outline-offset:3px; }
   .sules-discount-more {
     display:grid; grid-template-rows:0fr; opacity:0; visibility:hidden;
