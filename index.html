@@ -2692,7 +2692,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
           <div className="flex justify-between text-sm mb-1"><span>Harga paket{b.price_level != null ? ` · Level ${b.price_level}` : ""}</span><span>{formatRupiah(b.package_price ?? b.service_price)}</span></div>
           <div className="flex justify-between text-sm mb-1"><span>Travel Fee</span><span>{formatRupiah(b.travel_fee)}</span></div>
           {b.subtotal != null && <div className="flex justify-between text-sm mb-1"><span>Subtotal</span><span>{formatRupiah(b.subtotal)}</span></div>}
-          {Number(b.promo_discount) > 0 && <div className="flex justify-between text-sm mb-1 text-green-700"><span>Promo ({b.promo_type === "percent" ? `${b.promo_value}%` : "nominal"})</span><span>−{formatRupiah(b.promo_discount)}</span></div>}
+          {Number(b.promo_discount) > 0 && <div className="flex justify-between text-sm mb-1 text-green-700"><span>Diskon harga ({b.promo_type === "percent" ? `${b.promo_value}%` : "nominal"})</span><span>−{formatRupiah(b.promo_discount)}</span></div>}
           <div className="flex justify-between font-bold text-base mt-2 pt-2 border-t border-gray-200"><span>Total</span><span>{formatRupiah(b.final_total ?? b.grand_total)}</span></div>
         </div>
 
@@ -2916,7 +2916,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
           </div>
         )}
         <div className="flex justify-between text-sm mb-1"><span>Subtotal</span><span>{formatRupiah(subtotalEstimasi)}</span></div>
-        {promoEstimasi.discount > 0 && <div className="flex justify-between text-sm mb-1 text-green-700"><span>Promo {promoEstimasi.type === "percent" ? `(${promoEstimasi.value}%)` : "(potongan rupiah)"}</span><span>−{formatRupiah(promoEstimasi.discount)}</span></div>}
+        {promoEstimasi.discount > 0 && <div className="flex justify-between text-sm mb-1 text-green-700"><span>Diskon harga {promoEstimasi.type === "percent" ? `(${promoEstimasi.value}%)` : "(potongan rupiah)"}</span><span>−{formatRupiah(promoEstimasi.discount)}</span></div>}
         <div className="flex justify-between font-bold text-base mt-2 pt-2 border-t border-gray-200">
           <span>{tipeLokasi === "HOME_SERVICE" && (jarak === null || sumberJarak !== "road") ? "TOTAL (belum termasuk transport)" : "TOTAL ESTIMASI"}</span>
           <span className="sules-price">{formatRupiah(total)}</span>
@@ -3104,6 +3104,55 @@ function CatalogPackageGroup({ id, number, kicker, title, subtitle, packages, tr
   </section>;
 }
 
+function HomeDiscountBanner() {
+  const [pricingRows, setPricingRows] = useState([]);
+  useEffect(() => {
+    let active = true;
+    window.bookingService.getPackagePricingConfig()
+      .then(rows => { if (active) setPricingRows(Array.isArray(rows) ? rows : []); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+  const today = localDateKey(new Date());
+  const activeDiscounts = SERVICE_PACKAGES.map(item => {
+    const price = getPackagePrice(item, pricingRows);
+    const promo = getActivePackagePromo(item, pricingRows, price, today);
+    return { item, price, promo, finalPrice: Math.max(0, price - promo.discount) };
+  }).filter(row => row.promo.discount > 0);
+  if (!activeDiscounts.length) return null;
+  return <section aria-label="Diskon harga aktif" className="mx-4 mt-4 mb-2 overflow-hidden rounded-2xl border-2 border-amber-300 shadow-lg" style={{background:"linear-gradient(135deg,#18324B 0%,#234F70 62%,#2F6F9F 100%)",color:"#fff"}}>
+    <div className="px-4 pt-4 pb-3" style={{background:"radial-gradient(circle at 100% 0%,rgba(255,208,92,.28),transparent 42%)"}}>
+      <div className="flex items-center gap-2">
+        <span aria-hidden="true" className="inline-flex items-center justify-center rounded-full px-2 py-1 text-xs font-black tracking-wide" style={{background:"#FFD166",color:"#18324B"}}>HEMAT</span>
+        <p className="text-xs font-extrabold tracking-widest" style={{color:"#FFE6A3"}}>DISKON HARGA AKTIF</p>
+      </div>
+      <h2 className="mt-2 text-2xl font-black leading-tight">Lebih rileks, lebih hemat.</h2>
+      <p className="mt-1 text-sm" style={{color:"#EAF4FF"}}>Potongan harga langsung terlihat sebelum Anda memesan.</p>
+    </div>
+    <div className="px-3 pb-3 space-y-2">
+      {activeDiscounts.slice(0, 3).map(({item, price, promo, finalPrice}) => (
+        <div key={item.id} className="rounded-xl p-3" style={{background:"#fff",color:"#18324B"}}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-extrabold leading-snug">{item.label}</p>
+              <p className="mt-1 text-xs text-gray-500">Harga normal <span className="line-through">{formatRupiah(price)}</span></p>
+            </div>
+            <span className="shrink-0 rounded-lg px-2 py-1 text-sm font-black" style={{background:"#FFF0C2",color:"#8A4B00"}}>
+              {promo.type === "percent" ? `-${promo.value}%` : `-${formatRupiah(promo.discount)}`}
+            </span>
+          </div>
+          <div className="mt-2 flex items-end justify-between gap-2">
+            <div><p className="text-xs font-bold" style={{color:"#13804A"}}>HARGA SETELAH DISKON</p><p className="text-xl font-black" style={{color:"#13804A"}}>{formatRupiah(finalPrice)}</p></div>
+            <p className="text-xs font-extrabold" style={{color:"#13804A"}}>Hemat {formatRupiah(promo.discount)}</p>
+          </div>
+        </div>
+      ))}
+      {activeDiscounts.length > 3 && <p className="text-center text-xs font-semibold" style={{color:"#EAF4FF"}}>+ {activeDiscounts.length - 3} paket diskon lainnya tersedia</p>}
+      <p className="px-1 text-xs" style={{color:"#EAF4FF"}}>Diskon berlaku pada harga paket selama periode promo. Biaya perjalanan Home Service dihitung terpisah.</p>
+    </div>
+  </section>;
+}
+
 function HomeBrandHero({ onGoToBooking, onGoToCatalog }) {
   return <React.Fragment>
     <section className="sules-home-hero" aria-labelledby="sules-home-hero-title">
@@ -3127,6 +3176,7 @@ function HomeBrandHero({ onGoToBooking, onGoToCatalog }) {
       <div><span>PILIHAN LAYANAN</span><strong>Di Sules · ke Rumah</strong></div>
       <div><span>JAM LAYANAN</span><strong>08.00–15.00 · 19.00–24.00</strong></div>
     </section>
+    <HomeDiscountBanner />
   </React.Fragment>;
 }
 
@@ -3643,7 +3693,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
             <div className="flex justify-between gap-2"><span>Harga paket{booking.price_level != null ? ` · Level ${booking.price_level}` : ""}</span><span>{formatRupiah(booking.package_price ?? booking.service_price)}</span></div>
             <div className="flex justify-between gap-2"><span>Biaya perjalanan</span><span>{formatRupiah(booking.travel_fee)}</span></div>
             {booking.subtotal != null && <div className="flex justify-between gap-2"><span>Subtotal</span><span>{formatRupiah(booking.subtotal)}</span></div>}
-            {Number(booking.promo_discount) > 0 && <div className="flex justify-between gap-2 text-green-700"><span>Promo</span><span>−{formatRupiah(booking.promo_discount)}</span></div>}
+            {Number(booking.promo_discount) > 0 && <div className="flex justify-between gap-2 text-green-700"><span>Diskon harga</span><span>−{formatRupiah(booking.promo_discount)}</span></div>}
           </div>
           <div className="flex items-center justify-between gap-3 mt-2 pt-2 border-t border-gray-200"><span className="text-xs text-gray-500">TOTAL</span><strong className="sules-price">{formatRupiah(booking.final_total ?? booking.grand_total)}</strong></div>
         </div>}
