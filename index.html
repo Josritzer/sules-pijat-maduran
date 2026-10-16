@@ -1294,10 +1294,10 @@
   .sules-promo-carousel-viewport { display:grid; grid-template-columns:minmax(0,1fr); position:relative; overflow:hidden; }
   .sules-promo-carousel-item { grid-area:1 / 1; min-width:0; align-self:stretch; }
   .sules-promo-carousel-card { min-height:204px; height:100%; box-sizing:border-box; }
-  .sules-promo-in-left { animation:sulesPromoInLeft 500ms cubic-bezier(.22,.72,.2,1) both; }
-  .sules-promo-out-left { animation:sulesPromoOutLeft 500ms cubic-bezier(.22,.72,.2,1) both; }
-  .sules-promo-in-up { animation:sulesPromoInUp 500ms cubic-bezier(.22,.72,.2,1) both; }
-  .sules-promo-out-up { animation:sulesPromoOutUp 500ms cubic-bezier(.22,.72,.2,1) both; }
+  .sules-promo-in-left { animation:sulesPromoInLeft 900ms cubic-bezier(.22,.72,.2,1) both; }
+  .sules-promo-out-left { animation:sulesPromoOutLeft 900ms cubic-bezier(.22,.72,.2,1) both; }
+  .sules-promo-in-up { animation:sulesPromoInUp 900ms cubic-bezier(.22,.72,.2,1) both; }
+  .sules-promo-out-up { animation:sulesPromoOutUp 900ms cubic-bezier(.22,.72,.2,1) both; }
   @keyframes sulesPromoInLeft { from { transform:translateX(100%); opacity:.35; } to { transform:translateX(0); opacity:1; } }
   @keyframes sulesPromoOutLeft { from { transform:translateX(0); opacity:1; } to { transform:translateX(-100%); opacity:.35; } }
   @keyframes sulesPromoInUp { from { transform:translateY(100%); opacity:.35; } to { transform:translateY(0); opacity:1; } }
@@ -3313,7 +3313,7 @@ function HomeDiscountBanner() {
       setCarousel(current => current.transition
         ? { index: current.transition.to, transition: null }
         : current);
-    }, 500);
+    }, 900);
     return () => window.clearTimeout(timer);
   }, [carousel.transition]);
 
