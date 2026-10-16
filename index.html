@@ -1068,6 +1068,15 @@
   .sules-home-info-links button { display:inline-flex; align-items:center; gap:5px; min-height:40px; padding:7px 2px; border:0; color:var(--home-forest); background:transparent; font-size:12px; font-weight:700; }
   .sules-home-info-links button:hover { color:#8B713C; }
   .sules-home-info-label { margin-right:5px; }
+  .sules-announcement-marquee { display:flex; align-items:center; gap:0; min-width:0; overflow:hidden; padding:10px 0; border:1px solid #E2C36B; border-radius:12px; color:#FFF9E8; background:linear-gradient(105deg,#102541,#183B60 58%,#102541); box-shadow:0 5px 14px rgba(13,27,51,.12); }
+  .sules-announcement-label { flex:0 0 auto; padding:0 12px; color:#E7D5A4; font-size:10px; font-weight:850; letter-spacing:.1em; white-space:nowrap; }
+  .sules-announcement-viewport { flex:1 1 auto; min-width:0; overflow:hidden; }
+  .sules-announcement-track { display:flex; width:max-content; animation:sules-announcement-scroll 24s linear infinite; will-change:transform; }
+  .sules-announcement-copy { display:flex; flex:0 0 auto; align-items:center; gap:30px; padding-right:30px; }
+  .sules-announcement-item { display:inline-flex; align-items:center; gap:9px; color:#FFF9E8; font-size:12px; font-weight:650; line-height:1.4; white-space:nowrap; }
+  .sules-announcement-item::before { content:"✦"; color:#E7D5A4; font-size:11px; }
+  @keyframes sules-announcement-scroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+  @media (prefers-reduced-motion:reduce) { .sules-announcement-track { animation:none; transform:none; } .sules-announcement-viewport { overflow-x:auto; } }
   @media (max-width:600px) {
     .sules-home-screen { gap:22px; padding:5px; border-radius:19px; }
     .sules-home-hero { grid-template-columns:minmax(0,1fr); gap:18px; min-height:0; padding:25px 20px 21px; border-radius:22px; }
@@ -1795,14 +1804,26 @@ function useSesiStatus() {
 function SesiBanner({ sesi, className = "" }) {
   const daftar = ["pagi", "malam"].filter(k => sesiTutupAktif(sesi && sesi[k])).map(k => ({ k, ...normalisasiSesi(sesi[k]) }));
   if (!daftar.length) return null;
-  return <div role="status" className={className}>
-    {daftar.map(s => (
-      <div key={s.k} data-sesi-banner={s.k} style={{ backgroundColor:"#FEF3C7", border:"1px solid #F59E0B", color:"#92400E", borderRadius:"12px", padding:"10px 12px", marginBottom:"8px", fontSize:"13px" }}>
-        <div className="font-semibold">{s.k === "pagi" ? "☀️" : "🌙"} Sesi {SESI_NAMA[s.k]} tutup{s.sampai ? ` sampai ${formatTanggalSesi(s.sampai)}` : " untuk sementara"}</div>
-        {s.sampai && <div>Booking tersedia lagi mulai {formatTanggalSesi(new Date(new Date(s.sampai + "T00:00:00Z").getTime() + 86400000).toISOString().slice(0, 10))}.</div>}
-        {s.pesan && <div className="mt-1">{s.pesan}</div>}
+  const pesan = daftar.map(s => {
+    const nama = s.k === "pagi" ? "Siang" : "Malam";
+    const tutup = s.sampai ? `Sesi ${nama} tutup sampai ${formatTanggalSesi(s.sampai)}.` : `Sesi ${nama} tutup sementara.`;
+    const buka = s.sampai
+      ? `Booking tersedia lagi mulai ${formatTanggalSesi(new Date(new Date(s.sampai + "T00:00:00Z").getTime() + 86400000).toISOString().slice(0, 10))}.`
+      : "";
+    return [tutup, buka, s.pesan].filter(Boolean).join(" ");
+  }).join("  •  ");
+  const salinan = Array.from({ length: 3 }, () => pesan).join("  •  ");
+  const buatIsi = () => <div className="sules-announcement-copy">{salinan.split("  •  ").map((item, i) => <span className="sules-announcement-item" key={i}>{item}</span>)}</div>;
+  return <div className={className}>
+    <div role="status" aria-label={pesan} className="sules-announcement-marquee" data-sesi-announcement="true">
+      <span className="sules-announcement-label">INFO</span>
+      <div className="sules-announcement-viewport">
+        <div className="sules-announcement-track">
+          {buatIsi()}
+          <div className="sules-announcement-copy" aria-hidden="true">{salinan.split("  •  ").map((item, i) => <span className="sules-announcement-item" key={i}>{item}</span>)}</div>
+        </div>
       </div>
-    ))}
+    </div>
   </div>;
 }
 function HomeSesiBanner() {
