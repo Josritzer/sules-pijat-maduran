@@ -3358,7 +3358,7 @@ function HomeBookingTutorial({ onGoToCatalog }) {
             <h2>{slide.title}</h2>
             <p className="sules-tutorial-description">{slide.text}</p>
           </div>
-          <span className="sules-tutorial-count" aria-label={`Slide ${index + 1} dari ${slides.length}`}>{(index % slides.length) + 1}/{slides.length}</span>
+          <span className="sules-tutorial-count" aria-label={`Slide ${(index % slides.length) + 1} dari ${slides.length}`}>{(index % slides.length) + 1}/{slides.length}</span>
         </article>)}
       </div>
     </div>
