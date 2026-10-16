@@ -3217,8 +3217,10 @@ function CatalogPackageGroup({ id, number, kicker, title, subtitle, packages, tr
   </section>;
 }
 
-function DiscountCard({ item, price, promo, finalPrice }) {
-  return <div className="sules-promo-carousel-card rounded-xl p-3" style={{background:"#fff",color:"#18324B"}}>
+function DiscountCard({ item, price, promo, finalPrice, colorIndex = 0 }) {
+  const cardBackgrounds = ["#EAF2FF", "#F1E8FF", "#FFF0E2", "#FCE8F1", "#E5F4F1"];
+  const cardBackground = cardBackgrounds[colorIndex % cardBackgrounds.length];
+  return <div className="sules-promo-carousel-card rounded-xl p-3" style={{background:cardBackground,color:"#18324B"}}>
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
         <p className="text-sm font-extrabold leading-snug">{item.label}</p>
@@ -3321,7 +3323,7 @@ function HomeDiscountBanner() {
   const current = activeDiscounts[carousel.index] || activeDiscounts[0];
   const next = carousel.transition ? activeDiscounts[carousel.transition.to] : null;
   const direction = carousel.transition && carousel.transition.direction;
-  const renderPromo = row => <DiscountCard item={row.item} price={row.price} promo={row.promo} finalPrice={row.finalPrice} />;
+  const renderPromo = (row, colorIndex) => <DiscountCard item={row.item} price={row.price} promo={row.promo} finalPrice={row.finalPrice} colorIndex={colorIndex} />;
 
   return <section aria-label="Diskon harga aktif" className="mx-4 mt-4 mb-2 overflow-hidden rounded-2xl border shadow-lg" style={{borderColor:"#C6A86A",background:"linear-gradient(135deg,#101827 0%,#18263B 58%,#24334A 100%)",color:"#FFFDF7"}}>
     <div className="px-4 pt-4 pb-3" style={{background:"radial-gradient(circle at 100% 0%,rgba(198,168,106,.24),transparent 46%)"}}>
@@ -3333,10 +3335,10 @@ function HomeDiscountBanner() {
     <div className="px-3 pb-3">
       <div className="sules-promo-carousel-viewport" aria-label={`Promo ${carousel.index + 1} dari ${activeDiscounts.length}`} aria-live="polite" aria-atomic="true">
         <div key={current.item.id} className={`sules-promo-carousel-item${direction ? ` sules-promo-out-${direction}` : ""}`}>
-          {renderPromo(current)}
+          {renderPromo(current, carousel.index)}
         </div>
         {next && <div key={next.item.id} className={`sules-promo-carousel-item sules-promo-in-${direction}`}>
-          {renderPromo(next)}
+          {renderPromo(next, carousel.transition.to)}
         </div>}
       </div>
       {activeDiscounts.length > 1 && <p className="pt-2 text-center text-xs font-bold tracking-wide" style={{color:"#E5D0A0"}}>{carousel.index + 1} / {activeDiscounts.length}</p>}
