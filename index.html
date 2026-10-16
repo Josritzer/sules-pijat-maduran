@@ -615,8 +615,8 @@
 /* SL Relax tutorial: compact horizontal ticker card */
 .sules-booking-tutorial{box-sizing:border-box;width:calc(100% - 32px);max-width:520px;max-height:120px;margin:10px auto 4px;padding:8px 12px 12px;border:1px solid #dbe4f3;border-radius:16px;background:#fff;box-shadow:0 4px 14px rgba(30,55,100,.07);color:#20294a;overflow:hidden}
 .sules-tutorial-viewport{width:100%;height:100%;max-height:98px;overflow:hidden;touch-action:pan-y;overscroll-behavior-x:contain}
-.sules-tutorial-track{display:flex;width:400%;align-items:stretch;will-change:transform;transition:transform 400ms ease-in-out}
-.sules-tutorial-panel{position:relative;display:flex;align-items:center;gap:9px;flex:0 0 25%;width:25%;min-width:0;box-sizing:border-box;padding:2px 1px}
+.sules-tutorial-track{display:flex;width:500%;align-items:stretch;will-change:transform;transition:transform 400ms ease-in-out}
+.sules-tutorial-panel{position:relative;display:flex;align-items:center;gap:9px;flex:0 0 20%;width:20%;min-width:0;box-sizing:border-box;padding:2px 1px}
 .sules-tutorial-icon{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border:1px solid #e1e7ff;border-radius:11px;background:linear-gradient(145deg,#edf1ff,#fff);color:#4338a8}
 .sules-tutorial-icon svg{width:20px;height:20px}
 .sules-tutorial-copy{flex:1;min-width:0;padding-right:29px}
@@ -3300,6 +3300,7 @@ function HomeDiscountBanner() {
 
 function HomeBookingTutorial({ onGoToCatalog }) {
   const [activeSlide, setActiveSlide] = useState(0);
+  const [isResetting, setIsResetting] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(() => Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches));
   const touchStartX = useRef(null);
   const slides = [
@@ -3326,7 +3327,7 @@ function HomeBookingTutorial({ onGoToCatalog }) {
     const start = () => {
       stop();
       if (document.visibilityState !== "visible") return;
-      timer = window.setInterval(() => setActiveSlide(current => (current + 1) % slides.length), 3000);
+      timer = window.setInterval(() => setActiveSlide(current => current < slides.length ? current + 1 : 0), 3000);
     };
     start();
     document.addEventListener("visibilitychange", start);
@@ -3338,7 +3339,7 @@ function HomeBookingTutorial({ onGoToCatalog }) {
   const endSwipe = event => {
     if (touchStartX.current === null || !event.changedTouches || !event.changedTouches[0]) return;
     const delta = event.changedTouches[0].clientX - touchStartX.current;
-    if (Math.abs(delta) > 42) setActiveSlide(current => (current + (delta < 0 ? 1 : -1) + slides.length) % slides.length);
+    if (Math.abs(delta) > 42) setActiveSlide(current => (current % slides.length + (delta < 0 ? 1 : -1) + slides.length) % slides.length);
     touchStartX.current = null;
   };
   const paths = {
@@ -3349,15 +3350,15 @@ function HomeBookingTutorial({ onGoToCatalog }) {
   };
   return <section className="sules-booking-tutorial" aria-label="Tutorial booking">
     <div className="sules-tutorial-viewport" onTouchStart={startSwipe} onTouchEnd={endSwipe}>
-      <div className="sules-tutorial-track" style={{ transform: `translateX(-${activeSlide * 25}%)`, transitionDuration: reducedMotion ? "0ms" : undefined }}>
-        {slides.map((slide, index) => <article className="sules-tutorial-panel" key={slide.icon} aria-hidden={index !== activeSlide}>
+      <div className="sules-tutorial-track" onTransitionEnd={() => { if (activeSlide === slides.length && !isResetting) { setIsResetting(true); setActiveSlide(0); window.setTimeout(() => setIsResetting(false), 20); } }} style={{ transform: `translateX(-${activeSlide * 20}%)`, transitionDuration: reducedMotion || isResetting ? "0ms" : undefined }}>
+        {[...slides, slides[0]].map((slide, index) => <article className="sules-tutorial-panel" key={`${slide.icon}-${index}`} aria-hidden={index !== activeSlide}>
           <div className="sules-tutorial-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{paths[slide.icon]}</svg></div>
           <div className="sules-tutorial-copy">
             <p className="sules-tutorial-eyebrow">PANDUAN SL RELAX</p>
             <h2>{slide.title}</h2>
             <p className="sules-tutorial-description">{slide.text}</p>
           </div>
-          <span className="sules-tutorial-count" aria-label={`Slide ${index + 1} dari ${slides.length}`}>{index + 1}/{slides.length}</span>
+          <span className="sules-tutorial-count" aria-label={`Slide ${index + 1} dari ${slides.length}`}>{(index % slides.length) + 1}/{slides.length}</span>
         </article>)}
       </div>
     </div>
