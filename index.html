@@ -3285,10 +3285,14 @@ function HomeDiscountBanner() {
   }).filter(row => row.promo.discount > 0);
 
   useEffect(() => {
-    if (carousel.index >= activeDiscounts.length) {
-      setCarousel({ index: 0, transition: null });
-    }
-  }, [activeDiscounts.length, carousel.index]);
+    setCarousel(current => {
+      const targetOutOfRange = current.transition && current.transition.to >= activeDiscounts.length;
+      const indexOutOfRange = activeDiscounts.length === 0
+        ? current.index !== 0 || !!current.transition
+        : current.index >= activeDiscounts.length;
+      return indexOutOfRange || targetOutOfRange ? { index: 0, transition: null } : current;
+    });
+  }, [activeDiscounts.length]);
 
   useEffect(() => {
     if (activeDiscounts.length <= 1) return undefined;
