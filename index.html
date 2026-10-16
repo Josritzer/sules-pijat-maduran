@@ -611,6 +611,26 @@
     #kontak .appreciation-copy-button { gap:4px; min-width:66px; padding:0 8px; font-size:12px; }
     #kontak .appreciation-copy-button svg { width:15px; height:15px; flex-basis:15px; }
   }
+
+/* Home booking tutorial carousel */
+.sules-booking-tutorial{margin:12px 16px 4px;padding:16px 16px 12px;border:1px solid #dce5f0;border-radius:20px;background:linear-gradient(125deg,#fff 0%,#f5f7ff 58%,#fdf6ff 100%);box-shadow:0 8px 22px rgba(24,50,75,.08);color:#18324b;overflow:hidden;touch-action:pan-y}
+.sules-tutorial-content{display:flex;align-items:center;gap:13px;min-height:88px}
+.sules-tutorial-icon{display:grid;place-items:center;flex:0 0 54px;width:54px;height:54px;border-radius:17px;background:linear-gradient(145deg,#e9e8ff,#f8e8f7);color:#6841a5}
+.sules-tutorial-icon svg{width:29px;height:29px}
+.sules-tutorial-copy{flex:1;min-width:0}
+.sules-tutorial-eyebrow{margin:0 0 4px;font-size:9px;font-weight:800;letter-spacing:.15em;color:#76629a}
+.sules-tutorial-copy h2{margin:0;color:#18324b;font-size:15px;line-height:1.3;font-weight:850}
+.sules-tutorial-description{margin:5px 0 0;color:#526276;font-size:12px;line-height:1.5}
+.sules-tutorial-action{display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:0;border:0;background:none;color:#6841a5;font-size:12px;font-weight:800;cursor:pointer}
+.sules-tutorial-action span{font-size:19px;line-height:12px}
+.sules-tutorial-count{flex:0 0 auto;align-self:flex-start;padding:5px 7px;border-radius:9px;background:#ece8f8;color:#6841a5;font-size:11px;font-weight:850;font-variant-numeric:tabular-nums}
+.sules-tutorial-progress{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:10px}
+.sules-tutorial-dot{width:6px;height:6px;padding:0;border:0;border-radius:99px;background:#c8cbd8;cursor:pointer;transition:width .2s ease,background-color .2s ease}
+.sules-tutorial-dot.is-active{width:20px;background:#6841a5}
+.sules-tutorial-dot:focus-visible,.sules-tutorial-action:focus-visible{outline:2px solid #6841a5;outline-offset:3px}
+@media(min-width:640px){.sules-booking-tutorial{max-width:720px;margin:14px auto 6px;padding:18px 22px 13px}.sules-tutorial-content{min-height:82px}.sules-tutorial-copy h2{font-size:16px}}
+@media(prefers-reduced-motion:reduce){.sules-tutorial-dot{transition:none}}
+
 </style>
 <style>
   :root {
@@ -3282,6 +3302,57 @@ function HomeDiscountBanner() {
   </section>;
 }
 
+function HomeBookingTutorial({ onGoToCatalog }) {
+  const [activeSlide, setActiveSlide] = useState(0);
+  const touchStartX = useRef(null);
+  const reducedMotion = useRef(false);
+  const slides = [
+    { title: "Tutorial Booking", text: "Lihat semua langkah", icon: "guide", action: true },
+    { title: "Pilih Paket Pijat", text: "1. Pilih paket dan durasi pijat yang diinginkan.", icon: "massage" },
+    { title: "Google Maps & Jadwal", text: "2. Pastikan titik lokasi Home Service akurat di peta, lalu pilih tanggal dan jam yang tersedia.", icon: "map" },
+    { title: "Konfirmasi & Transfer", text: "3. Periksa konfirmasi booking. Jika diminta Admin, ikuti petunjuk transfer ke rekening pribadi yang diberikan.", icon: "check" }
+  ];
+  useEffect(() => {
+    const media = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion.current = Boolean(media && media.matches);
+    if (reducedMotion.current) return undefined;
+    const timer = window.setInterval(() => setActiveSlide(current => (current + 1) % slides.length), 4500);
+    return () => window.clearInterval(timer);
+  }, []);
+  const startSwipe = event => {
+    touchStartX.current = event.changedTouches && event.changedTouches[0] ? event.changedTouches[0].clientX : null;
+  };
+  const endSwipe = event => {
+    if (touchStartX.current === null || !event.changedTouches || !event.changedTouches[0]) return;
+    const delta = event.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(delta) > 45) setActiveSlide(current => (current + (delta < 0 ? 1 : -1) + slides.length) % slides.length);
+    touchStartX.current = null;
+  };
+  const slide = slides[activeSlide];
+  const paths = {
+    guide: <><path d="M5 4.5h9.5A2.5 2.5 0 0 1 17 7v12H7a2 2 0 0 1-2-2z"/><path d="M7 4.5v12a2.5 2.5 0 0 0 2.5 2.5M9 9h5M9 12h5"/><path d="m18 9 1.5 1.5L22 8"/></>,
+    massage: <><path d="M7 12.5c1.2-2.8 3.2-4.5 6-4.5 2.4 0 4.1 1.2 5 3.5"/><path d="M5 16c2.4-1.6 4.8-2.4 7.2-2.4 2.3 0 4.6.8 6.8 2.4"/><path d="M4 19h16"/><circle cx="8" cy="6" r="2"/><path d="m10 8 3 3"/></>,
+    map: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
+    check: <><circle cx="12" cy="12" r="9"/><path d="m7.5 12.2 3 3 6-6.4"/></>
+  };
+  return <section className="sules-booking-tutorial" aria-label="Tutorial booking" onTouchStart={startSwipe} onTouchEnd={endSwipe}>
+    <div className="sules-tutorial-content" aria-live="polite" aria-atomic="true">
+      <div className="sules-tutorial-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{paths[slide.icon]}</svg></div>
+      <div className="sules-tutorial-copy">
+        <p className="sules-tutorial-eyebrow">PANDUAN SL RELAX</p>
+        <h2>{slide.title}</h2>
+        {slide.action
+          ? <button type="button" className="sules-tutorial-action" onClick={onGoToCatalog}>Lihat semua langkah <span aria-hidden="true">›</span></button>
+          : <p className="sules-tutorial-description">{slide.text}</p>}
+      </div>
+      <span className="sules-tutorial-count" aria-label={`Slide ${activeSlide + 1} dari ${slides.length}`}>{activeSlide + 1}/{slides.length}</span>
+    </div>
+    <div className="sules-tutorial-progress" role="group" aria-label="Pilih slide tutorial">
+      {slides.map((item, index) => <button key={item.icon} type="button" className={`sules-tutorial-dot${index === activeSlide ? " is-active" : ""}`} aria-label={`Tampilkan slide ${index + 1}: ${item.title}`} aria-current={index === activeSlide ? "step" : undefined} onClick={() => setActiveSlide(index)} />)}
+    </div>
+  </section>;
+}
+
 function HomeBrandHero({ onGoToBooking, onGoToCatalog }) {
   return <React.Fragment>
     <section className="sules-home-hero" aria-labelledby="sules-home-hero-title">
@@ -3306,6 +3377,7 @@ function HomeBrandHero({ onGoToBooking, onGoToCatalog }) {
       <div><span>JAM LAYANAN</span><strong>08.00–15.00 · 19.00–24.00</strong></div>
     </section>
     <HomeDiscountBanner />
+    <HomeBookingTutorial onGoToCatalog={onGoToCatalog} />
   </React.Fragment>;
 }
 
