@@ -3309,7 +3309,7 @@ function HomeBookingTutorial({ onGoToCatalog }) {
   const slides = [
     { title: "Tutorial Booking", text: "Lihat semua langkah", icon: "guide", action: true },
     { title: "Pilih Paket Pijat", text: "1. Pilih paket dan durasi pijat yang diinginkan.", icon: "massage" },
-    { title: "Lokasi & Jadwal", text: "2. Tentukan lokasi layanan, lalu pilih tanggal dan jam yang tersedia.", icon: "calendar" },
+    { title: "Google Maps & Jadwal", text: "2. Pastikan titik lokasi Home Service akurat di peta, lalu pilih tanggal dan jam yang tersedia.", icon: "map" },
     { title: "Konfirmasi & Transfer", text: "3. Periksa konfirmasi booking. Jika diminta Admin, ikuti petunjuk transfer ke rekening pribadi yang diberikan.", icon: "check" }
   ];
   useEffect(() => {
@@ -3332,7 +3332,7 @@ function HomeBookingTutorial({ onGoToCatalog }) {
   const paths = {
     guide: <><path d="M5 4.5h9.5A2.5 2.5 0 0 1 17 7v12H7a2 2 0 0 1-2-2z"/><path d="M7 4.5v12a2.5 2.5 0 0 0 2.5 2.5M9 9h5M9 12h5"/><path d="m18 9 1.5 1.5L22 8"/></>,
     massage: <><path d="M7 12.5c1.2-2.8 3.2-4.5 6-4.5 2.4 0 4.1 1.2 5 3.5"/><path d="M5 16c2.4-1.6 4.8-2.4 7.2-2.4 2.3 0 4.6.8 6.8 2.4"/><path d="M4 19h16"/><circle cx="8" cy="6" r="2"/><path d="m10 8 3 3"/></>,
-    calendar: <><rect x="4" y="5.5" width="16" height="15" rx="2"/><path d="M8 3.5v4M16 3.5v4M4 10h16"/><circle cx="12" cy="15" r="2.5"/><path d="M12 13.5v1.7l1.2.8"/></>,
+    map: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
     check: <><circle cx="12" cy="12" r="9"/><path d="m7.5 12.2 3 3 6-6.4"/></>
   };
   return <section className="sules-booking-tutorial" aria-label="Tutorial booking" onTouchStart={startSwipe} onTouchEnd={endSwipe}>
