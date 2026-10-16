@@ -3301,7 +3301,7 @@ function HomeDiscountBanner() {
         if (current.transition) return current;
         const from = current.index % activeDiscounts.length;
         const to = (from + 1) % activeDiscounts.length;
-        return { index: from, transition: { from, to, direction: to % 2 === 0 ? "left" : "up" } };
+        return { index: from, transition: { from, to, direction: from % 2 === 0 ? "left" : "up" } };
       });
     }, 4500);
     return () => window.clearInterval(interval);
