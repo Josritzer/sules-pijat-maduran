@@ -1621,7 +1621,7 @@
       const row = rows.find(item => item.package_key === id);
       if (!row || !bases[id]) return;
       const rawLevel = Number(row.active_level);
-      const level = Number.isFinite(rawLevel) ? Math.max(0, Math.min(5, rawLevel)) : 1;
+      const level = Number.isFinite(rawLevel) ? Math.max(0, Math.min(5, rawLevel)) : 0;
       const price = Math.round(bases[id] * (1 + level * 0.10));
       node.textContent = "Rp" + price.toLocaleString("id-ID");
       const promoActive = row.promo_type !== "none" && row.promo_start_date && row.promo_end_date && today >= row.promo_start_date && today <= row.promo_end_date;
@@ -1664,7 +1664,7 @@ function getBasePackagePrice(item) {
 function getPackagePrice(item, configRows = []) {
   const config = configRows.find(row => row.package_key === item.id);
   const rawLevel = Number(config && config.active_level);
-  const level = Number.isFinite(rawLevel) ? Math.min(5, Math.max(0, rawLevel)) : 1;
+  const level = Number.isFinite(rawLevel) ? Math.min(5, Math.max(0, rawLevel)) : 0;
   return Math.round(getBasePackagePrice(item) * (1 + level * 0.10));
 }
 function getActivePackagePromo(item, configRows = [], packagePrice = 0, dateKey = localDateKey(new Date())) {
