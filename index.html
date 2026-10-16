@@ -3220,7 +3220,7 @@ function CatalogPackageGroup({ id, number, kicker, title, subtitle, packages, tr
 function DiscountCard({ item, price, promo, finalPrice, colorIndex = 0 }) {
   const cardBackgrounds = ["#EAF2FF", "#F1E8FF", "#FFF0E2", "#FCE8F1", "#E5F4F1"];
   const cardBackground = cardBackgrounds[colorIndex % cardBackgrounds.length];
-  return <div className="sules-promo-carousel-card rounded-xl p-3" style={{background:cardBackground,color:"#18324B"}}>
+  return <div className="sules-promo-carousel-card rounded-xl p-3" style={{background:cardBackground,color:"#18324B",border:"1px solid "+cardBackground,boxShadow:"0 4px 12px rgba(24,50,75,.06)"}}>
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
         <p className="text-sm font-extrabold leading-snug">{item.label}</p>
