@@ -612,23 +612,25 @@
     #kontak .appreciation-copy-button svg { width:15px; height:15px; flex-basis:15px; }
   }
 
-/* Home booking tutorial carousel: premium blue/white */
-.sules-booking-tutorial{box-sizing:border-box;margin:12px 16px 4px;padding:16px;border:1px solid #dbe4f3;border-radius:20px;background:linear-gradient(135deg,#fff 0%,#f6f8ff 100%);box-shadow:0 6px 20px rgba(30,55,100,.07);color:#20294a;overflow:hidden;touch-action:pan-y}
-.sules-tutorial-content{display:flex;align-items:center;gap:12px;min-height:112px}
-.sules-tutorial-icon{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border:1px solid #e1e7ff;border-radius:15px;background:linear-gradient(145deg,#edf1ff,#fff);color:#4338a8}
-.sules-tutorial-icon svg{width:26px;height:26px}
+/* Home booking tutorial carousel: compact card with a real horizontal slide track */
+.sules-booking-tutorial{box-sizing:border-box;width:calc(100% - 32px);max-width:520px;margin:12px auto 4px;padding:14px 15px;border:1px solid #dbe4f3;border-radius:20px;background:linear-gradient(135deg,#fff 0%,#f6f8ff 100%);box-shadow:0 6px 20px rgba(30,55,100,.07);color:#20294a;overflow:hidden}
+.sules-tutorial-viewport{width:100%;overflow:hidden;touch-action:pan-y;overscroll-behavior-x:contain}
+.sules-tutorial-track{display:flex;align-items:stretch;will-change:transform;transition:transform 720ms cubic-bezier(.22,.75,.18,1)}
+.sules-tutorial-panel{display:flex;align-items:center;gap:10px;flex:0 0 100%;width:100%;min-width:0;box-sizing:border-box;padding:2px 1px}
+.sules-tutorial-icon{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border:1px solid #e1e7ff;border-radius:14px;background:linear-gradient(145deg,#edf1ff,#fff);color:#4338a8;box-shadow:0 3px 9px rgba(67,56,168,.08)}
+.sules-tutorial-icon svg{width:23px;height:23px}
 .sules-tutorial-copy{flex:1;min-width:0}
 .sules-tutorial-eyebrow{margin:0 0 5px;font-size:9px;font-weight:800;letter-spacing:.13em;color:#5b63a5}
-.sules-tutorial-copy h2{margin:0;color:#20294a;font-size:15px;line-height:1.35;font-weight:800;overflow-wrap:anywhere}
-.sules-tutorial-description{margin:6px 0 0;color:#536078;font-size:12px;line-height:1.55;overflow-wrap:anywhere}
-.sules-tutorial-count{flex:0 0 auto;align-self:flex-start;padding:5px 7px;border:1px solid #e0e6fb;border-radius:9px;background:#f0f3ff;color:#4338a8;font-size:10px;font-weight:800;font-variant-numeric:tabular-nums}
-.sules-tutorial-progress{display:flex;justify-content:center;align-items:center;gap:7px;margin-top:12px}
-.sules-tutorial-dot{width:7px;height:7px;min-width:7px;padding:0;border:0;border-radius:99px;background:#cbd3e5;cursor:pointer;transition:width .2s ease,background-color .2s ease}
+.sules-tutorial-copy h2{margin:0;color:#20294a;font-size:14px;line-height:1.35;font-weight:800;overflow-wrap:anywhere}
+.sules-tutorial-description{margin:6px 0 0;color:#536078;font-size:11.5px;line-height:1.5;overflow-wrap:anywhere}
+.sules-tutorial-count{flex:0 0 auto;align-self:flex-start;padding:4px 6px;border:1px solid #e0e6fb;border-radius:8px;background:#f0f3ff;color:#4338a8;font-size:10px;font-weight:800;font-variant-numeric:tabular-nums}
+.sules-tutorial-progress{display:flex;justify-content:center;align-items:center;gap:7px;margin-top:11px}
+.sules-tutorial-dot{width:7px;height:7px;min-width:7px;padding:0;border:0;border-radius:99px;background:#cbd3e5;cursor:pointer;transition:width .25s ease,background-color .25s ease}
 .sules-tutorial-dot.is-active{width:22px;background:#4338a8}
 .sules-tutorial-dot:focus-visible{outline:2px solid #4338a8;outline-offset:4px}
-@media(min-width:640px){.sules-booking-tutorial{max-width:720px;margin:14px auto 6px;padding:18px 22px}.sules-tutorial-content{min-height:104px}.sules-tutorial-copy h2{font-size:16px}.sules-tutorial-description{font-size:13px}}
-@media(max-width:360px){.sules-booking-tutorial{margin-right:12px;margin-left:12px;padding:13px}.sules-tutorial-content{gap:9px;min-height:122px}.sules-tutorial-icon{flex-basis:40px;width:40px;height:40px;border-radius:13px}.sules-tutorial-icon svg{width:23px;height:23px}.sules-tutorial-copy h2{font-size:14px}.sules-tutorial-description{font-size:11px}.sules-tutorial-count{padding:4px 5px}}
-@media(prefers-reduced-motion:reduce){.sules-tutorial-dot{transition:none!important}}
+@media(min-width:640px){.sules-booking-tutorial{max-width:520px;padding:15px 17px}.sules-tutorial-panel{gap:12px}.sules-tutorial-copy h2{font-size:15px}.sules-tutorial-description{font-size:12px}}
+@media(max-width:360px){.sules-booking-tutorial{width:calc(100% - 28px);padding:12px}.sules-tutorial-panel{gap:8px}.sules-tutorial-icon{flex-basis:38px;width:38px;height:38px;border-radius:12px}.sules-tutorial-icon svg{width:21px;height:21px}.sules-tutorial-copy h2{font-size:13px}.sules-tutorial-description{font-size:11px}.sules-tutorial-count{padding:4px}}
+@media(prefers-reduced-motion:reduce){.sules-tutorial-track,.sules-tutorial-dot{transition:none!important;will-change:auto}}
 </style>
 <style>
   :root {
@@ -3333,32 +3335,35 @@ function HomeBookingTutorial({ onGoToCatalog }) {
     start();
     document.addEventListener("visibilitychange", start);
     return () => { stop(); document.removeEventListener("visibilitychange", start); };
-  }, [reducedMotion, activeSlide]);
+  }, [reducedMotion]);
   const startSwipe = event => {
     touchStartX.current = event.changedTouches && event.changedTouches[0] ? event.changedTouches[0].clientX : null;
   };
   const endSwipe = event => {
     if (touchStartX.current === null || !event.changedTouches || !event.changedTouches[0]) return;
     const delta = event.changedTouches[0].clientX - touchStartX.current;
-    if (Math.abs(delta) > 45) setActiveSlide(current => (current + (delta < 0 ? 1 : -1) + slides.length) % slides.length);
+    if (Math.abs(delta) > 42) setActiveSlide(current => (current + (delta < 0 ? 1 : -1) + slides.length) % slides.length);
     touchStartX.current = null;
   };
-  const slide = slides[activeSlide];
   const paths = {
     guide: <><path d="M5 4.5h9.5A2.5 2.5 0 0 1 17 7v12H7a2 2 0 0 1-2-2z"/><path d="M7 4.5v12a2.5 2.5 0 0 0 2.5 2.5M9 9h5M9 12h5"/><path d="m18 9 1.5 1.5L22 8"/></>,
     massage: <><path d="M7 12.5c1.2-2.8 3.2-4.5 6-4.5 2.4 0 4.1 1.2 5 3.5"/><path d="M5 16c2.4-1.6 4.8-2.4 7.2-2.4 2.3 0 4.6.8 6.8 2.4"/><path d="M4 19h16"/><circle cx="8" cy="6" r="2"/><path d="m10 8 3 3"/></>,
     map: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
     check: <><circle cx="12" cy="12" r="9"/><path d="m7.5 12.2 3 3 6-6.4"/></>
   };
-  return <section className="sules-booking-tutorial" aria-label="Tutorial booking" onTouchStart={startSwipe} onTouchEnd={endSwipe}>
-    <div className="sules-tutorial-content" aria-live="polite" aria-atomic="true">
-      <div className="sules-tutorial-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{paths[slide.icon]}</svg></div>
-      <div className="sules-tutorial-copy">
-        <p className="sules-tutorial-eyebrow">PANDUAN SL RELAX</p>
-        <h2>{slide.title}</h2>
-        <p className="sules-tutorial-description">{slide.text}</p>
+  return <section className="sules-booking-tutorial" aria-label="Tutorial booking">
+    <div className="sules-tutorial-viewport" onTouchStart={startSwipe} onTouchEnd={endSwipe}>
+      <div className="sules-tutorial-track" style={{ transform: `translate3d(-${activeSlide * 100}%, 0, 0)`, transitionDuration: reducedMotion ? "0ms" : undefined }}>
+        {slides.map((slide, index) => <article className="sules-tutorial-panel" key={slide.icon} aria-hidden={index !== activeSlide}>
+          <div className="sules-tutorial-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{paths[slide.icon]}</svg></div>
+          <div className="sules-tutorial-copy">
+            <p className="sules-tutorial-eyebrow">PANDUAN SL RELAX</p>
+            <h2>{slide.title}</h2>
+            <p className="sules-tutorial-description">{slide.text}</p>
+          </div>
+          <span className="sules-tutorial-count" aria-label={`Slide ${index + 1} dari ${slides.length}`}>{index + 1}/{slides.length}</span>
+        </article>)}
       </div>
-      <span className="sules-tutorial-count" aria-label={`Slide ${activeSlide + 1} dari ${slides.length}`}>{activeSlide + 1}/{slides.length}</span>
     </div>
     <div className="sules-tutorial-progress" role="group" aria-label="Pilih slide tutorial">
       {slides.map((item, index) => <button key={item.icon} type="button" className={`sules-tutorial-dot${index === activeSlide ? " is-active" : ""}`} aria-label={`Tampilkan slide ${index + 1}: ${item.title}`} aria-current={index === activeSlide ? "step" : undefined} onClick={() => setActiveSlide(index)} />)}
