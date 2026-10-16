@@ -3325,11 +3325,11 @@ function HomeDiscountBanner() {
   const direction = carousel.transition && carousel.transition.direction;
   const renderPromo = (row, colorIndex) => <DiscountCard item={row.item} price={row.price} promo={row.promo} finalPrice={row.finalPrice} colorIndex={colorIndex} />;
 
-  return <section aria-label="Diskon harga aktif" className="mx-4 mt-4 mb-2 overflow-hidden rounded-2xl border shadow-lg" style={{borderColor:"#C6A86A",background:"linear-gradient(135deg,#101827 0%,#18263B 58%,#24334A 100%)",color:"#FFFDF7"}}>
-    <div className="px-4 pt-4 pb-3" style={{background:"radial-gradient(circle at 100% 0%,rgba(198,168,106,.24),transparent 46%)"}}>
+  return <section aria-label="Diskon harga aktif" className="mx-4 mt-4 mb-2 overflow-hidden rounded-2xl border shadow-lg" style={{borderColor:"#D9D1E2",background:"linear-gradient(135deg,#FFFEFC 0%,#F5F0F8 58%,#F1EFF9 100%)",color:"#29294F"}}>
+    <div className="px-4 pt-4 pb-3" style={{background:"radial-gradient(circle at 100% 0%,rgba(173,63,131,.09),transparent 46%)"}}>
       <div className="flex items-center gap-2">
         <span aria-hidden="true" className="inline-flex items-center justify-center rounded-full px-2 py-1 text-xs font-black tracking-wide" style={{background:"#F2E5C8",color:"#182235"}}>DISKON</span>
-        <p className="text-xs font-extrabold tracking-widest" style={{color:"#E5D0A0"}}>DISKON HARGA AKTIF</p>
+        <p className="text-xs font-extrabold tracking-widest" style={{color:"#51458F"}}>DISKON HARGA AKTIF</p>
       </div>
     </div>
     <div className="px-3 pb-3">
@@ -3341,8 +3341,8 @@ function HomeDiscountBanner() {
           {renderPromo(next, carousel.transition.to)}
         </div>}
       </div>
-      {activeDiscounts.length > 1 && <p className="pt-2 text-center text-xs font-bold tracking-wide" style={{color:"#E5D0A0"}}>{carousel.index + 1} / {activeDiscounts.length}</p>}
-      <p className="px-1 pt-2 text-xs" style={{color:"#D6DCE5"}}>Biaya perjalanan Home Service dihitung terpisah.</p>
+      {activeDiscounts.length > 1 && <p className="pt-2 text-center text-xs font-bold tracking-wide" style={{color:"#51458F"}}>{carousel.index + 1} / {activeDiscounts.length}</p>}
+      <p className="px-1 pt-2 text-xs" style={{color:"#686579"}}>Biaya perjalanan Home Service dihitung terpisah.</p>
     </div>
   </section>;
 }
