@@ -1317,6 +1317,37 @@
   #root .sules-home-account-button:hover { background:#403B83; }
   #root .sules-home-catalog-link { border-color:#D9CBE4; color:#51458F; }
   #root .sules-home-catalog-link:hover { border-color:#AF91C7; background:#F6F1F8; }
+  #root .sules-home-services .sules-home-catalog-link {
+    min-height:42px;
+    padding:9px 15px;
+    border:1px solid rgba(255,255,255,.42);
+    border-radius:999px;
+    color:#FFFFFF;
+    background:linear-gradient(135deg,#51458F 0%,#6551A8 58%,#79569E 100%);
+    box-shadow:0 4px 10px rgba(81,69,143,.16);
+    transition:transform 140ms ease,box-shadow 140ms ease,filter 140ms ease;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+  }
+  #root .sules-home-services .sules-home-catalog-link:hover {
+    border-color:rgba(255,255,255,.58);
+    background:linear-gradient(135deg,#51458F 0%,#6551A8 58%,#79569E 100%);
+    box-shadow:0 6px 13px rgba(81,69,143,.21);
+    filter:brightness(1.04);
+    transform:translateY(-1px);
+  }
+  #root .sules-home-services .sules-home-catalog-link:active {
+    box-shadow:0 2px 5px rgba(81,69,143,.16);
+    filter:brightness(.97);
+    transform:scale(.97);
+  }
+  #root .sules-home-services .sules-home-catalog-link:focus-visible {
+    outline:2px solid #A64D84;
+    outline-offset:3px;
+  }
+  @media (prefers-reduced-motion:reduce) {
+    #root .sules-home-services .sules-home-catalog-link { transition:none; }
+  }
   #root .sules-home-screen .sules-service-card button.sules-primary { border-color:#D5C2EB !important; background:#51458F !important; }
   #root .sules-home-info-links button { color:#51458F; }
   #root .sules-home-info-links button:hover { color:#A64D84; }
