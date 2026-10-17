@@ -1021,6 +1021,10 @@
   .sules-home-emblem { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; min-width:0; }
   .sules-home-emblem-ring { display:grid; width:176px; height:176px; place-items:center; border:1px solid rgba(231,213,164,.66); border-radius:50%; background:radial-gradient(circle,#F8F5EA 0%,#E8E1CF 100%); box-shadow:0 0 0 10px rgba(231,213,164,.055),0 18px 38px rgba(8,20,42,.23); }
   .sules-home-emblem-ring img { display:block; width:112px; height:112px; object-fit:contain; border-radius:22px; }
+  /* Animasi hanya pada gambar logo; cincin krem tetap diam. */
+  .sules-home-emblem-ring img { animation:sules-logo-spin 4s linear infinite; transform-origin:50% 50%; will-change:transform; }
+  @keyframes sules-logo-spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion:reduce) { .sules-home-emblem-ring img { animation:none; will-change:auto; } }
   .sules-home-emblem p { margin:0; color:#E9DCBA; font-size:8px; font-weight:750; letter-spacing:.18em; text-align:center; }
   .sules-home-facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; padding:15px 4px 18px; border-bottom:1px solid var(--home-line); }
   .sules-home-facts > div { display:flex; flex-direction:column; gap:6px; min-width:0; }
