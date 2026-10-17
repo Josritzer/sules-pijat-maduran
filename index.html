@@ -190,11 +190,11 @@
       if (!Number.isInteger(count) || count < 0) throw new Error("Jumlah booking belum dapat dihitung.");
       return count;
     };
-    const [total, menunggu, diterima, ditolak, selesai, dibatalkan] = await Promise.all([
+    const [total, menunggu, diterima, ditolak, selesai, dibatalkan, kedaluwarsa] = await Promise.all([
       countForStatus(null), countForStatus("MENUNGGU"), countForStatus("DITERIMA"),
-      countForStatus("DITOLAK"), countForStatus("SELESAI"), countForStatus("DIBATALKAN")
+      countForStatus("DITOLAK"), countForStatus("SELESAI"), countForStatus("DIBATALKAN"), countForStatus("KEDALUWARSA")
     ]);
-    return { total, menunggu, diterima, ditolak, selesai, dibatalkan };
+    return { total, menunggu, diterima, ditolak, selesai, dibatalkan, kedaluwarsa };
   }
   async function getCustomerProfile(customerId) {
     const id = String(customerId || "");
@@ -1472,7 +1472,7 @@
     <ol class="public-list">
       <li><strong>Penyelenggara layanan.</strong> Syarat &amp; Ketentuan ini berlaku untuk layanan SULES PIJAT MADURAN, dengan SULES HARIANTO sebagai pemilik/pemrakarsa, beralamat di Jl. Karya Bangun RT.06/RW.02, Maduran, Lamongan 62261.</li>
       <li><strong>Harga dan paket.</strong> Harga mengikuti informasi yang ditampilkan di aplikasi SL RELAX saat pemesanan. Promo atau diskon mengikuti syarat dan periode yang tercantum di aplikasi. Paket Home Service (ke Rumah) untuk dua orang mencakup dua orang, masing-masing 90 menit secara bergantian.</li>
-      <li><strong>Status booking.</strong> Booking yang dikirim berstatus MENUNGGU dan belum berarti jadwal telah dikonfirmasi. Admin akan memeriksa jadwal dan memperbarui status menjadi DITERIMA atau DITOLAK. Periksa status di aplikasi untuk mengetahui hasilnya.</li>
+      <li><strong>Status booking.</strong> Booking yang dikirim berstatus MENUNGGU dan belum berarti jadwal telah dikonfirmasi. Admin akan memeriksa jadwal. Jika waktu mulai lewat tanpa konfirmasi, status otomatis menjadi KEDALUWARSA. Periksa status di aplikasi untuk mengetahui hasilnya.</li>
       <li><strong>Jam layanan dan jadwal.</strong> Sesi siang berlangsung pukul 08.00–15.00 dan sesi malam pukul 19.00–24.00. Pilihan waktu mulai tersedia dalam interval 30 menit. Waktu mulai dan durasi layanan harus sesuai ketersediaan slot serta tidak melewati batas sesi.</li>
       <li><strong>Biaya perjalanan Home Service.</strong> Biaya perjalanan hanya berlaku untuk Home Service (ke Rumah) dan terpisah dari harga paket. Perhitungan menggunakan jarak jalan sebenarnya: 1.000 meter pertama gratis, sedangkan jarak selebihnya dikenakan Rp3,50 per meter. Biaya perjalanan dihitung satu kali per booking, bukan per orang.</li>
       <li><strong>Ketepatan informasi.</strong> Sebelum mengirim booking, pastikan paket, jumlah orang, tanggal, waktu mulai, dan lokasi tujuan Home Service sudah benar. Lokasi tujuan perlu akurat agar jarak jalan dapat dihitung dengan benar.</li>
@@ -1756,6 +1756,7 @@ function getStatusMeta(status) {
     case "SELESAI": return { emoji: "✅", label: "SELESAI", bg: "#F0FDF4", text: "#166534", border: "#22C55E" };
     case "DITOLAK": return { emoji: "🚫", label: "DITOLAK", bg: "#FEF2F2", text: "#991B1B", border: "#EF4444" };
     case "DIBATALKAN": return { emoji: "🔴", label: "DIBATALKAN", bg: "#FEF2F2", text: "#7F1D1D", border: "#DC2626" };
+    case "KEDALUWARSA": return { emoji: "⏰", label: "KEDALUWARSA", bg: "#FFF7ED", text: "#9A3412", border: "#FB923C" };
     default: return { emoji: "🟡", label: "MENUNGGU", bg: "#FFFBEB", text: "#92400E", border: "#F59E0B" };
   }
 }
@@ -2829,6 +2830,12 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
             Mohon maaf, pesanan ini dibatalkan. Silakan hubungi Admin atau buat pesanan baru.
           </div>
         )}
+        {b.status === "KEDALUWARSA" && (
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-sm text-orange-900 mb-4">
+            Booking kedaluwarsa karena waktu mulai telah lewat sebelum dikonfirmasi Admin. Silakan buat booking baru jika masih ingin memesan.
+            <button type="button" onClick={onGoToBooking} className="block mt-2 font-bold underline">BOOKING LAGI</button>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200">
           <div className="font-semibold mb-2">{b.tipeLokasi === "HOME_SERVICE" && b.layanan === "90m" && b.orang === 2 ? "Pijat 2 Orang ke Rumah · 180 Menit Total (90 Menit per Orang)" : `${b.layanan === "90m" ? "Pijat 90 Menit" : "Pijat 2 Jam"} × ${b.orang} orang`}</div>
@@ -3548,7 +3555,7 @@ function CatalogTab({ onBookPackage }) {
 function CustomerBookingSummary({ summary, loading, error, onRetry, className = "" }) {
   const metrics = summary ? [
     ["Total booking", summary.total], ["Menunggu", summary.menunggu], ["Diterima", summary.diterima],
-    ["Selesai", summary.selesai], ["Ditolak", summary.ditolak], ["Dibatalkan", summary.dibatalkan]
+    ["Selesai", summary.selesai], ["Ditolak", summary.ditolak], ["Dibatalkan", summary.dibatalkan], ["Kedaluwarsa", summary.kedaluwarsa]
   ] : [];
   return <section className={`sules-active-card ${className}`.trim()} aria-label="Rekap booking pelanggan">
     <div className="sules-eyebrow">REKAP BOOKING</div>
@@ -3593,7 +3600,8 @@ function NotificationsTab({ customerSession, customerSessionReady, customerSessi
     DITERIMA: ["Booking diterima", "Admin telah menerima booking Anda."],
     DITOLAK: ["Booking ditolak", "Admin menolak booking Anda. Anda dapat membuat booking kembali."],
     SELESAI: ["Pesanan selesai", "Layanan Anda telah selesai."],
-    DIBATALKAN: ["Booking dibatalkan", "Booking ini berstatus dibatalkan."]
+    DIBATALKAN: ["Booking dibatalkan", "Booking ini berstatus dibatalkan."],
+    KEDALUWARSA: ["Booking kedaluwarsa", "Waktu mulai booking telah lewat sebelum Admin mengonfirmasi. Silakan buat booking baru jika masih ingin memesan."]
   };
 
   async function loadNotifications(silent = false, merge = false) {
@@ -3928,7 +3936,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
 
   async function hideHistoryBooking(row) {
     if (!row || view !== "history" || !customerId ||
-        (row.status !== "SELESAI" && row.status !== "DITOLAK") || hideHistoryLockRef.current) return;
+        (row.status !== "SELESAI" && row.status !== "DITOLAK" && row.status !== "KEDALUWARSA") || hideHistoryLockRef.current) return;
     const requestCustomerId = customerId;
     const requestToken = {};
     hideHistoryLockRef.current = requestToken;
@@ -3981,7 +3989,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
 
   const activeOrders = orders.filter(row => row.status === "MENUNGGU" || row.status === "DITERIMA")
     .sort((a,b) => `${a.tanggal}T${a.jam_mulai}`.localeCompare(`${b.tanggal}T${b.jam_mulai}`));
-  const historyOrders = orders.filter(row => row.status === "DITOLAK" || row.status === "SELESAI" || row.status === "DIBATALKAN")
+  const historyOrders = orders.filter(row => row.status === "DITOLAK" || row.status === "SELESAI" || row.status === "DIBATALKAN" || row.status === "KEDALUWARSA")
     .sort((a,b) => `${b.tanggal}T${b.jam_mulai}`.localeCompare(`${a.tanggal}T${a.jam_mulai}`));
   const visibleOrders = view === "active" ? activeOrders : historyOrders;
   const pageSize = window.bookingService.customerOrderPageSize;
@@ -4033,7 +4041,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
     {!loading && !error && visibleOrders.length === 0 && <div className="bg-white border border-gray-200 rounded-xl p-5 text-center text-sm text-gray-500"><p>{view === "active" ? "Belum ada pesanan aktif." : "Belum ada riwayat pesanan."}</p>{view === "active" && <button type="button" className="sules-primary mt-3" onClick={onGoToBooking}>Pesan Sekarang</button>}</div>}
     <div className="space-y-3">
       {visibleOrders.map(row => <article key={row.id} className="bg-white rounded-xl p-4 border border-gray-200 text-sm">
-        <div className="flex items-start justify-between gap-2 mb-2"><strong>{SERVICE_LABEL[row.service_id] || row.service_id} · {row.jumlah_orang} orang</strong><div className="flex items-center gap-2"><StatusBadge status={row.status} />{view === "history" && (row.status === "SELESAI" || row.status === "DITOLAK") && <button type="button" aria-label={hidingBookingId === row.id ? "Menyembunyikan dari riwayat" : "Sembunyikan dari riwayat"} title={hidingBookingId === row.id ? "Sedang memproses" : "Sembunyikan dari riwayat"} aria-busy={hidingBookingId === row.id} disabled={Boolean(hidingBookingId)} onClick={() => void hideHistoryBooking(row)} className="rounded-full border border-gray-300 text-gray-500 hover:text-red-700 hover:border-red-300 disabled:opacity-50" style={{ width: 28, height: 28, lineHeight: "24px", fontSize: 18 }}>{hidingBookingId === row.id ? "…" : "×"}</button>}</div></div>
+        <div className="flex items-start justify-between gap-2 mb-2"><strong>{SERVICE_LABEL[row.service_id] || row.service_id} · {row.jumlah_orang} orang</strong><div className="flex items-center gap-2"><StatusBadge status={row.status} />{view === "history" && (row.status === "SELESAI" || row.status === "DITOLAK" || row.status === "KEDALUWARSA") && <button type="button" aria-label={hidingBookingId === row.id ? "Menyembunyikan dari riwayat" : "Sembunyikan dari riwayat"} title={hidingBookingId === row.id ? "Sedang memproses" : "Sembunyikan dari riwayat"} aria-busy={hidingBookingId === row.id} disabled={Boolean(hidingBookingId)} onClick={() => void hideHistoryBooking(row)} className="rounded-full border border-gray-300 text-gray-500 hover:text-red-700 hover:border-red-300 disabled:opacity-50" style={{ width: 28, height: 28, lineHeight: "24px", fontSize: 18 }}>{hidingBookingId === row.id ? "…" : "×"}</button>}</div></div>
         <div className="grid grid-cols-2 gap-2 text-xs mb-2"><div><span className="text-gray-500 block">Tanggal</span>{row.tanggal}</div><div><span className="text-gray-500 block">Jam</span>{String(row.jam_mulai).slice(0,5)}</div></div>
         <div className="text-xs text-gray-600 mb-2">{row.tipe_lokasi === "HOME_SERVICE" ? "ke Rumah" : "Di Sules"} · {row.durasi_menit} menit</div>
         <div className="mt-2 text-xs text-gray-600 space-y-1">
@@ -4044,7 +4052,8 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
         </div>
         <div className="text-sm font-bold mt-2">Total: {formatRupiah(row.final_total ?? row.grand_total)}</div>
         {row.status === "DITOLAK" && row.catatan_penolakan && <p className="text-xs text-gray-600 mt-2">Catatan Admin: {row.catatan_penolakan}</p>}
-        {row.status === "DITOLAK" && <button onClick={onGoToBooking} className="sules-primary mt-3 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{backgroundColor:"#18324B"}}>BOOKING LAGI</button>}
+        {row.status === "KEDALUWARSA" && <p className="text-xs text-orange-800 mt-2">Waktu mulai telah lewat sebelum Admin mengonfirmasi.</p>}
+        {(row.status === "DITOLAK" || row.status === "KEDALUWARSA") && <button onClick={onGoToBooking} className="sules-primary mt-3 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{backgroundColor:"#18324B"}}>BOOKING LAGI</button>}
         {shouldShowGoogleReview(row.status) && <a href="https://g.page/r/CWXCZycYzhXqEBE/review" target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", backgroundColor:"white", border:"1px solid #2F6F9F", color:"#18324B", borderRadius:"12px", padding:"10px", fontWeight:"bold" }} className="mt-3 text-sm">⭐ Beri Penilaian di Google Maps</a>}
       </article>)}
     </div>
@@ -4458,7 +4467,9 @@ function AdminTab({ onExitToApp }) {
       if (!result.success) {
         const pesan = result.reason === "BENTROK"
           ? "Bentrok dengan booking lain yang sudah DITERIMA di jam yang sama."
-          : "Jam ini sudah di luar jam operasional.";
+          : result.reason === "KEDALUWARSA"
+            ? "Booking kedaluwarsa otomatis karena waktu mulai sudah lewat. Pelanggan perlu membuat booking baru."
+            : "Jam ini sudah di luar jam operasional.";
         setAcceptWarning(prev => ({ ...prev, [id]: pesan }));
       } else {
         setAcceptWarning(prev => ({ ...prev, [id]: null }));
@@ -4903,7 +4914,7 @@ function AppTabs() {
   }, [customerSessionRetryKey]);
 
   const activeCustomerId = customerSession && customerSession.user && customerSession.user.id;
-  const notificationStatuses = new Set(["MENUNGGU", "DITERIMA", "DITOLAK", "SELESAI", "DIBATALKAN"]);
+  const notificationStatuses = new Set(["MENUNGGU", "DITERIMA", "DITOLAK", "SELESAI", "DIBATALKAN", "KEDALUWARSA"]);
   const notificationFingerprint = row => row && row.id && notificationStatuses.has(row.status) ? String(row.id) + "|" + String(row.status) : "";
   const notificationSeenKey = customerId => "sules_notification_seen_v1_" + String(customerId || "");
   const readNotificationSeen = customerId => {
