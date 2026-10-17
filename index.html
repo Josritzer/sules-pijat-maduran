@@ -3286,9 +3286,9 @@ function ServicePackageCard({ item, onBookPackage, onSelectPackage, selectedPack
           <div className={compact ? "sules-home-compact-price" : "sules-service-price"}>{item.priceReady ? formatRupiah(item.finalPrice) : item.priceConfigLoaded ? "Harga belum tersedia" : "Memuat harga…"}{homeService && item.priceReady && <small>+ biaya perjalanan</small>}</div>
           {!compact && <span style={{color:"#7652A8",fontSize:11,fontWeight:800}}>Hemat {formatRupiah(item.promo.discount)}</span>}
         </div> : <div className={compact ? "sules-home-compact-price" : "sules-service-price"}>{item.priceReady ? formatRupiah(item.price) : item.priceConfigLoaded ? "Harga belum tersedia" : "Memuat harga…"}{homeService && item.priceReady && <small>+ biaya perjalanan</small>}</div>}
-        {catalog && <span className="sules-service-price-caption">{hasPromo ? "Harga promo" : "Harga paket"}</span>}
+        {catalog && <span className="sules-service-price-caption">{!item.priceReady ? "Harga belum tersedia" : hasPromo ? "Harga promo" : "Harga paket"}</span>}
       </div>
-      {homeService && compact && <p className="sules-service-meta sules-service-travel">Biaya perjalanan terpisah</p>}
+      {homeService && compact && <p className="sules-service-meta sules-service-travel">{paket5 ? "Biaya perjalanan 1× per booking" : "Biaya perjalanan terpisah"}</p>}
     </div>
     {!compact && <button type="button" className="sules-primary" aria-label={`Pesan Sekarang: ${item.label}`} onClick={() => onBookPackage(item.id)}>Pesan Sekarang</button>}
   </article>;
@@ -3619,7 +3619,7 @@ function CatalogTab({ onBookPackage, selectedPackageId = null }) {
     </header>
     <div className="sules-catalog-groups">
       <CatalogPackageGroup id="catalog-home" number="01" kicker="LAYANAN KE RUMAH" title="HOME SERVICE" subtitle="Terapis datang langsung ke rumah Anda" packages={homePackages} onBookPackage={onBookPackage} selectedPackageId={selectedPackageId} travelNote="Biaya perjalanan terpisah dari harga paket dan dihitung satu kali per booking, bukan per orang. 1.000 meter pertama gratis; selanjutnya mengikuti jarak jalan." />
-      <CatalogPackageGroup id="catalog-place" number="02" kicker="LAYANAN DI TEMPAT" subtitle="Pijat di tempat SULES" packages={inPlacePackages} onBookPackage={onBookPackage} selectedPackageId={selectedPackageId} />
+      <CatalogPackageGroup id="catalog-place" number="02" kicker="LAYANAN DI TEMPAT" title="PIJAT DI TEMPAT" subtitle="Pijat di tempat SULES" packages={inPlacePackages} onBookPackage={onBookPackage} selectedPackageId={selectedPackageId} />
     </div>
   </div>;
 }
