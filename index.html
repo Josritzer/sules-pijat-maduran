@@ -951,7 +951,7 @@
   #root .sules-catalog-grid .sules-service-card:hover { transform:translateY(-2px); border-color:#C9B7DD; box-shadow:0 14px 28px rgba(57,45,91,.1); }
   #root .sules-catalog-grid .sules-service-card:active { transform:scale(.99); }
   #root .sules-catalog-grid .sules-service-card-selected { border-color:#8B6CC1; box-shadow:0 0 0 3px rgba(117,80,180,.16),0 12px 26px rgba(57,45,91,.11); scroll-margin-top:90px; }
-  @media (prefers-reduced-motion:reduce) { #root .sules-catalog-grid .sules-service-card { transition:none; }
+  @media (prefers-reduced-motion:reduce) { #root .sules-catalog-grid .sules-service-card { transition:none; } }
   .sules-catalog-grid .sules-service-icon { display:grid; width:54px; height:54px; flex:0 0 auto; place-items:center; border:1px solid #D9C892; border-radius:17px; background:linear-gradient(145deg,#F1EFF9,#FBF6E8); color:#4A4D9C; }
   .sules-catalog-grid .sules-service-icon svg { width:34px; height:34px; }
   .sules-catalog-grid .sules-service-copy { display:flex; flex:1; flex-direction:column; width:100%; min-width:0; }
@@ -3283,9 +3283,9 @@ function ServicePackageCard({ item, onBookPackage, onSelectPackage, selectedPack
             {item.promo.type === "percent" ? `${item.promo.value}% OFF` : `HEMAT ${formatRupiah(item.promo.discount)}`}
           </span>
           <span className={compact ? "sules-home-compact-old-price" : ""} style={compact ? undefined : {color:"#777184",fontSize:12,textDecoration:"line-through"}}>Harga normal {formatRupiah(item.price)}</span>
-          <div className={compact ? "sules-home-compact-price" : "sules-service-price"}>{item.priceReady ? formatRupiah(item.finalPrice) : "Memuat harga…"}{homeService && item.priceReady && <small>+ biaya perjalanan</small>}</div>
+          <div className={compact ? "sules-home-compact-price" : "sules-service-price"}>{item.priceReady ? formatRupiah(item.finalPrice) : item.priceConfigLoaded ? "Harga belum tersedia" : "Memuat harga…"}{homeService && item.priceReady && <small>+ biaya perjalanan</small>}</div>
           {!compact && <span style={{color:"#7652A8",fontSize:11,fontWeight:800}}>Hemat {formatRupiah(item.promo.discount)}</span>}
-        </div> : <div className={compact ? "sules-home-compact-price" : "sules-service-price"}>{item.priceReady ? formatRupiah(item.price) : "Memuat harga…"}{homeService && item.priceReady && <small>+ biaya perjalanan</small>}</div>}
+        </div> : <div className={compact ? "sules-home-compact-price" : "sules-service-price"}>{item.priceReady ? formatRupiah(item.price) : item.priceConfigLoaded ? "Harga belum tersedia" : "Memuat harga…"}{homeService && item.priceReady && <small>+ biaya perjalanan</small>}</div>}
         {catalog && <span className="sules-service-price-caption">{hasPromo ? "Harga promo" : "Harga paket"}</span>}
       </div>
       {homeService && compact && <p className="sules-service-meta sules-service-travel">Biaya perjalanan terpisah</p>}
@@ -3307,7 +3307,7 @@ function ServicePackageList({ onBookPackage, onSelectPackage, selectedPackageId 
   const displayPackages = packages.map(item => {
     const price = getPackagePrice(item, pricingRows);
     const promo = getActivePackagePromo(item, pricingRows, price, localDateKey(new Date()));
-    return { ...item, price, promo, finalPrice: Math.max(0, price - promo.discount), priceReady: pricingLoaded };
+    return { ...item, price, promo, finalPrice: Math.max(0, price - promo.discount), priceConfigLoaded: pricingLoaded, priceReady: pricingLoaded && pricingRows.length === SERVICE_PACKAGES.length };
   });
   return <div className={compact ? "sules-service-rail" : "sules-catalog-grid"} aria-busy={!pricingLoaded}>
     {displayPackages.map(item => <ServicePackageCard key={item.id} item={item} onBookPackage={onBookPackage} onSelectPackage={onSelectPackage} selectedPackageId={selectedPackageId} compact={compact} catalog={catalog} />)}
