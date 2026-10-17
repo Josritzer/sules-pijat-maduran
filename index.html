@@ -949,6 +949,9 @@
   .sules-catalog-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; width:100%; min-width:0; margin:0; align-items:stretch; }
   #root .sules-catalog-grid .sules-service-card { grid-column:auto; display:flex; min-width:0; min-height:315px; flex-direction:column; align-items:stretch; gap:12px; padding:18px; border:1px solid #E4DDEA; border-radius:20px; background:linear-gradient(150deg,#FFFEFC 0%,#FAF7FB 100%); box-shadow:0 8px 22px rgba(57,45,91,.065); text-align:left; transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease; }
   #root .sules-catalog-grid .sules-service-card:hover { transform:translateY(-2px); border-color:#C9B7DD; box-shadow:0 14px 28px rgba(57,45,91,.1); }
+  #root .sules-catalog-grid .sules-service-card:active { transform:scale(.99); }
+  #root .sules-catalog-grid .sules-service-card-selected { border-color:#8B6CC1; box-shadow:0 0 0 3px rgba(117,80,180,.16),0 12px 26px rgba(57,45,91,.11); scroll-margin-top:90px; }
+  @media (prefers-reduced-motion:reduce) { #root .sules-catalog-grid .sules-service-card { transition:none; }
   .sules-catalog-grid .sules-service-icon { display:grid; width:54px; height:54px; flex:0 0 auto; place-items:center; border:1px solid #D9C892; border-radius:17px; background:linear-gradient(145deg,#F1EFF9,#FBF6E8); color:#4A4D9C; }
   .sules-catalog-grid .sules-service-icon svg { width:34px; height:34px; }
   .sules-catalog-grid .sules-service-copy { display:flex; flex:1; flex-direction:column; width:100%; min-width:0; }
@@ -1081,14 +1084,25 @@
   .sules-home-section-heading h2 { margin:5px 0 0; color:var(--home-ink); font-family:Georgia,'Times New Roman',serif; font-size:clamp(25px,4.2vw,34px); font-weight:500; line-height:1.12; letter-spacing:-.035em; }
   .sules-home-catalog-link { display:inline-flex; align-items:center; justify-content:center; gap:8px; flex:none; min-height:42px; padding:8px 12px; border:1px solid #D7C9A6; border-radius:999px; color:var(--home-forest); background:transparent; font-size:12px; font-weight:750; }
   .sules-home-catalog-link:hover { border-color:#B99D62; background:#FCFAF5; }
-  .sules-home-screen .sules-service-rail { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-flow:row; grid-auto-columns:auto; gap:13px; overflow:visible; padding:0; scroll-snap-type:none; }
-  .sules-home-screen .sules-service-card { display:flex; align-items:stretch; min-width:0; min-height:100%; padding:17px; border:1px solid var(--home-line); border-radius:17px; background:linear-gradient(180deg,#FFFDF9,#FFFFFF); box-shadow:0 8px 20px rgba(31,46,67,.04); }
-  .sules-home-screen .sules-service-card:nth-child(5) { grid-column:1 / -1; width:calc((100% - 13px)/2); justify-self:center; }
-  .sules-home-screen .sules-service-card .sules-eyebrow { color:#917B4F !important; }
-  .sules-home-screen .sules-service-card h3 { color:var(--home-ink); font-family:Georgia,'Times New Roman',serif; font-size:17px; line-height:1.3; letter-spacing:-.02em; overflow-wrap:anywhere; }
-  .sules-home-screen .sules-service-card .sules-service-meta { color:var(--home-muted); font-size:12px; line-height:1.5; }
-  .sules-home-screen .sules-service-card .sules-service-price { color:var(--home-forest); font-size:20px; }
-  .sules-home-screen .sules-service-card .sules-service-price small { color:#917B4F; }
+  .sules-home-screen .sules-service-rail { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-flow:row; grid-auto-columns:auto; gap:12px; overflow:visible; padding:0; scroll-snap-type:none; }
+  .sules-home-screen .sules-service-card { position:relative; display:flex; flex-direction:column; align-items:stretch; min-width:0; min-height:176px; padding:14px; border:1px solid var(--home-line); border-radius:17px; background:linear-gradient(150deg,#FFFFFF 0%,#F7F4FB 100%); box-shadow:0 7px 18px rgba(48,42,91,.055); cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; transition:transform 140ms ease,border-color 140ms ease,box-shadow 140ms ease; }
+  .sules-home-screen .sules-service-card:nth-child(5) { grid-column:1 / -1; width:100%; min-height:108px; justify-self:stretch; flex-direction:row; align-items:flex-start; gap:12px; }
+  .sules-home-screen .sules-service-card:hover { border-color:#C7B8E1; box-shadow:0 10px 22px rgba(48,42,91,.09); transform:translateY(-1px); }
+  .sules-home-screen .sules-service-card:active { box-shadow:0 3px 8px rgba(48,42,91,.08); transform:scale(.985); }
+  .sules-home-screen .sules-service-card:focus-visible { outline:2px solid #7652B2; outline-offset:3px; }
+  .sules-home-screen .sules-service-card .sules-service-icon { display:grid; width:32px; height:32px; flex:none; place-items:center; margin-bottom:8px; border:1px solid #D9C892; border-radius:11px; background:linear-gradient(145deg,#F1EFF9,#FBF6E8); color:#5946A0; }
+  .sules-home-screen .sules-service-card .sules-service-icon svg { width:22px; height:22px; }
+  .sules-home-screen .sules-service-card .sules-eyebrow { color:#917B4F !important; font-size:9px; line-height:1.35; letter-spacing:.09em; }
+  .sules-home-screen .sules-service-card h3 { margin:5px 0 4px; color:var(--home-ink); font-family:Georgia,'Times New Roman',serif; font-size:15px; line-height:1.25; letter-spacing:-.02em; overflow-wrap:anywhere; }
+  .sules-home-screen .sules-service-card .sules-service-meta { color:var(--home-muted); font-size:10px; line-height:1.4; }
+  .sules-home-screen .sules-service-card .sules-service-price { margin-top:7px; color:var(--home-forest); font-size:17px; line-height:1.25; overflow-wrap:anywhere; }
+  .sules-home-screen .sules-service-card .sules-service-price small { display:block; margin-top:2px; color:#917B4F; font-size:9px; font-weight:700; }
+  .sules-home-screen .sules-service-card .sules-home-compact-promo { display:inline-flex; align-self:flex-start; margin-top:7px; padding:3px 7px; border:1px solid #D8C9EA; border-radius:999px; color:#5946A0; background:#F4EFFA; font-size:9px; font-weight:850; line-height:1.25; }
+  .sules-home-screen .sules-service-card .sules-home-compact-old-price { margin-top:6px; color:#777184; font-size:10px; line-height:1.3; text-decoration:line-through; }
+  .sules-home-screen .sules-service-card .sules-home-compact-price { margin-top:2px; color:var(--home-forest); font-size:17px; font-weight:850; line-height:1.25; overflow-wrap:anywhere; }
+  .sules-home-screen .sules-service-card .sules-home-compact-price small { display:block; margin-top:2px; color:#917B4F; font-size:9px; font-weight:700; }
+  .sules-home-screen .sules-service-card:nth-child(5) .sules-service-icon { margin-top:2px; margin-bottom:0; }
+  .sules-home-screen .sules-service-card:nth-child(5) .sules-service-copy { flex:1; min-width:0; }
   #root .sules-home-screen .sules-service-card button.sules-primary { min-height:46px; margin-top:auto; border:1px solid #C6A96B !important; border-radius:999px !important; color:#FBF8EF !important; background:var(--home-forest) !important; box-shadow:none !important; font-size:12px; }
   .sules-home-story { display:grid; grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr); gap:clamp(18px,4vw,42px); padding:clamp(20px,4vw,32px) 4px; border-top:1px solid var(--home-line); border-bottom:1px solid var(--home-line); }
   .sules-home-story h2 { max-width:17ch; margin:8px 0 0; color:var(--home-ink); font-family:Georgia,'Times New Roman',serif; font-size:clamp(25px,4.5vw,38px); font-weight:500; line-height:1.08; letter-spacing:-.035em; }
@@ -1131,10 +1145,11 @@
     .sules-home-section-heading { align-items:flex-start; flex-direction:column; gap:10px; }
     .sules-home-section-heading h2 { max-width:19ch; font-size:28px; }
     .sules-home-summary > .grid { grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:12px !important; }
-    .sules-home-screen .sules-service-rail { grid-template-columns:minmax(0,1fr); gap:10px; }
-    .sules-home-screen .sules-service-card:nth-child(5) { grid-column:auto; width:100%; }
-    .sules-home-screen .sules-service-card { padding:15px; }
-    .sules-home-screen .sules-service-card h3 { font-size:16px; }
+    .sules-home-screen .sules-service-rail { grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+    .sules-home-screen .sules-service-card:nth-child(5) { grid-column:1 / -1; width:100%; min-height:108px; }
+    .sules-home-screen .sules-service-card { min-height:166px; padding:11px; border-radius:15px; }
+    .sules-home-screen .sules-service-card h3 { font-size:13px; }
+    .sules-home-screen .sules-service-card .sules-service-price { font-size:15px; }
     .sules-home-story { grid-template-columns:minmax(0,1fr); gap:12px; padding:21px 4px; }
     .sules-home-story h2 { max-width:16ch; font-size:29px; }
     .sules-home-info-links { gap:4px 14px; }
@@ -3243,51 +3258,63 @@ function RevenueChart({ days = [] }) {
   );
 }
 
-function ServicePackageCard({ item, onBookPackage, compact = false, catalog = false }) {
+function ServicePackageCard({ item, onBookPackage, onSelectPackage, selectedPackageId = null, compact = false, catalog = false }) {
   const homeService = item.type === "HOME_SERVICE";
   const paket5 = homeService && item.serviceId === "90m" && item.people === 2;
   const durasiMenit = paket5 ? 180 : DURASI[item.serviceId];
-  return <article className={`sules-service-card${catalog ? " sules-service-card-catalog" : ""}`}>
-    {!compact && <div className="sules-service-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M24 37c-8 0-14-4-17-11 9-1 15 3 17 11Z"/><path d="M24 37c8 0 14-4 17-11-9-1-15 3-17 11Z"/><path d="M24 36c-6-7-6-15 0-22 6 7 6 15 0 22Z"/><path d="M13 42h22"/><path d="M17 40c2-2 4-3 7-3 3 0 5 1 7 3"/></svg></div>}
+  const hasPromo = Number(item.promo?.discount) > 0;
+  const cardClass = `sules-service-card${catalog ? " sules-service-card-catalog" : ""}${catalog && selectedPackageId === item.id ? " sules-service-card-selected" : ""}`;
+  const selectFromHome = () => { if (compact && typeof onSelectPackage === "function") onSelectPackage(item.id); };
+  const handleCardKeyDown = event => {
+    if (!compact || (event.key !== "Enter" && event.key !== " ")) return;
+    event.preventDefault();
+    selectFromHome();
+  };
+  return <article className={cardClass} data-package-id={item.id}
+    {...(compact ? {role:"button",tabIndex:0,"aria-label":`Lihat ${item.label} di Katalog`,onClick:selectFromHome,onKeyDown:handleCardKeyDown} : {})}>
+    <div className="sules-service-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M24 37c-8 0-14-4-17-11 9-1 15 3 17 11Z"/><path d="M24 37c8 0 14-4 17-11-9-1-15 3-17 11Z"/><path d="M24 36c-6-7-6-15 0-22 6 7 6 15 0 22Z"/><path d="M13 42h22"/><path d="M17 40c2-2 4-3 7-3 3 0 5 1 7 3"/></svg></div>
     <div className="sules-service-copy">
-    <div className="sules-eyebrow">{durasiMenit} MENIT{paket5 ? " TOTAL" : ""} · {homeService ? "KE RUMAH" : "DI SULES"}</div>
-    <h3>{item.label}</h3>
-    <p className="sules-service-meta">{item.people} orang{paket5 ? " · 90 Menit per orang, berurutan" : ""} · {homeService ? "Layanan ke Rumah" : "Layanan di tempat Sules"}</p>
-    <div className="sules-service-price-block">
-      {catalog && item.promo?.discount > 0 ? <div style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:4,minWidth:0}}>
-        <span style={{display:"inline-flex",alignItems:"center",padding:"4px 9px",borderRadius:999,background:"linear-gradient(135deg,#4A1E8A,#6B35A8)",border:"1px solid #D4AF37",color:"#FFFFFF",fontSize:10,fontWeight:900,letterSpacing:".04em",boxShadow:"0 2px 5px rgba(74,30,138,.2)"}}>
-          {item.promo.type === "percent" ? `${item.promo.value}% OFF` : `HEMAT ${formatRupiah(item.promo.discount)}`}
-        </span>
-        <span style={{color:"#777184",fontSize:12,textDecoration:"line-through"}}>Harga normal {formatRupiah(item.price)}</span>
-        <div className="sules-service-price">{formatRupiah(item.finalPrice)}{homeService && <small>+ biaya perjalanan</small>}</div>
-        <span style={{color:"#7652A8",fontSize:11,fontWeight:800}}>Hemat {formatRupiah(item.promo.discount)}</span>
-      </div> : <div className="sules-service-price">{formatRupiah(item.price)}{homeService && <small>+ biaya perjalanan</small>}</div>}
-      {catalog && <span className="sules-service-price-caption">{item.promo?.discount > 0 ? "Harga promo" : "Harga paket"}</span>}
+      <div className="sules-eyebrow">{durasiMenit} MENIT{paket5 ? " TOTAL" : ""} · {homeService ? "KE RUMAH" : "DI SULES"}</div>
+      <h3>{item.label}</h3>
+      <p className="sules-service-meta">{item.people} orang{paket5 ? " · 90 Menit per orang, berurutan" : ""} · {homeService ? "Layanan ke Rumah" : "Layanan di tempat Sules"}</p>
+      <div className="sules-service-price-block">
+        {hasPromo ? <div style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:4,minWidth:0}}>
+          <span className={compact ? "sules-home-compact-promo" : ""} style={compact ? undefined : {display:"inline-flex",alignItems:"center",padding:"4px 9px",borderRadius:999,background:"linear-gradient(135deg,#4A1E8A,#6B35A8)",border:"1px solid #D4AF37",color:"#FFFFFF",fontSize:10,fontWeight:900,letterSpacing:".04em",boxShadow:"0 2px 5px rgba(74,30,138,.2)"}}>
+            {item.promo.type === "percent" ? `${item.promo.value}% OFF` : `HEMAT ${formatRupiah(item.promo.discount)}`}
+          </span>
+          <span className={compact ? "sules-home-compact-old-price" : ""} style={compact ? undefined : {color:"#777184",fontSize:12,textDecoration:"line-through"}}>Harga normal {formatRupiah(item.price)}</span>
+          <div className={compact ? "sules-home-compact-price" : "sules-service-price"}>{item.priceReady ? formatRupiah(item.finalPrice) : "Memuat harga…"}{homeService && item.priceReady && <small>+ biaya perjalanan</small>}</div>
+          {!compact && <span style={{color:"#7652A8",fontSize:11,fontWeight:800}}>Hemat {formatRupiah(item.promo.discount)}</span>}
+        </div> : <div className={compact ? "sules-home-compact-price" : "sules-service-price"}>{item.priceReady ? formatRupiah(item.price) : "Memuat harga…"}{homeService && item.priceReady && <small>+ biaya perjalanan</small>}</div>}
+        {catalog && <span className="sules-service-price-caption">{hasPromo ? "Harga promo" : "Harga paket"}</span>}
+      </div>
+      {homeService && compact && <p className="sules-service-meta sules-service-travel">Biaya perjalanan terpisah</p>}
     </div>
-    {homeService && !catalog && <p className="sules-service-meta sules-service-travel">Biaya perjalanan dihitung satu kali per booking.</p>}
-    </div>
-    <button type="button" className="sules-primary" aria-label={`${catalog ? "Pilih paket" : "Pesan"} ${item.label}`} onClick={() => onBookPackage(item.id)}>{catalog ? "Pilih Paket" : "Pesan Sekarang"}</button>
+    {!compact && <button type="button" className="sules-primary" aria-label={`Pesan Sekarang: ${item.label}`} onClick={() => onBookPackage(item.id)}>Pesan Sekarang</button>}
   </article>;
 }
 
-function ServicePackageList({ onBookPackage, compact = false, packages = SERVICE_PACKAGES, catalog = false }) {
+function ServicePackageList({ onBookPackage, onSelectPackage, selectedPackageId = null, compact = false, packages = SERVICE_PACKAGES, catalog = false }) {
   const [pricingRows, setPricingRows] = useState([]);
+  const [pricingLoaded, setPricingLoaded] = useState(false);
   useEffect(() => {
     let active = true;
-    window.bookingService.getPackagePricingConfig().then(rows => { if (active) setPricingRows(rows); }).catch(() => {});
+    window.bookingService.getPackagePricingConfig().then(rows => {
+      if (active) { setPricingRows(rows); setPricingLoaded(true); }
+    }).catch(() => { if (active) setPricingLoaded(true); });
     return () => { active = false; };
   }, []);
   const displayPackages = packages.map(item => {
     const price = getPackagePrice(item, pricingRows);
     const promo = getActivePackagePromo(item, pricingRows, price, localDateKey(new Date()));
-    return { ...item, price, promo, finalPrice: Math.max(0, price - promo.discount) };
+    return { ...item, price, promo, finalPrice: Math.max(0, price - promo.discount), priceReady: pricingLoaded };
   });
-  return <div className={compact ? "sules-service-rail" : "sules-catalog-grid"}>
-    {displayPackages.map(item => <ServicePackageCard key={item.id} item={item} onBookPackage={onBookPackage} compact={compact} catalog={catalog} />)}
+  return <div className={compact ? "sules-service-rail" : "sules-catalog-grid"} aria-busy={!pricingLoaded}>
+    {displayPackages.map(item => <ServicePackageCard key={item.id} item={item} onBookPackage={onBookPackage} onSelectPackage={onSelectPackage} selectedPackageId={selectedPackageId} compact={compact} catalog={catalog} />)}
   </div>;
 }
 
-function CatalogPackageGroup({ id, number, kicker, title, subtitle, packages, travelNote, onBookPackage }) {
+function CatalogPackageGroup({ id, number, kicker, title, subtitle, packages, travelNote, onBookPackage, selectedPackageId = null }) {
   return <section className={`sules-catalog-group sules-catalog-group-${id}`} aria-labelledby={`${id}-title`}>
     <header className="sules-catalog-group-heading">
       <div className="sules-catalog-group-title-row">
@@ -3301,7 +3328,7 @@ function CatalogPackageGroup({ id, number, kicker, title, subtitle, packages, tr
       <span className="sules-catalog-group-count" aria-label={`${packages.length} paket`}>{packages.length} paket</span>
     </header>
     {travelNote && <aside className="sules-catalog-travel-note"><span>INFORMASI BIAYA PERJALANAN</span><p>{travelNote}</p></aside>}
-    <ServicePackageList onBookPackage={onBookPackage} packages={packages} catalog />
+    <ServicePackageList onBookPackage={onBookPackage} packages={packages} selectedPackageId={selectedPackageId} catalog />
   </section>;
 }
 
@@ -3560,16 +3587,25 @@ function HomeDiscoveryContent({ onGoToCatalog, onBookPackage, onOpenPublicSectio
         <div><p className="sules-home-eyebrow">{SERVICE_PACKAGES.length} PILIHAN LAYANAN</p><h2 id="home-service-title">Temukan sesi yang sesuai.</h2></div>
         <button type="button" className="sules-home-catalog-link" onClick={onGoToCatalog}>Lihat katalog <span aria-hidden="true">↗</span></button>
       </div>
-      <ServicePackageList compact onBookPackage={onBookPackage} />
+      <ServicePackageList compact onBookPackage={onBookPackage} onSelectPackage={onGoToCatalog} />
     </section>
     <HomeBrandStory />
     <HomeQuickMenu onOpenPublicSection={onOpenPublicSection} />
   </React.Fragment>;
 }
 
-function CatalogTab({ onBookPackage }) {
+function CatalogTab({ onBookPackage, selectedPackageId = null }) {
   const homePackages = SERVICE_PACKAGES.filter(item => item.type === "HOME_SERVICE");
   const inPlacePackages = SERVICE_PACKAGES.filter(item => item.type === "DI_TEMPAT");
+  useEffect(() => {
+    if (!selectedPackageId) return;
+    const timer = window.setTimeout(() => {
+      const target = Array.from(document.querySelectorAll(".sules-catalog-grid [data-package-id]"))
+        .find(node => node.getAttribute("data-package-id") === selectedPackageId);
+      if (target) target.scrollIntoView({ behavior:"smooth", block:"center" });
+    }, 160);
+    return () => window.clearTimeout(timer);
+  }, [selectedPackageId]);
   return <div className="sules-catalog-screen">
     <header className="sules-catalog-heading">
       <p className="sules-catalog-wordmark">SULES</p>
@@ -3579,8 +3615,8 @@ function CatalogTab({ onBookPackage }) {
       <p className="sules-catalog-subtitle sules-catalog-subtitle-desktop">LUXURY PREMIUM MASSAGE SERVICE CATALOG</p>
     </header>
     <div className="sules-catalog-groups">
-      <CatalogPackageGroup id="catalog-home" number="01" kicker="LAYANAN KE RUMAH" title="HOME SERVICE" subtitle="Terapis datang langsung ke rumah Anda" packages={homePackages} onBookPackage={onBookPackage} travelNote="Biaya perjalanan terpisah dari harga paket dan dihitung satu kali per booking, bukan per orang. 1.000 meter pertama gratis; selanjutnya mengikuti jarak jalan." />
-      <CatalogPackageGroup id="catalog-place" number="02" kicker="LAYANAN DI TEMPAT" title="PIJAT DI TEMPAT" subtitle="Pijat di tempat SULES" packages={inPlacePackages} onBookPackage={onBookPackage} />
+      <CatalogPackageGroup id="catalog-home" number="01" kicker="LAYANAN KE RUMAH" title="HOME SERVICE" subtitle="Terapis datang langsung ke rumah Anda" packages={homePackages} onBookPackage={onBookPackage} selectedPackageId={selectedPackageId} travelNote="Biaya perjalanan terpisah dari harga paket dan dihitung satu kali per booking, bukan per orang. 1.000 meter pertama gratis; selanjutnya mengikuti jarak jalan." />
+      <CatalogPackageGroup id="catalog-place" number="02" kicker="LAYANAN DI TEMPAT" subtitle="Pijat di tempat SULES" packages={inPlacePackages} onBookPackage={onBookPackage} selectedPackageId={selectedPackageId} />
     </div>
   </div>;
 }
@@ -4884,6 +4920,7 @@ function AppTabs() {
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [menuView, setMenuView] = useState("menu");
   const [bookingPackageId, setBookingPackageId] = useState(SERVICE_PACKAGES[0].id);
+  const [selectedCatalogPackageId, setSelectedCatalogPackageId] = useState(null);
   const [ordersView, setOrdersView] = useState("active");
   const [customerSession, setCustomerSession] = useState(null);
   const [customerSessionReady, setCustomerSessionReady] = useState(false);
@@ -5050,6 +5087,11 @@ function AppTabs() {
     setBookingPackageId(SERVICE_PACKAGES.some(item => item.id === packageId) ? packageId : SERVICE_PACKAGES[0].id);
     navigate("book");
   };
+  const openCatalog = packageId => {
+    if (SERVICE_PACKAGES.some(item => item.id === packageId)) setSelectedCatalogPackageId(packageId);
+    else setSelectedCatalogPackageId(null);
+    navigate("catalog");
+  };
   useEffect(() => {
     const handlePublicPackageChoice = event => {
       const link = event.target && typeof event.target.closest === "function" ? event.target.closest("#katalog .sules-public-package-button[data-sules-package-id]") : null;
@@ -5144,8 +5186,8 @@ function AppTabs() {
     <div className={isAdminScreen ? "sules-admin-shell" : "sules-app-shell"}>
       <div className={isAdminScreen ? "sules-admin-content" : `sules-app-content${tab === "catalog" ? " sules-app-content-catalog" : ""}`}>
         {tab === "home" && <HomeSesiBanner />}
-        {tab === "home" && <CustomerOrdersTab mode="home" onGoToBooking={()=>navigate("book")} onBookPackage={bookPackage} onGoToCatalog={()=>navigate("catalog")} onGoToOrders={goToOrders} onOpenPublicSection={openPublicSection} customerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
-        {tab === "catalog" && <CatalogTab onBookPackage={bookPackage} />}
+        {tab === "home" && <CustomerOrdersTab mode="home" onGoToBooking={()=>navigate("book")} onBookPackage={bookPackage} onGoToCatalog={openCatalog} onGoToOrders={goToOrders} onOpenPublicSection={openPublicSection} customerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
+        {tab === "catalog" && <CatalogTab onBookPackage={bookPackage} selectedPackageId={selectedCatalogPackageId} />}
         {tab === "book" && <BookingTab initialPackageId={bookingPackageId} onCustomerSessionChange={updateCustomerSession} onGoToOrders={()=>goToOrders("active")} externalCustomerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
         {tab === "customer-auth" && <BookingTab initialPackageId={bookingPackageId} authOnly initialAuthMode={customerAuthMode} onAuthComplete={finishCustomerAuth} onAuthCancel={finishCustomerAuth} onCustomerSessionChange={updateCustomerSession} externalCustomerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
         {tab === "orders" && <CustomerOrdersTab initialView={ordersView} onGoToBooking={()=>navigate("book")} customerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
