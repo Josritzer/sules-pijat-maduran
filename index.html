@@ -3304,10 +3304,13 @@ function ServicePackageList({ onBookPackage, onSelectPackage, selectedPackageId 
     }).catch(() => { if (active) setPricingLoaded(true); });
     return () => { active = false; };
   }, []);
+  const priceConfigReady = pricingLoaded && pricingRows.length === SERVICE_PACKAGES.length;
   const displayPackages = packages.map(item => {
     const price = getPackagePrice(item, pricingRows);
-    const promo = getActivePackagePromo(item, pricingRows, price, localDateKey(new Date()));
-    return { ...item, price, promo, finalPrice: Math.max(0, price - promo.discount), priceConfigLoaded: pricingLoaded, priceReady: pricingLoaded && pricingRows.length === SERVICE_PACKAGES.length };
+    const promo = priceConfigReady
+      ? getActivePackagePromo(item, pricingRows, price, localDateKey(new Date()))
+      : { type:"none", target:"active_level", value:0, discount:0 };
+    return { ...item, price, promo, finalPrice: Math.max(0, price - promo.discount), priceConfigLoaded: pricingLoaded, priceReady: priceConfigReady };
   });
   return <div className={compact ? "sules-service-rail" : "sules-catalog-grid"} aria-busy={!pricingLoaded}>
     {displayPackages.map(item => <ServicePackageCard key={item.id} item={item} onBookPackage={onBookPackage} onSelectPackage={onSelectPackage} selectedPackageId={selectedPackageId} compact={compact} catalog={catalog} />)}
