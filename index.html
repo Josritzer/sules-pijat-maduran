@@ -4859,7 +4859,7 @@ function AppTabs() {
   const [customerAuthReturnTab, setCustomerAuthReturnTab] = useState("account");
   const [customerAuthMode, setCustomerAuthMode] = useState("login");
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const body = document.body;
     body.classList.toggle("sules-app-tab-not-home", tab !== "home");
     return () => body.classList.remove("sules-app-tab-not-home");
@@ -4993,6 +4993,9 @@ function AppTabs() {
   };
 
   const navigate = (nextTab) => {
+    // Hide the long public information sections immediately when leaving Beranda,
+    // so Catalog and other app tabs never reveal duplicate FAQ/contact sections on scroll.
+    document.body.classList.toggle("sules-app-tab-not-home", nextTab !== "home");
     setTab(nextTab);
     if (nextTab === "account") setMenuView("menu");
     else setMenuView("menu");
