@@ -843,6 +843,8 @@
   #root .sules-bottom-nav button[data-nav="notifications"] { --nav-accent:#B3444C; --nav-tint:#FFF0F1; --nav-line:#F0D0D2; }
   #root .sules-bottom-nav button[data-nav="account"] { --nav-accent:#75669A; --nav-tint:#F2EFF8; --nav-line:#DDD7EA; }
   #root .sules-bottom-nav button svg { width:19px; height:19px; color:var(--nav-accent,#687F93); }
+  #root .sules-bottom-nav .sules-nav-icon-wrap { position:relative; display:inline-flex; align-items:center; justify-content:center; line-height:0; }
+  #root .sules-bottom-nav .sules-nav-notification-dot { position:absolute; top:-3px; right:-5px; width:9px; height:9px; border-radius:999px; background:#DC2626; border:2px solid #FFFFFF; box-shadow:0 0 0 1px rgba(220,38,38,.12); }
   #root .sules-bottom-nav button[aria-current="page"] { color:var(--nav-accent,#225F91) !important; background:var(--nav-tint,#EAF3FA) !important; border-color:var(--nav-line,#D8E7F2) !important; }
   .public-shell { max-width:1120px; padding:26px 18px 48px; }
   .public-section { scroll-margin-top:88px; }
@@ -3570,7 +3572,7 @@ function CustomerRealtimeNotice({ error, onRetry }) {
   </div>;
 }
 
-function NotificationsTab({ customerSession, customerSessionReady, customerSessionError, onRetryCustomerSession, onCustomerAuth, onGoToOrders }) {
+function NotificationsTab({ customerSession, customerSessionReady, customerSessionError, onRetryCustomerSession, onCustomerAuth, onGoToOrders, onNotificationsRead }) {
   const customerId = customerSession && customerSession.user && customerSession.user.id;
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -3613,6 +3615,7 @@ function NotificationsTab({ customerSession, customerSessionReady, customerSessi
         return Array.from(next.values()).sort((a,b) => String(b.updated_at || b.created_at || "").localeCompare(String(a.updated_at || a.created_at || "")));
       });
       setError("");
+      if (typeof onNotificationsRead === "function") onNotificationsRead(current);
     } catch (_) {
       if (aliveRef.current && requestId === requestSequenceRef.current) setError("Notifikasi booking belum dapat dimuat. Periksa koneksi lalu coba lagi.");
     } finally {
@@ -4834,6 +4837,7 @@ function ProfileMenuTab({ onOpenAdmin, customerSession, customerSessionReady, cu
 
 function AppTabs() {
   const [tab, setTab] = useState("home");
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [menuView, setMenuView] = useState("menu");
   const [bookingPackageId, setBookingPackageId] = useState(SERVICE_PACKAGES[0].id);
   const [ordersView, setOrdersView] = useState("active");
@@ -4897,6 +4901,74 @@ function AppTabs() {
       window.bookingService.removeCustomerAuthSubscription(authSubscription);
     };
   }, [customerSessionRetryKey]);
+
+  const activeCustomerId = customerSession && customerSession.user && customerSession.user.id;
+  const notificationStatuses = new Set(["MENUNGGU", "DITERIMA", "DITOLAK", "SELESAI", "DIBATALKAN"]);
+  const notificationFingerprint = row => row && row.id && notificationStatuses.has(row.status) ? String(row.id) + "|" + String(row.status) : "";
+  const notificationSeenKey = customerId => "sules_notification_seen_v1_" + String(customerId || "");
+  const readNotificationSeen = customerId => {
+    try {
+      const raw = window.localStorage.getItem(notificationSeenKey(customerId));
+      if (raw === null) return null;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter(value => typeof value === "string") : null;
+    } catch (_) { return null; }
+  };
+  const writeNotificationSeen = (customerId, values) => {
+    try {
+      window.localStorage.setItem(notificationSeenKey(customerId), JSON.stringify(Array.from(new Set(values.filter(Boolean))).slice(-500)));
+      return true;
+    } catch (_) { return false; }
+  };
+  const markNotificationsRead = rows => {
+    if (!activeCustomerId) return;
+    const seen = readNotificationSeen(activeCustomerId) || [];
+    const current = (Array.isArray(rows) ? rows : []).map(notificationFingerprint).filter(Boolean);
+    writeNotificationSeen(activeCustomerId, seen.concat(current));
+    setUnreadNotificationCount(0);
+  };
+
+  useEffect(() => {
+    if (!activeCustomerId || !customerSessionReady) {
+      setUnreadNotificationCount(0);
+      return;
+    }
+    let active = true;
+    let refreshTimer = null;
+    const refreshUnread = async () => {
+      try {
+        const rows = await withCustomerReadTimeout(() => window.bookingService.getCustomerBookings(activeCustomerId, 0));
+        if (!active) return;
+        const fingerprints = (Array.isArray(rows) ? rows : []).map(notificationFingerprint).filter(Boolean);
+        const seen = readNotificationSeen(activeCustomerId);
+        if (seen === null) {
+          // First activation establishes a baseline; old booking statuses are not shown as new.
+          writeNotificationSeen(activeCustomerId, fingerprints);
+          setUnreadNotificationCount(0);
+          return;
+        }
+        const seenSet = new Set(seen);
+        setUnreadNotificationCount(fingerprints.filter(value => !seenSet.has(value)).length);
+      } catch (_) {
+        // Preserve the last known badge state when the network is temporarily unavailable.
+      }
+    };
+    const channel = window.bookingService.subscribeCustomerOrders(activeCustomerId, () => {
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => { refreshTimer = null; if (active) void refreshUnread(); }, 180);
+    });
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") void refreshUnread();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    void refreshUnread();
+    return () => {
+      active = false;
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      void window.bookingService.removeRealtimeChannel(channel);
+    };
+  }, [activeCustomerId, customerSessionReady]);
 
   const retryCustomerSessionCheck = () => {
     setCustomerSessionError("");
@@ -5002,7 +5074,7 @@ function AppTabs() {
         {tab === "book" && <BookingTab initialPackageId={bookingPackageId} onCustomerSessionChange={updateCustomerSession} onGoToOrders={()=>goToOrders("active")} externalCustomerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
         {tab === "customer-auth" && <BookingTab initialPackageId={bookingPackageId} authOnly initialAuthMode={customerAuthMode} onAuthComplete={finishCustomerAuth} onAuthCancel={finishCustomerAuth} onCustomerSessionChange={updateCustomerSession} externalCustomerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
         {tab === "orders" && <CustomerOrdersTab initialView={ordersView} onGoToBooking={()=>navigate("book")} customerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
-        {tab === "notifications" && <NotificationsTab customerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} onCustomerAuth={openCustomerAuth} onGoToOrders={()=>goToOrders("active")} />}
+        {tab === "notifications" && <NotificationsTab customerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} onCustomerAuth={openCustomerAuth} onGoToOrders={()=>goToOrders("active")} onNotificationsRead={markNotificationsRead} />}
         {tab === "account" && (menuView === "admin"
           ? <AdminTab onExitToApp={()=>setMenuView("menu")} />
           : <ProfileMenuTab onOpenAdmin={()=>setMenuView("admin")} customerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck}
@@ -5010,9 +5082,13 @@ function AppTabs() {
             onGoToOrders={()=>goToOrders("active")} onStartBooking={()=>bookPackage(bookingPackageId)} />)}
       </div>
       {!isAdminScreen && <nav className="sules-bottom-nav" aria-label="Navigasi aplikasi">
-        {navItems.map(item => <button key={item.id} type="button" data-nav={item.id} title={item.title || item.label} aria-label={item.title || item.label}
+        {navItems.map(item => <button key={item.id} type="button" data-nav={item.id} title={item.title || item.label}
+          aria-label={item.id === "notifications" && unreadNotificationCount > 0 ? `Notifikasi, ${unreadNotificationCount} belum dibaca` : item.title || item.label}
           aria-current={currentNavTab === item.id ? "page" : undefined} onClick={()=>navigate(item.id)}>
-          <SulesNavIcon name={item.icon} /><span>{item.label}</span>
+          {item.id === "notifications"
+            ? <span className="sules-nav-icon-wrap"><SulesNavIcon name={item.icon} />{unreadNotificationCount > 0 && <span className="sules-nav-notification-dot" aria-hidden="true" />}</span>
+            : <SulesNavIcon name={item.icon} />}
+          <span>{item.label}</span>
         </button>)}
       </nav>}
     </div>
