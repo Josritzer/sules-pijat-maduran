@@ -534,6 +534,7 @@
   .public-button.secondary { background:#fff; color:var(--sules-navy); border-color:var(--sules-line); }
   .public-shell { max-width:1120px; margin:0 auto; padding:22px 18px 52px; }
   .public-section { margin:24px 0; scroll-margin-top:18px; }
+  body.sules-app-tab-not-home .public-shell { display:none !important; }
   .public-hero { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(240px,.7fr); gap:22px; align-items:center; padding:34px; border:1px solid var(--sules-line); border-radius:28px; background:linear-gradient(130deg,#fff 8%,#EDF5FB 100%); box-shadow:0 14px 36px rgba(24,50,75,.07); }
   .public-hero h1 { color:var(--sules-navy); font-size:clamp(30px,5vw,52px); line-height:1.05; letter-spacing:-.035em; margin:10px 0 14px; }
   .public-hero p { color:#536E84; line-height:1.65; }
@@ -4857,6 +4858,12 @@ function AppTabs() {
   const [customerSessionRetryKey, setCustomerSessionRetryKey] = useState(0);
   const [customerAuthReturnTab, setCustomerAuthReturnTab] = useState("account");
   const [customerAuthMode, setCustomerAuthMode] = useState("login");
+
+  useEffect(() => {
+    const body = document.body;
+    body.classList.toggle("sules-app-tab-not-home", tab !== "home");
+    return () => body.classList.remove("sules-app-tab-not-home");
+  }, [tab]);
 
   useEffect(() => {
     let active = true;
