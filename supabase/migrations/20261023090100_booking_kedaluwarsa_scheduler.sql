@@ -98,6 +98,54 @@ BEGIN
 END;
 $function$;
 
+-- Allow customers to hide expired bookings from their own history without deleting records.
+CREATE OR REPLACE FUNCTION public.sembunyikan_riwayat(p_booking_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'pg_catalog', 'public'
+AS $function$
+DECLARE
+  v_status text;
+  v_hidden_at timestamptz;
+BEGIN
+  IF auth.uid() IS NULL OR p_booking_id IS NULL THEN
+    RETURN false;
+  END IF;
+
+  SELECT b.status::text, b.disembunyikan_pelanggan_at
+    INTO v_status, v_hidden_at
+    FROM public.bookings AS b
+   WHERE b.id = p_booking_id
+     AND b.customer_id = auth.uid()
+   FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN false;
+  END IF;
+
+  IF v_status NOT IN ('SELESAI', 'DITOLAK', 'KEDALUWARSA') THEN
+    RETURN false;
+  END IF;
+
+  IF v_hidden_at IS NOT NULL THEN
+    RETURN true;
+  END IF;
+
+  UPDATE public.bookings AS b
+     SET disembunyikan_pelanggan_at = clock_timestamp()
+   WHERE b.id = p_booking_id
+     AND b.customer_id = auth.uid()
+     AND b.disembunyikan_pelanggan_at IS NULL;
+
+  RETURN FOUND;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.sembunyikan_riwayat(uuid)
+  FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.sembunyikan_riwayat(uuid) TO authenticated;
+
 -- Idempotently replace the named one-minute job.
 DO $block$
 DECLARE
