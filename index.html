@@ -14,7 +14,7 @@
 <meta property="og:locale" content="id_ID" />
 <meta property="og:site_name" content="SULES PIJAT MADURAN" />
 <meta property="og:title" content="SULES PIJAT MADURAN | Booking Pijat di Maduran" />
-<meta property="og:description" content="Pilih paket pijat di Sules atau ke Rumah. Lima pilihan layanan dan status booking tersimpan di Supabase." />
+<meta property="og:description" content="Pilih paket pijat di Sules atau ke Rumah. Lima pilihan layanan dan status booking bisa dipantau langsung." />
 <meta property="og:url" content="https://bookingpijat.com/" />
 <meta property="og:image" content="https://bookingpijat.com/icons/pwa-512.png" />
 <meta property="og:image:alt" content="Ikon SULES PIJAT MADURAN" />
@@ -1391,7 +1391,7 @@
 
   <section id="booking-info" class="public-section public-two-col">
     <article class="public-card"><p class="public-eyebrow">Booking</p><h2>Ajukan jadwal secara langsung</h2><ol class="public-list"><li>Masuk menggunakan email dan kode OTP.</li><li>Pilih satu dari lima paket, tanggal, serta slot 30 menit yang tersedia.</li><li>Untuk layanan ke Rumah, masukkan lokasi agar jarak jalan dan biaya perjalanan dihitung.</li><li>Kirim booking. Status awal MENUNGGU; layanan belum dikonfirmasi sampai Admin memilih TERIMA.</li></ol><a class="public-button" style="margin-top:16px" href="#booking-app">Buka Form Booking</a></article>
-    <article id="pesanan" class="public-card"><p class="public-eyebrow">Pesanan Aktif &amp; Riwayat</p><h2>Pantau pesanan milik Anda</h2><p class="public-muted">Masuk ke akun pelanggan yang dipakai untuk booking, lalu buka tab <strong>Pesanan</strong> di aplikasi untuk melihat status MENUNGGU/DITERIMA serta riwayat DITOLAK/SELESAI. Data diambil dari Supabase dan dibatasi oleh akun pelanggan.</p><a class="public-button secondary" href="#booking-app">Buka Aplikasi Pesanan</a></article>
+    <article id="pesanan" class="public-card"><p class="public-eyebrow">Pesanan Aktif &amp; Riwayat</p><h2>Pantau pesanan milik Anda</h2><p class="public-muted">Masuk ke akun pelanggan yang dipakai untuk booking, lalu buka tab <strong>Pesanan</strong> di aplikasi untuk melihat status MENUNGGU/DITERIMA serta riwayat DITOLAK/SELESAI. Pesanan hanya dapat dilihat oleh akun pelanggan yang bersangkutan.</p><a class="public-button secondary" href="#booking-app">Buka Aplikasi Pesanan</a></article>
   </section>
 
   <section id="faq" class="public-section">
@@ -1428,7 +1428,7 @@
     <details class="public-details"><summary>Bagaimana cara mengajukan booking?</summary><p>Masuk menggunakan email dan kode OTP, pilih satu dari lima paket, tentukan tanggal dan slot yang tersedia, lalu kirim permintaan. Untuk layanan ke Rumah, masukkan lokasi agar jarak jalan dan biaya perjalanan dapat dihitung.</p></details>
     <details class="public-details"><summary>Apakah booking langsung terkonfirmasi?</summary><p>Tidak. Booking baru berstatus MENUNGGU. Admin yang memeriksa jadwal dan memilih TERIMA atau TOLAK.</p></details>
     <details class="public-details"><summary>Jam layanan dan slotnya bagaimana?</summary><p>Jadwal layanan 08.00–15.00 dan 19.00–24.00 dengan interval 30 menit. Slot yang durasinya melewati batas sesi tidak tersedia.</p></details>
-    <details class="public-details"><summary>Bagaimana biaya perjalanan dihitung?</summary><p>Untuk layanan ke Rumah, 1.000 meter pertama gratis; selebihnya Rp3,50 per meter dari jarak jalan Google Routes. Biaya dihitung satu kali per booking, bukan per orang.</p></details>
+    <details class="public-details"><summary>Bagaimana biaya perjalanan dihitung?</summary><p>Untuk layanan ke Rumah, 1.000 meter pertama gratis; selebihnya Rp3,50 per meter dari jarak jalan. Biaya dihitung satu kali per booking, bukan per orang.</p></details>
     <details class="public-details"><summary>Apa yang terjadi jika jarak jalan tidak dapat dihitung?</summary><p>Aplikasi tidak memakai jarak perkiraan. Coba hitung kembali atau hubungi Admin sebelum mengirim booking.</p></details>
     <details class="public-details"><summary>Bagaimana masuk dan melihat pesanan?</summary><p>Booking pelanggan menggunakan verifikasi email OTP. Setelah masuk, tab Pesanan menampilkan booking aktif dan riwayat milik akun tersebut.</p></details>
     <details class="public-details"><summary>Bagaimana menghubungi Admin?</summary><p>Hubungi melalui <a href="https://wa.me/6285855603240" rel="noopener noreferrer">WhatsApp 085855603240</a> atau email <a href="mailto:srawungjagad3714@gmail.com">srawungjagad3714@gmail.com</a>.</p></details>
@@ -1449,7 +1449,7 @@
       <li><strong>Harga dan paket.</strong> Harga mengikuti informasi yang ditampilkan di aplikasi SL RELAX saat pemesanan. Promo atau diskon mengikuti syarat dan periode yang tercantum di aplikasi. Paket Home Service untuk dua orang mencakup dua orang, masing-masing 90 menit secara bergantian.</li>
       <li><strong>Status booking.</strong> Booking yang dikirim berstatus MENUNGGU dan belum berarti jadwal telah dikonfirmasi. Admin akan memeriksa jadwal dan memperbarui status menjadi DITERIMA atau DITOLAK. Periksa status di aplikasi untuk mengetahui hasilnya.</li>
       <li><strong>Jam layanan dan jadwal.</strong> Sesi siang berlangsung pukul 08.00–15.00 dan sesi malam pukul 19.00–24.00. Pilihan waktu mulai tersedia dalam interval 30 menit. Waktu mulai dan durasi layanan harus sesuai ketersediaan slot serta tidak melewati batas sesi.</li>
-      <li><strong>Biaya perjalanan Home Service.</strong> Biaya perjalanan hanya berlaku untuk layanan ke Rumah dan terpisah dari harga paket. Perhitungan menggunakan jarak jalan dari Google Routes: 1.000 meter pertama gratis, sedangkan jarak selebihnya dikenakan Rp3,50 per meter. Biaya perjalanan dihitung satu kali per booking, bukan per orang.</li>
+      <li><strong>Biaya perjalanan Home Service.</strong> Biaya perjalanan hanya berlaku untuk layanan ke Rumah dan terpisah dari harga paket. Perhitungan menggunakan jarak jalan sebenarnya: 1.000 meter pertama gratis, sedangkan jarak selebihnya dikenakan Rp3,50 per meter. Biaya perjalanan dihitung satu kali per booking, bukan per orang.</li>
       <li><strong>Ketepatan informasi.</strong> Sebelum mengirim booking, pastikan paket, jumlah orang, tanggal, waktu mulai, dan lokasi tujuan Home Service sudah benar. Lokasi tujuan perlu akurat agar jarak jalan dapat dihitung dengan benar.</li>
       <li><strong>Pembayaran.</strong> Aplikasi SL RELAX belum menyediakan checkout atau pembayaran online. Mengirim booking bukan bukti pembayaran telah dilakukan. Jika pembayaran diperlukan, ikuti informasi yang diberikan Admin.</li>
       <li><strong>Kontak bantuan.</strong> Untuk pertanyaan atau kendala terkait layanan dan booking, hubungi Admin melalui saluran WhatsApp atau email yang tercantum pada bagian Kontak di website.</li>
@@ -1848,7 +1848,7 @@ async function computeRoadDistance(destLat, destLng) {
   if (
     !data || data.source !== "google_routes" || data.travelMode !== "TWO_WHEELER" ||
     typeof data.distanceMeters !== "number" || !Number.isFinite(data.distanceMeters) || data.distanceMeters < 0
-  ) throw new Error("Jarak jalan Google Routes tidak valid.");
+  ) throw new Error("Jarak jalan tidak valid.");
   return { meters: data.distanceMeters, sumber: "road" };
 }
 function maskEmail(email) {
@@ -2413,7 +2413,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       setSumberJarak(sumber);
     } catch (_) {
       if (reqId !== jarakReqRef.current) return;
-      setJarakError("Jarak jalan Google Routes belum tersedia, biaya perjalanan belum bisa dihitung. Periksa koneksi lalu tekan Hitung Jarak Jalan untuk mencoba lagi.");
+      setJarakError("Jarak jalan belum tersedia, biaya perjalanan belum bisa dihitung. Periksa koneksi lalu tekan Hitung Jarak Jalan untuk mencoba lagi.");
     }
     if (reqId === jarakReqRef.current) setLoadingJarak(false);
   };
@@ -2463,7 +2463,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
       return;
     }
     if (tipeLokasi === "HOME_SERVICE" && (jarak === null || sumberJarak !== "road")) {
-      setFormError("Jarak jalan belum tersedia. Hitung ulang jarak Google Routes lalu coba booking lagi.");
+      setFormError("Jarak jalan belum tersedia. Hitung ulang jarak jalan lalu coba booking lagi.");
       return;
     }
     bookingSubmitLockRef.current = true;
@@ -2979,7 +2979,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
             {jarak !== null && sumberJarak && (
               <div className="mb-2">
                 <span style={{ backgroundColor:"#ECFDF5", color:"#065F46", border:"1px solid #10B981" }} className="text-xs rounded-full px-3 py-1 inline-block">
-                  📍 Jarak Jalan (Google Routes) • {jarak}m
+                  📍 Jarak Jalan • {jarak}m
                 </span>
               </div>
             )}
@@ -3012,7 +3012,7 @@ function BookingTab({ initialPackageId = SERVICE_PACKAGES[0].id, authOnly = fals
         </div>
         {tipeLokasi === "HOME_SERVICE" && jarak !== null && (
           <div className="text-xs text-gray-500 mb-1">
-            Jarak Jalan {jarak}m (Google Routes) {jarak > GRATIS_METER ? `- Gratis ${GRATIS_METER}m = ${jarak-GRATIS_METER}m x Rp3,50 = ${formatRupiah(transport)}` : "(dalam radius gratis)"}
+            Jarak Jalan {jarak}m {jarak > GRATIS_METER ? `- Gratis ${GRATIS_METER}m = ${jarak-GRATIS_METER}m x Rp3,50 = ${formatRupiah(transport)}` : "(dalam radius gratis)"}
           </div>
         )}
         {tipeLokasi === "HOME_SERVICE" && (
@@ -3972,7 +3972,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
   }
 
   return <div className="max-w-md mx-auto px-4 pb-16">
-    <div className="py-5"><h2 className="text-xl font-bold" style={{color:"#18324B"}}>Pesanan Anda</h2><p className="text-xs text-gray-500 mt-1">Data pesanan dimuat dari Supabase untuk akun yang sedang masuk.</p></div>
+    <div className="py-5"><h2 className="text-xl font-bold" style={{color:"#18324B"}}>Pesanan Anda</h2><p className="text-xs text-gray-500 mt-1">Pesanan dari akun yang sedang masuk.</p></div>
     {sessionError && <div role="alert" className="sules-active-card text-sm text-red-700 mb-3">{sessionError}<button type="button" onClick={retryCustomerSessionCheck} className="underline font-semibold block mt-2">Coba lagi</button></div>}
     <CustomerBookingSummary summary={bookingSummary} loading={summaryLoading} error={summaryError} onRetry={()=>void fetchBookingSummary()} className="mb-4" />
     <CustomerRealtimeNotice error={realtimeError} onRetry={()=>setRealtimeRetryKey(key => key + 1)} />
