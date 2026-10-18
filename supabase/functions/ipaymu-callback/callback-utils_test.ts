@@ -23,6 +23,8 @@ Deno.test("callback normalization removes signature and sorts keys", () => {
 Deno.test("callback normalization converts known boolean strings", () => {
   assertEquals(normalizeCallback({ is_escrow: "true" })["is_escrow"], true);
   assertEquals(normalizeCallback({ is_escrow: "0" })["is_escrow"], false);
+  assertEquals(normalizeCallback({ is_escrow: true })["is_escrow"], true);
+  assertEquals(normalizeCallback({ settlement_date: null })["settlement_date"], "null");
 });
 
 Deno.test("hex signature comparison accepts equal hex case-insensitively", () => {
