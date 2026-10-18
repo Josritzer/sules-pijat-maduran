@@ -16,6 +16,7 @@ Deno.test("callback normalization removes signature and sorts keys", () => {
   assertEquals(result["status_code"], 1);
   assertEquals(result["trx_id"], 12345);
   assertEquals(result["additional_info"], []);
+  assertEquals(normalizeCallback({ additional_info: "{\"x\":1}" })["additional_info"], "{\"x\":1}");
   assertEquals("signature" in result, false);
 });
 
