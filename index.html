@@ -5111,6 +5111,19 @@ function AppTabs() {
   const [customerAuthReturnTab, setCustomerAuthReturnTab] = useState("account");
   const [customerAuthMode, setCustomerAuthMode] = useState("login");
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentReturn = params.get("payment");
+    if (paymentReturn !== "return" && paymentReturn !== "cancel") return;
+    setOrdersView("active");
+    setTab("orders");
+    params.delete("payment");
+    params.delete("booking_id");
+    const query = params.toString();
+    const cleanUrl = window.location.pathname + (query ? `?${query}` : "") + window.location.hash;
+    window.history.replaceState({}, "", cleanUrl);
+  }, []);
+
   useLayoutEffect(() => {
     const body = document.body;
     body.classList.add("sules-app-hide-public-shell");
