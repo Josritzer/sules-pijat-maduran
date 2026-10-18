@@ -101,10 +101,10 @@ function normalizeCallback(raw) {
       if (!Number.isFinite(parsed)) throw new Error("invalid_callback_number");
       result[key] = parsed;
     } else if (key === "additional_info") {
+      // iPaymu callback signature spec converts only the literal "[]" to an array.
+      // Preserve other string values exactly to avoid signature mismatches.
       if (value === "[]") result[key] = [];
-      else if (typeof value === "string") {
-        try { result[key] = JSON.parse(value); } catch { result[key] = value; }
-      } else result[key] = value;
+      else result[key] = value;
     } else {
       result[key] = value === null ? null : String(value);
     }
