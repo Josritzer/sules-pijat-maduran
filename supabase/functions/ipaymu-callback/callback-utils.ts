@@ -8,19 +8,20 @@ export function constantTimeEqualHex(a: string, b: string) {
 }
 
 export function normalizeCallback(input: Record<string, unknown>) {
-  const normalized: Record<string, unknown> = { ...input };
-  delete normalized.signature;
-  for (const key of ["trx_id", "status_code", "transaction_status_code", "paid_off"]) {
-    if (typeof normalized[key] === "string" && /^-?\d+$/.test(normalized[key] as string)) {
-      normalized[key] = Number(normalized[key]);
+  const normalized: Record<string, unknown> = {};
+  for (const [key, raw] of Object.entries(input)) {
+    if (key === "signature") continue;
+    if (key === "is_escrow") {
+      normalized[key] = raw === true || raw === 1 || raw === "true" || raw === "1";
+    } else if (["trx_id", "status_code", "transaction_status_code", "paid_off"].includes(key)) {
+      const value = typeof raw === "string" ? Number.parseInt(raw, 10) : raw;
+      normalized[key] = value;
+    } else if (key === "additional_info") {
+      normalized[key] = raw === "[]" ? [] : raw;
+    } else {
+      normalized[key] = String(raw);
     }
   }
-  if (typeof normalized.is_escrow === "string") {
-    const value = (normalized.is_escrow as string).toLowerCase();
-    if (value === "true" || value === "1") normalized.is_escrow = true;
-    else if (value === "false" || value === "0") normalized.is_escrow = false;
-  }
-  if (normalized.additional_info === "[]") normalized.additional_info = [];
   if (!("additional_info" in normalized)) normalized.additional_info = [];
   return Object.fromEntries(Object.keys(normalized).sort((a, b) => a.localeCompare(b)).map((key) => [key, normalized[key]]));
 }
