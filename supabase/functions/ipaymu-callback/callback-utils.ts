@@ -23,7 +23,7 @@ export function normalizeCallback(input: Record<string, unknown>) {
     }
   }
   if (!("additional_info" in normalized)) normalized.additional_info = [];
-  return Object.fromEntries(Object.keys(normalized).sort((a, b) => a.localeCompare(b)).map((key) => [key, normalized[key]]));
+  return Object.fromEntries(Object.keys(normalized).sort((a, b) => a < b ? -1 : a > b ? 1 : 0).map((key) => [key, normalized[key]]));
 }
 
 export async function hmacSha256Hex(value: string, secret: string) {
