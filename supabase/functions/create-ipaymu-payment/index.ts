@@ -106,12 +106,13 @@ Deno.serve(async (req: Request) => {
     return json(req, { error: "payment_create_failed" }, 409);
   }
 
+  const paymentId = payment.id;
   async function markPaymentFailed() {
     const { error } = await admin.from("payment_transactions")
       .update({ status: "FAILED", updated_at: new Date().toISOString() })
-      .eq("id", payment.id)
+      .eq("id", paymentId)
       .eq("status", "PENDING");
-    if (error) console.error("Unable to mark failed payment session", payment.id);
+    if (error) console.error("Unable to mark failed payment session", paymentId);
   }
 
   const productName = booking.package_key || (booking.service_id === "120m" ? "Pijat 2 Jam" : "Pijat 90 Menit");
