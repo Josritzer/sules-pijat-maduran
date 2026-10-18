@@ -3,6 +3,10 @@
 [functions.create-ipaymu-payment]
 verify_jwt = true
 
+# Customer payment-status reads require an authenticated Supabase user.
+[functions.get-customer-payment-status]
+verify_jwt = true
+
 # iPaymu server-to-server callbacks do not carry a Supabase user JWT.
 # The handler validates the iPaymu X-Signature itself.
 [functions.ipaymu-callback]
