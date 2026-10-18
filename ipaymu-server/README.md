@@ -15,7 +15,7 @@ See `.env.example`. Keep all real values in the VPS environment/secrets manager.
 
 ## Before Sandbox testing
 
-1. Apply the migration `supabase/migrations/20261024_ipaymu_payments.sql` in a reviewable deployment step.
+1. Apply the migration `supabase/migrations/20261018_ipaymu_payments.sql` in a reviewable deployment step.
 2. Deploy this service on a VPS with a static IP, configure TLS for `api.bookingpijat.com`, and set environment variables.
 3. Configure the iPaymu Sandbox callback to `https://api.bookingpijat.com/ipaymu/callback` and the same callback content format documented in iPaymu (JSON or URL-encoded).
 4. Add the Sandbox VA and API key only to the VPS environment; never put them in frontend files, GitHub, or chat.
