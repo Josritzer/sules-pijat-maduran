@@ -91,12 +91,14 @@ Deno.serve(async (req: Request) => {
 
   const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data: payment, error: paymentError } = await admin.from("payment_transactions")
-    .select("id,amount,status")
+    .select("id,amount,status,ipaymu_session_id")
     .eq("id", referenceId)
     .maybeSingle();
   if (paymentError) return json({ error: "payment_lookup_failed" }, 503);
   if (!payment) return json({ status: "ignored" });
-  if (Number(payment.amount) !== callbackAmount) return json({ error: "amount_mismatch" }, 409);
+  if (Number(payment.amount) !== callbackAmount) return json({ status: "acknowledged_amount_mismatch" });
+  const callbackSessionId = typeof payload.sid === "string" ? payload.sid : "";
+  if (!callbackSessionId || callbackSessionId !== payment.ipaymu_session_id) return json({ status: "acknowledged_session_mismatch" });
   if (payment.status === "PAID") return json({ status: "already_processed" });
   if (payment.status !== "PENDING") return json({ status: "not_pending" });
 
