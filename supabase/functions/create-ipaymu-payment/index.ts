@@ -73,6 +73,13 @@ Deno.serve(async (req: Request) => {
   if (existing?.checkout_url && Number(existing.amount) === amount) {
     return json(req, { paymentId: existing.id, checkoutUrl: existing.checkout_url, status: existing.status });
   }
+  if (existing && Number(existing.amount) !== amount) {
+    return json(req, { error: "pending_payment_amount_mismatch" }, 409);
+  }
+  // Do not create a second provider session while another request is initializing this pending row.
+  if (existing && !existing.checkout_url) {
+    return json(req, { error: "payment_initializing_retry_shortly" }, 409);
+  }
 
   let payment = existing;
   if (!payment) {
@@ -88,12 +95,23 @@ Deno.serve(async (req: Request) => {
       if (concurrent?.checkout_url && Number(concurrent.amount) === amount) {
         return json(req, { paymentId: concurrent.id, checkoutUrl: concurrent.checkout_url, status: concurrent.status });
       }
+      if (concurrent && Number(concurrent.amount) === amount) {
+        return json(req, { error: "payment_initializing_retry_shortly" }, 409);
+      }
       return json(req, { error: "payment_create_failed" }, 409);
     }
     payment = inserted;
   }
   if (!payment) {
     return json(req, { error: "payment_create_failed" }, 409);
+  }
+
+  async function markPaymentFailed() {
+    const { error } = await admin.from("payment_transactions")
+      .update({ status: "FAILED", updated_at: new Date().toISOString() })
+      .eq("id", payment.id)
+      .eq("status", "PENDING");
+    if (error) console.error("Unable to mark failed payment session", payment.id);
   }
 
   const productName = booking.package_key || (booking.service_id === "120m" ? "Pijat 2 Jam" : "Pijat 90 Menit");
@@ -111,20 +129,38 @@ Deno.serve(async (req: Request) => {
       }),
     });
   } catch {
+    await markPaymentFailed();
     return json(req, { error: "payment_proxy_unreachable" }, 502);
   }
-  if (!proxyResponse.ok) return json(req, { error: "payment_session_failed" }, 502);
+  if (!proxyResponse.ok) {
+    await markPaymentFailed();
+    return json(req, { error: "payment_session_failed" }, 502);
+  }
   let session: Record<string, unknown>;
-  try { session = await proxyResponse.json(); } catch { return json(req, { error: "payment_proxy_invalid_response" }, 502); }
-  if (typeof session.sessionId !== "string" || typeof session.checkoutUrl !== "string" ||
-      !session.checkoutUrl.startsWith("https://sandbox.ipaymu.com/")) {
+  try { session = await proxyResponse.json(); } catch {
+    await markPaymentFailed();
+    return json(req, { error: "payment_proxy_invalid_response" }, 502);
+  }
+  let checkoutUrl;
+  try { checkoutUrl = new URL(String(session.checkoutUrl)); } catch {
+    await markPaymentFailed();
+    return json(req, { error: "payment_session_invalid" }, 502);
+  }
+  if (typeof session.sessionId !== "string" || !session.sessionId.trim() ||
+      checkoutUrl.protocol !== "https:" || checkoutUrl.hostname !== "sandbox.ipaymu.com" ||
+      checkoutUrl.username || checkoutUrl.password) {
+    await markPaymentFailed();
     return json(req, { error: "payment_session_invalid" }, 502);
   }
 
-  const { error: updateError } = await admin.from("payment_transactions")
-    .update({ ipaymu_session_id: session.sessionId, checkout_url: session.checkoutUrl, updated_at: new Date().toISOString() })
-    .eq("id", payment.id).eq("status", "PENDING");
-  if (updateError) return json(req, { error: "payment_session_persist_failed" }, 503);
+  const { data: savedPayment, error: updateError } = await admin.from("payment_transactions")
+    .update({ ipaymu_session_id: session.sessionId, checkout_url: checkoutUrl.toString(), updated_at: new Date().toISOString() })
+    .eq("id", payment.id).eq("status", "PENDING")
+    .select("id").maybeSingle();
+  if (updateError || !savedPayment) {
+    await markPaymentFailed();
+    return json(req, { error: "payment_session_persist_failed" }, 503);
+  }
 
-  return json(req, { paymentId: payment.id, checkoutUrl: session.checkoutUrl, status: "PENDING" });
+  return json(req, { paymentId: payment.id, checkoutUrl: checkoutUrl.toString(), status: "PENDING" });
 });
