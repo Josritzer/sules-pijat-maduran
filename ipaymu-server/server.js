@@ -220,7 +220,7 @@ app.post("/api/payments", async (req, res) => {
   const checkoutUrl = String(providerResponse.Data.Url);
   let checkoutHost;
   try { checkoutHost = new URL(checkoutUrl).hostname; } catch { checkoutHost = ""; }
-  if (!checkoutUrl.startsWith("https://") || !checkoutHost.endsWith("ipaymu.com")) {
+  if (!checkoutUrl.startsWith("https://") || !(checkoutHost === "ipaymu.com" || checkoutHost.endsWith(".ipaymu.com"))) {
     await supabaseAdmin.from("payments").update({ status: "FAILED", updated_at: new Date().toISOString() }).eq("id", payment.id);
     return send(res, 502, { error: "Alamat checkout iPaymu tidak valid." });
   }
@@ -230,9 +230,13 @@ app.post("/api/payments", async (req, res) => {
     provider_session_id: sessionId,
     checkout_url: checkoutUrl,
     updated_at: new Date().toISOString(),
-  }).eq("id", payment.id);
+  }).eq("id", payment.id).neq("status", "PAID");
   if (updateError) return send(res, 503, { error: "Pembayaran dibuat tetapi belum dapat disimpan. Hubungi Admin sebelum mencoba ulang." });
-  return send(res, 200, { status: "PENDING", amount, checkoutUrl });
+  // A fast callback may mark the payment PAID before the checkout response is saved.
+  const { data: savedPayment, error: savedPaymentError } = await supabaseAdmin.from("payments")
+    .select("status").eq("id", payment.id).maybeSingle();
+  if (savedPaymentError || !savedPayment) return send(res, 503, { error: "Status pembayaran belum dapat dipastikan. Periksa Pesanan sebelum mencoba lagi." });
+  return send(res, 200, { status: savedPayment.status, amount, checkoutUrl });
 });
 
 app.get("/api/payments/:bookingId", async (req, res) => {
@@ -295,7 +299,7 @@ app.post("/ipaymu/callback", async (req, res) => {
     provider_status_code: Number.isFinite(statusCode) ? statusCode : null,
     last_callback_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-    ...(nextStatus === "PAID" ? { paid_at: payload.paid_at ? new Date(String(payload.paid_at)).toISOString() : new Date().toISOString() } : {}),
+    ...(nextStatus === "PAID" ? { paid_at: Number.isFinite(Date.parse(String(payload.paid_at || ""))) ? new Date(String(payload.paid_at)).toISOString() : new Date().toISOString() } : {}),
   };
   const { error: updateError } = await supabaseAdmin.from("payments").update(update)
     .eq("id", payment.id).neq("status", "PAID");
