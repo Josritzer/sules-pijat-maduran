@@ -1,0 +1,45 @@
+name: iPaymu Sandbox Tests
+
+on:
+  pull_request:
+    paths:
+      - "infra/ipaymu-proxy/**"
+      - "supabase/functions/ipaymu-callback/**"
+      - ".github/workflows/ipaymu-sandbox-tests.yml"
+  push:
+    branches:
+      - "feat/ipaymu-redirect-sandbox"
+    paths:
+      - "infra/ipaymu-proxy/**"
+      - "supabase/functions/ipaymu-callback/**"
+      - ".github/workflows/ipaymu-sandbox-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proxy-signature-tests:
+    name: Proxy signature tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run proxy signature tests
+        run: node --test infra/ipaymu-proxy/signature.test.mjs
+
+  callback-helper-tests:
+    name: Callback helper tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: "v2.x"
+      - name: Run callback helper tests
+        run: deno test supabase/functions/ipaymu-callback/callback-utils_test.ts
