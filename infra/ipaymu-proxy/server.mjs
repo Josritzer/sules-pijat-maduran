@@ -1,5 +1,6 @@
 import http from "node:http";
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
+import { signatureFor } from "./signature.mjs";
 
 const PORT = Number(process.env.PORT || 8080);
 const SHARED_SECRET = process.env.PROXY_SHARED_SECRET || "";
@@ -25,11 +26,6 @@ function timestamp14() {
   return d.getUTCFullYear().toString() + String(d.getUTCMonth() + 1).padStart(2, "0") +
     String(d.getUTCDate()).padStart(2, "0") + String(d.getUTCHours()).padStart(2, "0") +
     String(d.getUTCMinutes()).padStart(2, "0") + String(d.getUTCSeconds()).padStart(2, "0");
-}
-function signatureFor(method, va, rawBody, apiKey) {
-  const bodyHash = createHash("sha256").update(rawBody).digest("hex").toLowerCase();
-  const stringToSign = method + ":" + va + ":" + bodyHash + ":" + apiKey;
-  return createHmac("sha256", apiKey).update(stringToSign).digest("hex");
 }
 async function readJson(req) {
   const chunks = [];
