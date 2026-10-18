@@ -5,6 +5,7 @@ on:
     paths:
       - "infra/ipaymu-proxy/**"
       - "supabase/functions/ipaymu-callback/**"
+      - "supabase/functions/create-ipaymu-payment/**"
       - ".github/workflows/ipaymu-sandbox-tests.yml"
   push:
     branches:
@@ -43,3 +44,16 @@ jobs:
           deno-version: "v2.x"
       - name: Run callback helper tests
         run: deno test supabase/functions/ipaymu-callback/callback-utils_test.ts
+
+  payment-function-typecheck:
+    name: Payment function typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: "v2.x"
+      - name: Type-check payment function
+        run: deno check supabase/functions/create-ipaymu-payment/index.ts

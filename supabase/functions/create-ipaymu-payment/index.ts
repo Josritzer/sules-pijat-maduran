@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
   if (!payment) {
     const { data: inserted, error: insertError } = await admin.from("payment_transactions")
       .insert({ booking_id: booking.id, customer_id: authData.user.id, amount, status: "PENDING" })
-      .select("id,amount,status")
+      .select("id,amount,status,checkout_url,ipaymu_session_id")
       .single();
     if (insertError) {
       // A concurrent request may have created the pending payment first.
@@ -91,6 +91,9 @@ Deno.serve(async (req: Request) => {
       return json(req, { error: "payment_create_failed" }, 409);
     }
     payment = inserted;
+  }
+  if (!payment) {
+    return json(req, { error: "payment_create_failed" }, 409);
   }
 
   const productName = booking.package_key || (booking.service_id === "120m" ? "Pijat 2 Jam" : "Pijat 90 Menit");
