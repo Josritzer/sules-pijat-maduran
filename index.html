@@ -1113,6 +1113,16 @@
   .sules-home-info-links button { display:inline-flex; align-items:center; gap:5px; min-height:40px; padding:7px 2px; border:0; color:var(--home-forest); background:transparent; font-size:12px; font-weight:700; }
   .sules-home-info-links button:hover { color:#8B713C; }
   .sules-home-info-label { margin-right:5px; }
+  .sules-explore-spa-card { display:flex; align-items:center; gap:13px; min-width:0; padding:15px 16px; border:1px solid #DCE3EF; border-radius:18px; color:var(--home-ink); background:linear-gradient(115deg,#FFFFFF 0%,#F7F9FD 100%); box-shadow:0 5px 16px rgba(24,50,75,.045); text-decoration:none; transition:border-color 140ms ease-out, background-color 140ms ease-out, box-shadow 140ms ease-out; -webkit-tap-highlight-color:transparent; }
+  .sules-explore-spa-card:hover { border-color:#BCCBE4; background:#FFFFFF; box-shadow:0 7px 20px rgba(24,50,75,.07); }
+  .sules-explore-spa-card:active { box-shadow:inset 0 0 0 1px rgba(90,119,255,.2), inset 0 0 14px rgba(90,119,255,.055); }
+  .sules-explore-spa-icon { display:grid; place-items:center; flex:0 0 44px; width:44px; height:44px; border:1px solid #DCE5F7; border-radius:14px; color:#4F65A8; background:#EEF2FF; }
+  .sules-explore-spa-icon svg { width:22px; height:22px; }
+  .sules-explore-spa-copy { display:flex; flex:1 1 auto; flex-direction:column; gap:4px; min-width:0; }
+  .sules-explore-spa-copy strong { color:var(--home-ink); font-size:14px; font-weight:800; line-height:1.3; }
+  .sules-explore-spa-copy > span { color:var(--home-muted); font-size:12px; line-height:1.45; }
+  .sules-explore-spa-arrow { display:grid; place-items:center; flex:0 0 30px; width:30px; height:30px; border:1px solid #E2E8F2; border-radius:50%; color:#526BAE; background:#FFFFFF; font-size:17px; line-height:1; }
+  @media (prefers-reduced-motion: reduce) { .sules-explore-spa-card { transition:none; } }
   .sules-announcement-marquee { display:flex; align-items:center; gap:0; min-width:0; overflow:hidden; padding:10px 0; border:1px solid #E2C36B; border-radius:12px; color:#FFF9E8; background:linear-gradient(105deg,#102541,#183B60 58%,#102541); box-shadow:0 5px 14px rgba(13,27,51,.12); }
   .sules-announcement-label { flex:0 0 auto; padding:0 12px; color:#E7D5A4; font-size:10px; font-weight:850; letter-spacing:.1em; white-space:nowrap; }
   .sules-announcement-viewport { flex:1 1 auto; min-width:0; overflow:hidden; }
@@ -3620,6 +3630,19 @@ function HomeDiscoveryContent({ onGoToCatalog, onBookPackage, onOpenPublicSectio
       </div>
       <ServicePackageList compact onBookPackage={onBookPackage} onSelectPackage={onGoToCatalog} />
     </section>
+    <a className="sules-explore-spa-card" href="https://www.fresha.com/" target="_blank" rel="noopener noreferrer" aria-label="Jelajahi Spa dan Pijat melalui Fresha">
+      <span className="sules-explore-spa-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="9" />
+          <path d="m15.8 8.2-2.4 5.2-5.2 2.4 2.4-5.2 5.2-2.4Z" />
+        </svg>
+      </span>
+      <span className="sules-explore-spa-copy">
+        <strong>Jelajahi Spa &amp; Pijat</strong>
+        <span>Temukan berbagai tempat pijat dan spa.</span>
+      </span>
+      <span className="sules-explore-spa-arrow" aria-hidden="true">↗</span>
+    </a>
     <HomeBrandStory />
     <HomeQuickMenu onOpenPublicSection={onOpenPublicSection} />
   </React.Fragment>;
