@@ -21,6 +21,18 @@ function safeEqual(left, right) {
   const b = Buffer.from(right);
   return a.length === b.length && timingSafeEqual(a, b);
 }
+function isUuid(value) {
+  return typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+function safeCheckoutUrl(value) {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === "sandbox.ipaymu.com" &&
+      !url.username && !url.password ? url.toString() : null;
+  } catch { return null; }
+}
 function timestamp14() {
   const d = new Date();
   return d.getUTCFullYear().toString() + String(d.getUTCMonth() + 1).padStart(2, "0") +
@@ -57,7 +69,7 @@ const server = http.createServer(async (req, res) => {
   const amount = Number(input?.amount);
   const productName = typeof input?.productName === "string" ? input.productName.trim() : "";
   const description = typeof input?.description === "string" ? input.description.trim() : "";
-  if (!/^[0-9a-f-]{36}$/i.test(referenceId) || !Number.isSafeInteger(amount) || amount < 1 ||
+  if (!isUuid(referenceId) || !Number.isSafeInteger(amount) || amount < 1 ||
       !productName || productName.length > 120 || !description || description.length > 250) {
     return respond(res, 400, { error: "invalid_payment_request" });
   }
@@ -88,9 +100,8 @@ const server = http.createServer(async (req, res) => {
 
   const status = Number(result?.Status);
   const sessionId = result?.Data?.SessionID;
-  const checkoutUrl = result?.Data?.Url;
-  if (!response.ok || status !== 200 || typeof sessionId !== "string" ||
-      typeof checkoutUrl !== "string" || !checkoutUrl.startsWith("https://sandbox.ipaymu.com/")) {
+  const checkoutUrl = safeCheckoutUrl(result?.Data?.Url);
+  if (!response.ok || status !== 200 || typeof sessionId !== "string" || !sessionId.trim() || !checkoutUrl) {
     return respond(res, 502, { error: "ipaymu_payment_session_failed" });
   }
   return respond(res, 200, { sessionId, checkoutUrl });
