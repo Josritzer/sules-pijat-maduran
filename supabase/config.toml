@@ -1,0 +1,9 @@
+# Supabase Edge Function configuration for iPaymu integration.
+# Keep customer-authenticated payment-intent creation protected by JWT.
+[functions.create-ipaymu-payment]
+verify_jwt = true
+
+# iPaymu server-to-server callbacks do not carry a Supabase user JWT.
+# The handler validates the iPaymu X-Signature itself.
+[functions.ipaymu-callback]
+verify_jwt = false
