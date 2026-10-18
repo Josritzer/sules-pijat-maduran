@@ -20,12 +20,9 @@ export function normalizeCallback(input: Record<string, unknown>) {
     if (value === "true" || value === "1") normalized.is_escrow = true;
     else if (value === "false" || value === "0") normalized.is_escrow = false;
   }
-  if (typeof normalized.additional_info === "string") {
-    try { normalized.additional_info = JSON.parse(normalized.additional_info as string); }
-    catch { /* keep the original value if provider sends a non-JSON string */ }
-  }
+  if (normalized.additional_info === "[]") normalized.additional_info = [];
   if (!("additional_info" in normalized)) normalized.additional_info = [];
-  return Object.fromEntries(Object.keys(normalized).sort().map((key) => [key, normalized[key]]));
+  return Object.fromEntries(Object.keys(normalized).sort((a, b) => a.localeCompare(b)).map((key) => [key, normalized[key]]));
 }
 
 export async function hmacSha256Hex(value: string, secret: string) {
