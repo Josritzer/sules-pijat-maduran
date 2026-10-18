@@ -20,6 +20,11 @@ Deno.test("callback normalization removes signature and sorts keys", () => {
   assertEquals("signature" in result, false);
 });
 
+Deno.test("callback normalization sorts keys case-sensitively", () => {
+  const result = normalizeCallback({ b: "2", A: "1", a: "3", B: "4" });
+  assertEquals(Object.keys(result), ["A", "B", "a", "b", "additional_info"]);
+});
+
 Deno.test("callback normalization converts known boolean strings", () => {
   assertEquals(normalizeCallback({ is_escrow: "true" })["is_escrow"], true);
   assertEquals(normalizeCallback({ is_escrow: "0" })["is_escrow"], false);
