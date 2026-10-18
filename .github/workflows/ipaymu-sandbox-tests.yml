@@ -9,10 +9,12 @@ on:
       - ".github/workflows/ipaymu-sandbox-tests.yml"
   push:
     branches:
+      - "main"
       - "feat/ipaymu-redirect-sandbox"
     paths:
       - "infra/ipaymu-proxy/**"
       - "supabase/functions/ipaymu-callback/**"
+      - "supabase/functions/create-ipaymu-payment/**"
       - ".github/workflows/ipaymu-sandbox-tests.yml"
 
 permissions:
