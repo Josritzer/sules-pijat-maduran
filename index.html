@@ -615,12 +615,12 @@
     min-width:76px; min-height:46px; padding:0 11px; border:1px solid #C9D8E5;
     border-radius:12px; background:#FFFFFF; color:var(--sules-navy); font-family:inherit; font-size:13px; font-weight:700;
     cursor:pointer; box-shadow:0 2px 7px rgba(24,50,75,.045);
-    transition:background-color .18s ease,border-color .18s ease,color .18s ease,transform .18s ease;
+    transition:background-color .14s cubic-bezier(.2,.8,.2,1),border-color .14s ease,color .14s ease,box-shadow .14s ease;
   }
   #kontak .appreciation-copy-button svg { display:block; width:16px; height:16px; flex:0 0 16px; }
   #kontak .appreciation-copy-button svg[hidden] { display:none; }
   #kontak .appreciation-copy-button:hover { background:#F2F7FB; border-color:#AFC6D8; }
-  #kontak .appreciation-copy-button:active { transform:scale(.97); }
+  #kontak .appreciation-copy-button:active { transform:none; }
   #kontak .appreciation-copy-button:focus-visible { outline:3px solid rgba(47,111,159,.25); outline-offset:2px; }
   #kontak .appreciation-copy-button.is-copied { color:#285D4C; background:#EFF7F3; border-color:#C9DFD4; }
   #kontak .appreciation-copy-status { margin:4px 0 10px; font-size:12px; }
@@ -689,8 +689,8 @@
   ::selection { background:rgba(47,111,159,.18); color:var(--sules-navy); }
   a { transition:color .18s ease,opacity .18s ease; }
   button,summary { -webkit-tap-highlight-color:transparent; }
-  button { transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease,border-color .16s ease,opacity .16s ease; }
-  button:active { transform:scale(.985); }
+  button { transition:box-shadow .14s cubic-bezier(.2,.8,.2,1),background-color .14s cubic-bezier(.2,.8,.2,1),border-color .14s ease,opacity .14s ease; }
+  button:active { transform:none; }
   :focus-visible { outline:2px solid var(--sules-cyan) !important; outline-offset:3px; }
 
   .site-header { position:sticky; top:0; z-index:45; background:rgba(255,255,255,.92) !important; border-color:var(--sules-line) !important; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); }
@@ -949,7 +949,7 @@
   .sules-catalog-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; width:100%; min-width:0; margin:0; align-items:stretch; }
   #root .sules-catalog-grid .sules-service-card { grid-column:auto; display:flex; min-width:0; min-height:315px; flex-direction:column; align-items:stretch; gap:12px; padding:18px; border:1px solid #E4DDEA; border-radius:20px; background:linear-gradient(150deg,#FFFEFC 0%,#FAF7FB 100%); box-shadow:0 8px 22px rgba(57,45,91,.065); text-align:left; transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease; }
   #root .sules-catalog-grid .sules-service-card:hover { transform:translateY(-2px); border-color:#C9B7DD; box-shadow:0 14px 28px rgba(57,45,91,.1); }
-  #root .sules-catalog-grid .sules-service-card:active { transform:scale(.99); }
+  #root .sules-catalog-grid .sules-service-card:active { transform:none; }
   #root .sules-catalog-grid .sules-service-card-selected { border-color:#8B6CC1; box-shadow:0 0 0 3px rgba(117,80,180,.16),0 12px 26px rgba(57,45,91,.11); scroll-margin-top:90px; }
   @media (prefers-reduced-motion:reduce) { #root .sules-catalog-grid .sules-service-card { transition:none; } }
   .sules-catalog-grid .sules-service-icon { display:grid; width:54px; height:54px; flex:0 0 auto; place-items:center; border:1px solid #D9C892; border-radius:17px; background:linear-gradient(145deg,#F1EFF9,#FBF6E8); color:#4A4D9C; }
@@ -1088,7 +1088,7 @@
   .sules-home-screen .sules-service-card { position:relative; display:flex; flex-direction:column; align-items:stretch; min-width:0; min-height:176px; padding:14px; border:1px solid var(--home-line); border-radius:17px; background:linear-gradient(150deg,#FFFFFF 0%,#F7F4FB 100%); box-shadow:0 7px 18px rgba(48,42,91,.055); cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; transition:transform 140ms ease,border-color 140ms ease,box-shadow 140ms ease; }
   .sules-home-screen .sules-service-card:nth-child(5) { grid-column:1 / -1; width:100%; min-height:108px; justify-self:stretch; flex-direction:row; align-items:flex-start; gap:12px; }
   .sules-home-screen .sules-service-card:hover { border-color:#C7B8E1; box-shadow:0 10px 22px rgba(48,42,91,.09); transform:translateY(-1px); }
-  .sules-home-screen .sules-service-card:active { box-shadow:0 3px 8px rgba(48,42,91,.08); transform:scale(.985); }
+  .sules-home-screen .sules-service-card:active { box-shadow:inset 0 0 0 1px rgba(90,119,255,.24),inset 0 0 16px rgba(90,119,255,.075); transform:none; }
   .sules-home-screen .sules-service-card:focus-visible { outline:2px solid #7652B2; outline-offset:3px; }
   .sules-home-screen .sules-service-card .sules-service-icon { display:grid; width:32px; height:32px; flex:none; place-items:center; margin-bottom:8px; border:1px solid #D9C892; border-radius:11px; background:linear-gradient(145deg,#F1EFF9,#FBF6E8); color:#5946A0; }
   .sules-home-screen .sules-service-card .sules-service-icon svg { width:22px; height:22px; }
@@ -1340,7 +1340,7 @@
     color:#FFFFFF;
     background:linear-gradient(135deg,#51458F 0%,#6551A8 58%,#79569E 100%);
     box-shadow:0 4px 10px rgba(81,69,143,.16);
-    transition:transform 140ms ease,box-shadow 140ms ease,filter 140ms ease;
+    transition:box-shadow 140ms cubic-bezier(.2,.8,.2,1),filter 140ms ease;
     -webkit-tap-highlight-color:transparent;
     touch-action:manipulation;
   }
@@ -1354,7 +1354,7 @@
   #root .sules-home-services .sules-home-catalog-link:active {
     box-shadow:0 2px 5px rgba(81,69,143,.16);
     filter:brightness(.97);
-    transform:scale(.97);
+    transform:none;
   }
   #root .sules-home-services .sules-home-catalog-link:focus-visible {
     outline:2px solid #A64D84;
@@ -1383,6 +1383,34 @@
     .sules-promo-in-left,.sules-promo-out-left,.sules-promo-in-up,.sules-promo-out-up { animation:none !important; }
   }
 </style>
+
+<style id="sules-premium-precision-interaction">
+  /* Premium precision tap: instant activation, no scale/bounce, only a restrained inset light response. */
+  :where(button,a,summary,[role="button"],input[type="button"],input[type="submit"]) {
+    -webkit-tap-highlight-color:transparent;
+    -webkit-touch-callout:none;
+  }
+  :where(button,a,summary,[role="button"],input[type="button"],input[type="submit"]):active {
+    transform:none !important;
+    filter:none !important;
+    box-shadow:inset 0 0 0 1px rgba(90,119,255,.24),inset 0 0 16px rgba(90,119,255,.075) !important;
+    transition:box-shadow 110ms ease-out !important;
+  }
+  @media (hover:none) {
+    .site-cta:hover,.public-button:hover,.package-grid .public-card:hover,
+    #root .sules-catalog-grid .sules-service-card:hover,
+    #root .sules-home-services .sules-home-catalog-link:hover {
+      transform:none !important;
+      filter:none !important;
+    }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    :where(button,a,summary,[role="button"],input[type="button"],input[type="submit"]):active {
+      transition:none !important;
+    }
+  }
+</style>
+
 </head>
 <body>
 <header class="site-header">
