@@ -42,4 +42,4 @@ jobs:
         with:
           deno-version: "v2.x"
       - name: Run callback helper tests
-        run: deno test --no-check supabase/functions/ipaymu-callback/callback-utils_test.ts
+        run: deno test supabase/functions/ipaymu-callback/callback-utils_test.ts
