@@ -13,15 +13,15 @@ Deno.test("callback normalization removes signature and sorts keys", () => {
     additional_info: "[]",
   });
   assertEquals(Object.keys(result), ["additional_info", "status", "status_code", "trx_id"]);
-  assertEquals(result.status_code, 1);
-  assertEquals(result.trx_id, 12345);
-  assertEquals(result.additional_info, []);
+  assertEquals(result["status_code"], 1);
+  assertEquals(result["trx_id"], 12345);
+  assertEquals(result["additional_info"], []);
   assertEquals("signature" in result, false);
 });
 
 Deno.test("callback normalization converts known boolean strings", () => {
-  assertEquals(normalizeCallback({ is_escrow: "true" }).is_escrow, true);
-  assertEquals(normalizeCallback({ is_escrow: "0" }).is_escrow, false);
+  assertEquals(normalizeCallback({ is_escrow: "true" })["is_escrow"], true);
+  assertEquals(normalizeCallback({ is_escrow: "0" })["is_escrow"], false);
 });
 
 Deno.test("hex signature comparison accepts equal hex case-insensitively", () => {
