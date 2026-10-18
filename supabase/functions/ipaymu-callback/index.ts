@@ -1,41 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { constantTimeEqualHex, normalizeCallback, hmacSha256Hex } from "./callback-utils.ts";
 
 function json(body: unknown, status = 200) {
   return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
-}
-function constantTimeEqualHex(a: string, b: string) {
-  if (!/^[0-9a-f]{64}$/i.test(a) || !/^[0-9a-f]{64}$/i.test(b)) return false;
-  const left = new TextEncoder().encode(a.toLowerCase());
-  const right = new TextEncoder().encode(b.toLowerCase());
-  let diff = 0;
-  for (let i = 0; i < left.length; i++) diff |= left[i] ^ right[i];
-  return diff === 0;
-}
-function normalizeCallback(input: Record<string, unknown>) {
-  const normalized: Record<string, unknown> = { ...input };
-  delete normalized.signature;
-  for (const key of ["trx_id", "status_code", "transaction_status_code", "paid_off"]) {
-    if (typeof normalized[key] === "string" && /^-?\d+$/.test(normalized[key] as string)) {
-      normalized[key] = Number(normalized[key]);
-    }
-  }
-  if (typeof normalized.is_escrow === "string") {
-    const value = (normalized.is_escrow as string).toLowerCase();
-    if (value === "true" || value === "1") normalized.is_escrow = true;
-    else if (value === "false" || value === "0") normalized.is_escrow = false;
-  }
-  if (typeof normalized.additional_info === "string") {
-    try { normalized.additional_info = JSON.parse(normalized.additional_info as string); }
-    catch { /* keep the original value if provider sends a non-JSON string */ }
-  }
-  if (!("additional_info" in normalized)) normalized.additional_info = [];
-  return Object.fromEntries(Object.keys(normalized).sort().map((key) => [key, normalized[key]]));
-}
-async function hmacSha256Hex(value: string, secret: string) {
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value));
-  return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 async function parsePayload(req: Request): Promise<Record<string, unknown> | null> {
   const raw = await req.text();
