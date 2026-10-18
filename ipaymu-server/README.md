@@ -20,6 +20,7 @@ See `.env.example`. Keep all real values in the VPS environment/secrets manager.
 3. Configure the iPaymu Sandbox callback to `https://api.bookingpijat.com/ipaymu/callback` and the same callback content format documented in iPaymu (JSON or URL-encoded).
 4. Add the Sandbox VA and API key only to the VPS environment; never put them in frontend files, GitHub, or chat.
 5. Test accepted booking -> checkout redirect -> signed callback -> payment status update. Never treat the browser return URL as proof of payment.
+6. After end-to-end Sandbox tests pass, enable the frontend flag `window.SULES_IPAYMU_ENABLED = true` in `index.html`; keep it false until then.
 
 ## Production checklist
 
