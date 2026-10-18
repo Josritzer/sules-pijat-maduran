@@ -276,8 +276,10 @@ app.post("/ipaymu/callback", async (req, res) => {
   if (!payment) return send(res, 200, { status: "ignored" });
   if (payment.status === "PAID") return send(res, 200, { status: "already_processed" });
 
-  const callbackAmount = Number(payload.sub_total ?? payload.amount ?? payload.total);
-  if (Number.isFinite(callbackAmount) && Math.round(callbackAmount) !== Math.round(Number(payment.amount))) {
+  const callbackAmountRaw = payload.sub_total ?? payload.amount ?? payload.total;
+  const callbackAmount = Number(callbackAmountRaw);
+  if (callbackAmountRaw === undefined || callbackAmountRaw === null || callbackAmountRaw === "" ||
+      !Number.isFinite(callbackAmount) || Math.round(callbackAmount) !== Math.round(Number(payment.amount))) {
     return send(res, 400, { error: "Payment amount mismatch." });
   }
   const statusText = String(payload.status || "").toLowerCase();
