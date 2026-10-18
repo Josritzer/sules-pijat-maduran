@@ -57,5 +57,9 @@ jobs:
         uses: denoland/setup-deno@v2
         with:
           deno-version: "v2.x"
-      - name: Type-check payment function
-        run: deno check supabase/functions/create-ipaymu-payment/index.ts
+      - name: Type-check payment and callback functions
+        run: >-
+          deno check
+          supabase/functions/create-ipaymu-payment/index.ts
+          supabase/functions/get-customer-payment-status/index.ts
+          supabase/functions/ipaymu-callback/index.ts
