@@ -35,7 +35,7 @@ CREATE POLICY payments_read_own_or_admin
   ON public.payments
   FOR SELECT
   TO authenticated
-  USING (customer_id = auth.uid() OR public.is_admin(auth.uid()));
+  USING (customer_id = auth.uid() OR public.is_admin());
 
 REVOKE ALL ON public.payments FROM anon, authenticated;
 GRANT SELECT ON public.payments TO authenticated;
