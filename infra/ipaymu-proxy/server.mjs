@@ -10,6 +10,10 @@ const IPAYMU_ENV = process.env.IPAYMU_ENV || "sandbox";
 const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || "https://bookingpijat.com").replace(/\/+$/, "");
 const IPAYMU_NOTIFY_URL = process.env.IPAYMU_NOTIFY_URL || "";
 const MAX_BODY_BYTES = 16 * 1024;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 10;
+const RATE_LIMIT_MAX_IPS = 5_000;
+const requestCounts = new Map();
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 
 function respond(res, status, body) {
@@ -33,6 +37,28 @@ function safeCheckoutUrl(value) {
       !url.username && !url.password ? url.toString() : null;
   } catch { return null; }
 }
+function allowRequest(ip, now = Date.now()) {
+  let entry = requestCounts.get(ip);
+  if (entry && now >= entry.resetAt) {
+    requestCounts.delete(ip);
+    entry = null;
+  }
+  if (!entry) {
+    if (requestCounts.size >= RATE_LIMIT_MAX_IPS) {
+      for (const [key, value] of requestCounts) {
+        if (now >= value.resetAt) requestCounts.delete(key);
+      }
+      if (requestCounts.size >= RATE_LIMIT_MAX_IPS) return { allowed: false, retryAfter: 60 };
+    }
+    requestCounts.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return { allowed: true, retryAfter: 0 };
+  }
+  if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return { allowed: false, retryAfter: Math.max(1, Math.ceil((entry.resetAt - now) / 1000)) };
+  }
+  entry.count += 1;
+  return { allowed: true, retryAfter: 0 };
+}
 function timestamp14() {
   const d = new Date();
   return d.getUTCFullYear().toString() + String(d.getUTCMonth() + 1).padStart(2, "0") +
@@ -53,6 +79,11 @@ async function readJson(req) {
 const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/health") return respond(res, 200, { ok: true, mode: IPAYMU_ENV });
   if (req.method !== "POST" || req.url !== "/v1/redirect-payment") return respond(res, 404, { error: "not_found" });
+  const limit = allowRequest(req.socket.remoteAddress || "unknown");
+  if (!limit.allowed) {
+    res.setHeader("retry-after", String(limit.retryAfter));
+    return respond(res, 429, { error: "rate_limit_exceeded" });
+  }
   if (!SHARED_SECRET || !IPAYMU_VA || !IPAYMU_API_KEY || !IPAYMU_NOTIFY_URL) return respond(res, 503, { error: "proxy_not_configured" });
   if (IPAYMU_ENV !== "sandbox") return respond(res, 503, { error: "production_disabled_until_sandbox_verification" });
 
