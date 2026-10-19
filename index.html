@@ -4505,6 +4505,8 @@ function AdminTab({ onExitToApp }) {
   const [loginError, setLoginError] = useState("");
   const [loggingIn, setLoggingIn] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
+  const [pushStatusChecking, setPushStatusChecking] = useState(false);
+  const [pushActive, setPushActive] = useState(false);
   const [pushMessage, setPushMessage] = useState("");
   const [pushError, setPushError] = useState("");
   const [presenceCounts, setPresenceCounts] = useState(() => window.bookingService.getVisitorPresenceCounts());
@@ -4554,6 +4556,65 @@ function AdminTab({ onExitToApp }) {
     });
     return () => { mounted = false; };
   }, []);
+
+  // Pulihkan status notifikasi dari langganan perangkat setiap kali sesi Admin aktif.
+  // Pemeriksaan ini tidak meminta izin baru; izin hanya diminta lewat tombol aktivasi.
+  useEffect(() => {
+    if (!loggedIn) {
+      setPushActive(false);
+      setPushMessage("");
+      setPushError("");
+      setPushStatusChecking(false);
+      return;
+    }
+    let cancelled = false;
+    const checkPushStatus = async () => {
+      setPushStatusChecking(true);
+      setPushError("");
+      try {
+        if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+          if (!cancelled) {
+            setPushActive(false);
+            setPushMessage("Browser ini belum mendukung notifikasi web. Coba Chrome di Android.");
+          }
+          return;
+        }
+        if (Notification.permission !== "granted") {
+          if (!cancelled) {
+            setPushActive(false);
+            setPushMessage("Notifikasi HP belum aktif di perangkat ini.");
+          }
+          return;
+        }
+        let registration = await navigator.serviceWorker.getRegistration("/");
+        if (!registration) registration = await navigator.serviceWorker.register("/service-worker.js", { scope: "/" });
+        await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (!subscription) {
+          if (!cancelled) {
+            setPushActive(false);
+            setPushMessage("Izin browser tersedia, tetapi langganan notifikasi belum ada. Tekan tombol aktivasi.");
+          }
+          return;
+        }
+        // Upsert memastikan endpoint perangkat yang masih aktif tetap terdaftar di Supabase.
+        await window.bookingService.saveAdminPushSubscription(subscription);
+        if (!cancelled) {
+          setPushActive(true);
+          setPushMessage("Notifikasi HP aktif di perangkat ini.");
+        }
+      } catch (_) {
+        if (!cancelled) {
+          setPushActive(false);
+          setPushError("Status notifikasi belum dapat diverifikasi. Tekan tombol aktivasi untuk mencoba lagi.");
+        }
+      } finally {
+        if (!cancelled) setPushStatusChecking(false);
+      }
+    };
+    void checkPushStatus();
+    return () => { cancelled = true; };
+  }, [loggedIn]);
 
   async function fetchActiveBookings(requestId, statusFilter, schedulePeriod = activeSchedulePeriod) {
     const today = new Date();
@@ -4700,8 +4761,10 @@ function AdminTab({ onExitToApp }) {
         });
       }
       await window.bookingService.saveAdminPushSubscription(subscription);
+      setPushActive(true);
       setPushMessage("Notifikasi HP aktif di perangkat ini.");
     } catch (error) {
+      setPushActive(false);
       setPushError(error && error.message ? error.message : "Gagal mengaktifkan notifikasi HP.");
     } finally {
       setPushBusy(false);
@@ -4731,11 +4794,11 @@ function AdminTab({ onExitToApp }) {
         <div className="sules-admin-heading">Dashboard Admin</div>
       </div>
       <div className="sules-admin-header-actions">
-        {loggedIn && <button type="button" onClick={enablePhoneNotifications} disabled={pushBusy} aria-label="Aktifkan notifikasi HP">{pushBusy ? "Mengaktifkan…" : "🔔 Aktifkan notifikasi HP"}</button>}
+        {loggedIn && <button type="button" onClick={enablePhoneNotifications} disabled={pushBusy || pushStatusChecking} aria-label={pushActive ? "Periksa notifikasi HP" : "Aktifkan notifikasi HP"}>{pushBusy ? "Mengaktifkan…" : pushStatusChecking ? "Memeriksa notifikasi…" : pushActive ? "🔔 Notifikasi HP aktif" : "🔔 Aktifkan notifikasi HP"}</button>}
         <button type="button" onClick={onExitToApp}>← Kembali ke aplikasi</button>
         {loggedIn && <button type="button" className="sules-admin-logout" onClick={doLogout}>Logout</button>}
       </div>
-      {loggedIn && (pushMessage || pushError) && <div role={pushError ? "alert" : "status"} className={pushError ? "w-full text-sm text-red-700" : "w-full text-sm text-green-700"}>{pushError || pushMessage}</div>}
+      {loggedIn && (pushMessage || pushError) && <div role={pushError ? "alert" : "status"} className={pushError ? "w-full text-sm text-red-700" : pushActive ? "w-full text-sm text-green-700" : "w-full text-sm text-gray-600"}>{pushError || pushMessage}</div>}
     </header>
   );
 
