@@ -4522,7 +4522,6 @@ function AdminTab({ onExitToApp }) {
 
   const [bookings, setBookings] = useState([]);
   const [analyticsBookings, setAnalyticsBookings] = useState([]);
-  const [testAccountBookingIds, setTestAccountBookingIds] = useState([]);
   const [activeBookings, setActiveBookings] = useState([]);
   const [activeLoading, setActiveLoading] = useState(false);
   const [activeError, setActiveError] = useState("");
@@ -4672,18 +4671,16 @@ function AdminTab({ onExitToApp }) {
     setLoadingList(true);
     setListError("");
     try {
-      const [summaryData, bookingData, analyticsData, testBookingIds] = await Promise.all([
+      const [summaryData, bookingData, analyticsData] = await Promise.all([
         window.bookingService.getDashboardSummary(range.startDate, range.endDate),
         window.bookingService.getBookingsPeriod(range.startDate, range.endDate, filterStatus),
-        window.bookingService.getBookingsPeriod(range.startDate, range.endDate, null),
-        window.bookingService.getBookingIdsForCustomer("ecdd9a04-7e79-4008-842f-b06f9e767e1e")
+        window.bookingService.getBookings()
       ]);
       if (requestId !== fetchRequestId.current) return false;
       setDashboardSummary(summaryData || {});
       setRevenueDays(Array.isArray(summaryData && summaryData.per_hari) ? summaryData.per_hari : []);
       setBookings(bookingData || []);
       setAnalyticsBookings(analyticsData || []);
-      setTestAccountBookingIds(testBookingIds || []);
       const refreshedAt = new Date();
       setLastUpdated(`${String(refreshedAt.getHours()).padStart(2,"0")}:${String(refreshedAt.getMinutes()).padStart(2,"0")}`);
       return true;
@@ -4879,7 +4876,7 @@ function AdminTab({ onExitToApp }) {
   const packageStats = packageStatCategories.map(category => ({
     key: category.key,
     label: category.label,
-    count: analyticsBookings.filter(b => !testAccountBookingIds.includes(b.id)).filter(b =>
+    count: analyticsBookings.filter(b =>
       category.packageKeys.includes(b.package_key) ||
       (!b.package_key && b.service_id === category.serviceId && b.tipe_lokasi === category.location)
     ).length
