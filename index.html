@@ -4857,12 +4857,20 @@ function AdminTab({ onExitToApp }) {
   const customRangeInvalid = dashboardPeriod === "custom" && !dashboardRange;
   const waitingTodayCount = analyticsBookings.filter(b => b.status === "MENUNGGU" && b.tanggal === todayKey).length;
   const activeTodayCount = analyticsBookings.filter(b => (b.status === "MENUNGGU" || b.status === "DITERIMA") && b.tanggal === todayKey).length;
-  const packageStats = Object.entries(analyticsBookings.reduce((acc, b) => {
-    const key = b.package_key || b.service_id || "Layanan";
-    if (!acc[key]) acc[key] = { count: 0, label: SERVICE_LABEL[b.service_id] || key };
-    acc[key].count += 1;
-    return acc;
-  }, {})).map(([key, value]) => ({ key, ...value })).sort((a, b) => b.count - a.count).slice(0, 3);
+  const packageStatCategories = [
+    { key: "sules-90m", label: "Di Tempat · 1,5 Jam", packageKeys: ["sules-90m-1"], location: "DI_TEMPAT", serviceId: "90m" },
+    { key: "sules-120m", label: "Di Tempat · 2 Jam", packageKeys: ["sules-120m-1"], location: "DI_TEMPAT", serviceId: "120m" },
+    { key: "home-90m", label: "Home Service · 1,5 Jam", packageKeys: ["home-90m-1", "home-90m-2"], location: "HOME_SERVICE", serviceId: "90m" },
+    { key: "home-120m", label: "Home Service · 2 Jam", packageKeys: ["home-120m-1"], location: "HOME_SERVICE", serviceId: "120m" }
+  ];
+  const packageStats = packageStatCategories.map(category => ({
+    key: category.key,
+    label: category.label,
+    count: analyticsBookings.filter(b =>
+      category.packageKeys.includes(b.package_key) ||
+      (!b.package_key && b.service_id === category.serviceId && b.tipe_lokasi === category.location)
+    ).length
+  }));
 
   const handleTerima = async (id) => {
     setActionLoading(prev => ({ ...prev, [id]: true }));
@@ -5075,8 +5083,8 @@ function AdminTab({ onExitToApp }) {
       <RevenueChart days={revenueDays} />
 
       <section className="mb-4 rounded-xl border border-gray-200 bg-white p-4" aria-labelledby="package-analytics-heading">
-        <div className="mb-3"><h2 id="package-analytics-heading" className="font-bold text-base text-slate-800">ANALITIK PAKET</h2><p className="mt-1 text-xs text-slate-500">Paket paling sering dipesan pada periode dashboard, berdasarkan semua status booking.</p></div>
-        {packageStats.length ? <div className="space-y-3">{packageStats.map((item, index) => <div key={item.key} className="flex items-center gap-3"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-sm font-extrabold text-indigo-700">{index + 1}</div><div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-slate-800">{item.label}</div><div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500" style={{width: `${Math.max(8, item.count / Math.max(...packageStats.map(p => p.count)) * 100)}%`}} /></div></div><div className="text-sm font-bold text-slate-700">{item.count} booking</div></div>)}</div> : <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">Belum ada data paket pada periode ini.</div>}
+        <div className="mb-3"><h2 id="package-analytics-heading" className="font-bold text-base text-slate-800">ANALITIK LAYANAN</h2><p className="mt-1 text-xs text-slate-500">Empat kategori tetap berdasarkan durasi dan lokasi layanan; termasuk booking Home Service 2 orang pada kategori 1,5 jam.</p></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{packageStats.map(item => <div key={item.key} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3"><div className="flex items-start justify-between gap-2"><div className="text-sm font-semibold text-slate-800">{item.label}</div><div className="shrink-0 text-sm font-extrabold text-indigo-700">{item.count}</div></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500" style={{width: `${Math.max(0, item.count / Math.max(1, ...packageStats.map(p => p.count)) * 100)}%`}} /></div><div className="mt-1 text-[11px] text-slate-500">booking</div></div>)}</div>
       </section>
 
       <div className="mb-3">
