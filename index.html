@@ -1642,42 +1642,58 @@ window.bookingService = { startVisitorPresence, getVisitorPresenceCounts, refres
 </style>
 
 <style id="sules-catalog-layout-refinement">
-  /* Katalog saja: pertahankan palet warna live; rapikan hierarki dan ruang kartu. */
-  @media (min-width:601px) {
-    #root .sules-catalog-screen { gap:16px; }
-    #root .sules-catalog-groups { gap:14px; }
-    #root .sules-catalog-group { padding:clamp(15px,2vw,21px); border-radius:20px; }
-    #root .sules-catalog-group-heading { margin-bottom:12px; }
-    #root .sules-catalog-grid { gap:12px; }
-    #root .sules-catalog-grid .sules-service-card { min-height:290px; padding:16px; border-radius:18px; gap:10px; }
+  /* Katalog saja: pembaruan visual yang tegas, tanpa mengubah palet atau fungsi. */
+  #root .sules-catalog-screen { gap:20px; }
+  #root .sules-catalog-heading { padding-bottom:8px; }
+  #root .sules-catalog-groups { gap:20px; }
+  #root .sules-catalog-group { padding:clamp(18px,2.4vw,26px); border-radius:24px; box-shadow:0 14px 32px rgba(57,45,91,.075); }
+  #root .sules-catalog-group-heading { margin-bottom:18px; }
+  #root .sules-catalog-group-number { box-shadow:0 7px 16px rgba(74,67,151,.2); }
+  #root .sules-catalog-grid { gap:16px; }
+  #root .sules-catalog-grid .sules-service-card {
+    position:relative; min-height:300px; padding:20px; border-radius:22px;
+    box-shadow:0 8px 20px rgba(57,45,91,.055);
+  }
+  #root .sules-catalog-grid .sules-service-card::before {
+    content:""; position:absolute; inset:0 auto 0 0; width:4px; border-radius:22px 0 0 22px;
+    background:linear-gradient(180deg,#BFA45F 0%,#7652B2 100%); opacity:.9;
+  }
+  #root .sules-catalog-grid .sules-service-card:hover { transform:translateY(-2px); box-shadow:0 15px 30px rgba(57,45,91,.11); }
+  #root .sules-catalog-grid .sules-service-icon { box-shadow:inset 0 1px 0 rgba(255,255,255,.85); }
+  #root .sules-catalog-grid .sules-service-price-block { border-top:0; border-radius:13px; padding:11px 12px; background:#F5F0F8; }
+  #root .sules-catalog-grid .sules-service-card button.sules-primary { min-height:50px; border-radius:13px !important; }
+  @media (max-width:980px) and (min-width:601px) {
+    #root .sules-catalog-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    #root .sules-catalog-grid .sules-service-card { min-height:290px; padding:17px; }
   }
   @media (max-width:600px) {
-    /* Jangan memaksa lima paket masuk satu layar; keterbacaan dan ruang sentuh diutamakan. */
-    #root .sules-catalog-screen { gap:12px; padding:2px 0 22px; }
+    /* Prioritas: keterbacaan paket dan area sentuh, bukan memadatkan lima kartu ke satu layar. */
+    #root .sules-catalog-screen { gap:14px; padding:0 0 24px; }
     #root .sules-catalog-screen .sules-catalog-heading { margin-bottom:0; }
-    #root .sules-catalog-groups { gap:12px; }
-    #root .sules-catalog-group { padding:13px; border-radius:18px; }
-    #root .sules-catalog-group-heading { align-items:center; gap:8px; margin-bottom:10px; }
-    #root .sules-catalog-group-title-row { gap:9px; }
-    #root .sules-catalog-group-number { width:34px; height:34px; border-radius:11px; }
+    #root .sules-catalog-groups { gap:14px; }
+    #root .sules-catalog-group { padding:14px; border-radius:20px; }
+    #root .sules-catalog-group-heading { align-items:center; gap:9px; margin-bottom:12px; }
+    #root .sules-catalog-group-title-row { gap:10px; }
+    #root .sules-catalog-group-number { width:36px; height:36px; border-radius:12px; }
     #root .sules-catalog-group-subtitle { font-size:11px; }
-    #root .sules-catalog-group-count { min-height:26px; padding:4px 8px; font-size:10px; }
-    #root .sules-catalog-travel-note { margin-bottom:9px; }
-    #root .sules-catalog-grid { grid-template-columns:minmax(0,1fr); gap:9px; }
+    #root .sules-catalog-group-count { min-height:27px; padding:4px 8px; font-size:10px; }
+    #root .sules-catalog-travel-note { margin-bottom:10px; }
+    #root .sules-catalog-grid { grid-template-columns:minmax(0,1fr); gap:11px; }
     #root .sules-catalog-grid .sules-service-card {
-      display:grid; grid-template-columns:42px minmax(0,1fr); grid-template-areas:"icon copy" "cta cta";
-      align-items:center; gap:8px 11px; min-height:0; padding:12px; border-radius:16px;
+      display:grid; grid-template-columns:48px minmax(0,1fr); grid-template-areas:"icon copy" "cta cta";
+      align-items:center; gap:10px 12px; min-height:0; padding:14px 14px 13px 16px; border-radius:18px;
     }
-    #root .sules-catalog-grid .sules-service-icon { grid-area:icon; width:42px; height:42px; border-radius:13px; }
-    #root .sules-catalog-grid .sules-service-icon svg { width:26px; height:26px; }
+    #root .sules-catalog-grid .sules-service-card::before { width:4px; border-radius:18px 0 0 18px; }
+    #root .sules-catalog-grid .sules-service-icon { grid-area:icon; width:46px; height:46px; border-radius:14px; }
+    #root .sules-catalog-grid .sules-service-icon svg { width:28px; height:28px; }
     #root .sules-catalog-grid .sules-service-copy { grid-area:copy; }
-    #root .sules-catalog-grid .sules-service-card .sules-eyebrow { padding:3px 7px; font-size:8px; }
-    #root .sules-catalog-grid .sules-service-card h3 { margin:5px 0 3px; font-size:15px; line-height:1.3; }
+    #root .sules-catalog-grid .sules-service-card .sules-eyebrow { padding:4px 7px; font-size:8px; }
+    #root .sules-catalog-grid .sules-service-card h3 { margin:5px 0 4px; font-size:16px; line-height:1.28; }
     #root .sules-catalog-grid .sules-service-meta { font-size:11px; line-height:1.45; }
-    #root .sules-catalog-grid .sules-service-price { margin-top:6px; font-size:21px; line-height:1.25; }
-    #root .sules-catalog-grid .sules-service-price small { font-size:10px; }
-    #root .sules-catalog-grid .sules-service-card button.sules-primary { grid-area:cta; min-height:44px; margin-top:0; border-radius:12px !important; }
-    #root .sules-catalog-group-catalog-home .sules-service-card:last-child { grid-template-areas:"icon copy" "cta cta"; }
+    #root .sules-catalog-grid .sules-service-price-block { display:flex; flex-direction:column; align-items:flex-start; gap:4px; margin-top:10px; padding:9px 10px; border:1px solid #E7DDEC; border-radius:12px; background:#F7F2F8; }
+    #root .sules-catalog-grid .sules-service-price { margin:0; font-size:21px; line-height:1.25; }
+    #root .sules-catalog-grid .sules-service-price small { display:block; margin:3px 0 0; font-size:10px; }
+    #root .sules-catalog-grid .sules-service-card button.sules-primary { grid-area:cta; min-height:46px; margin-top:0; border-radius:12px !important; }
   }
   @media (prefers-reduced-motion:reduce) {
     #root .sules-catalog-grid .sules-service-card { transition:none !important; }
