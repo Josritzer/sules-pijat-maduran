@@ -5005,16 +5005,14 @@ function AdminTab({ onExitToApp }) {
           <div><div className="text-[11px] font-bold uppercase tracking-[.14em] text-indigo-600">Ringkasan cepat</div><h2 id="admin-attention-heading" className="text-lg font-extrabold text-slate-900">Pusat Perhatian Admin</h2><p className="text-xs text-slate-500 mt-1">Prioritas kerja dari data booking yang tersedia.</p></div>
           <span className="rounded-full border border-indigo-100 bg-white px-3 py-1 text-xs font-semibold text-slate-600">{lastUpdated ? `Data ${lastUpdated}` : "Menunggu data"}</span>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-          <button type="button" onClick={() => { setFilterStatus("MENUNGGU"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="rounded-xl border border-amber-200 bg-white p-3 text-left hover:bg-amber-50">
-            <div className="text-xs font-semibold text-amber-800">Perlu diproses</div><div className="mt-1 text-2xl font-extrabold text-slate-900">{summary.menunggu ?? "—"}</div><div className="mt-1 text-[11px] text-slate-500">{waitingTodayCount} booking menunggu hari ini</div>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+          <button type="button" onClick={() => { setActiveSchedulePeriod("today"); document.getElementById("active-bookings-heading")?.scrollIntoView({ behavior: "smooth", block: "start" }); }} className="rounded-xl border border-amber-200 bg-white p-3 text-left hover:bg-amber-50">
+            <div className="text-xs font-semibold text-amber-800">Perlu diproses hari ini</div><div className="mt-1 text-2xl font-extrabold text-slate-900">{waitingTodayCount}</div><div className="mt-1 text-[11px] text-slate-500">Booking berstatus MENUNGGU</div>
           </button>
           <div className="rounded-xl border border-blue-100 bg-white p-3"><div className="text-xs font-semibold text-blue-800">Agenda hari ini</div><div className="mt-1 text-2xl font-extrabold text-slate-900">{activeTodayCount}</div><div className="mt-1 text-[11px] text-slate-500">Menunggu + diterima</div></div>
-          <div className="rounded-xl border border-purple-100 bg-white p-3"><div className="text-xs font-semibold text-purple-800">Nilai booking</div><div className="mt-1 text-base font-extrabold text-slate-900">{summary.pemasukan == null ? "—" : formatRupiah(summary.pemasukan)}</div><div className="mt-1 text-[11px] text-slate-500">Diterima + selesai, bukan bukti pembayaran</div></div>
           <div className="rounded-xl border border-slate-200 bg-white p-3"><div className="text-xs font-semibold text-slate-700">Kesehatan dashboard</div><div className={`mt-1 text-sm font-extrabold ${listError ? "text-red-700" : lastUpdated ? "text-emerald-700" : "text-slate-500"}`}>{listError ? "Perlu diperiksa" : lastUpdated ? "Data berhasil dimuat" : "Memeriksa data…"}</div><div className="mt-1 text-[11px] text-slate-500">Notifikasi HP: {pushStatusChecking ? "memeriksa" : pushActive ? "aktif" : "belum aktif"}</div></div>
         </div>
         {listError && <div role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">Dashboard mengalami kendala: {listError} <button type="button" onClick={fetchDashboard} className="ml-1 font-bold underline">Coba lagi</button></div>}
-        <p className="mt-3 text-[11px] text-slate-500">Email booking tetap dikirim melalui Resend; status pengiriman email tidak dapat dipastikan dari panel ini secara langsung.</p>
       </section>
 
       <div className="flex items-center justify-between gap-3 mb-2">
