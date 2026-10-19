@@ -4291,6 +4291,7 @@ function SesiAdminPanel() {
 }
 function PackagePricingAdminPanel() {
   const [rows, setRows] = useState([]);
+  const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState("");
   const [message, setMessage] = useState("");
@@ -4318,10 +4319,14 @@ function PackagePricingAdminPanel() {
     finally { setSavingKey(""); }
   };
   return <section className="bg-white rounded-2xl p-4 border border-gray-200 mb-4">
-    <div className="flex items-start justify-between gap-3 mb-3">
-      <div><div className="text-xs font-bold tracking-wider text-blue-700">PENGATURAN KOMERSIAL</div><h2 className="text-lg font-bold mt-1">Harga Bertingkat & Promo</h2><p className="text-xs text-gray-500 mt-1">Perubahan berlaku untuk booking baru. Riwayat harga lama tetap.</p></div>
-      <button type="button" onClick={load} disabled={loading} className="text-sm underline">Muat ulang</button>
+    <div className="flex items-start justify-between gap-3">
+      <button type="button" onClick={() => setExpanded(value => !value)} aria-expanded={expanded} className="flex min-w-0 flex-1 items-start justify-between gap-3 text-left">
+        <div><div className="text-xs font-bold tracking-wider text-blue-700">PENGATURAN KOMERSIAL</div><h2 className="text-lg font-bold mt-1">Harga Bertingkat & Promo</h2><p className="text-xs text-gray-500 mt-1">Perubahan berlaku untuk booking baru. Riwayat harga lama tetap.</p></div>
+        <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">{expanded ? "Tutup" : "Buka"} <span aria-hidden="true">{expanded ? "⌃" : "⌄"}</span></span>
+      </button>
+      <button type="button" onClick={load} disabled={loading} className="text-sm underline whitespace-nowrap">Muat ulang</button>
     </div>
+    {expanded && <div className="mt-3">
     {loading && <p role="status" className="text-sm text-gray-500">Memuat konfigurasi…</p>}
     {error && <p role="alert" className="text-sm text-red-700 bg-red-50 rounded-lg p-2 mb-2">{error}</p>}
     {message && <p role="status" className="text-sm text-green-800 bg-green-50 rounded-lg p-2 mb-2">{message}</p>}
@@ -4373,6 +4378,7 @@ function PackagePricingAdminPanel() {
         </div>;
       })}
     </div>
+    </div>}
   </section>;
 }
 
