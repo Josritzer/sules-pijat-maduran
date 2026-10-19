@@ -333,6 +333,35 @@
     return session;
   }
 
+  async function getAdminPushPublicKey() {
+    const { data, error } = await supabaseClient.functions.invoke("admin-push-config", { body: {} });
+    if (error) throw await getFunctionError(error);
+    if (!data || typeof data.publicKey !== "string" || !data.publicKey) throw new Error("Notifikasi HP belum dikonfigurasi.");
+    return data.publicKey;
+  }
+  async function saveAdminPushSubscription(subscription) {
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+    const user = sessionData && sessionData.session && sessionData.session.user;
+    if (!user || !user.id) throw new Error("Sesi Admin berakhir. Silakan login kembali.");
+    const json = subscription && subscription.toJSON ? subscription.toJSON() : null;
+    if (!json || !json.endpoint || !json.keys || !json.keys.p256dh || !json.keys.auth) throw new Error("Data langganan notifikasi tidak valid.");
+    const { error } = await supabaseClient.from("admin_push_subscriptions").upsert({
+      admin_id: user.id, endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "admin_id,endpoint" });
+    if (error) throw error;
+  }
+  async function deleteAdminPushSubscription(endpoint) {
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+    const user = sessionData && sessionData.session && sessionData.session.user;
+    if (!user || !user.id) throw new Error("Sesi Admin berakhir. Silakan login kembali.");
+    const { error } = await supabaseClient.from("admin_push_subscriptions").delete()
+      .eq("admin_id", user.id).eq("endpoint", endpoint);
+    if (error) throw error;
+  }
+
   // Customer auth: kode OTP email tetap dikelola Supabase Auth; SMTP dikonfigurasi di dashboard.
   async function customerSendOtp(email, mode = "login") {
     const shouldCreateUser = mode === "register";
@@ -515,7 +544,7 @@
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { getPackagePricingConfig, savePackagePricingConfig, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+  window.bookingService = { getPackagePricingConfig, savePackagePricingConfig, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, getAdminPushPublicKey, saveAdminPushSubscription, deleteAdminPushSubscription, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -4355,6 +4384,9 @@ function AdminTab({ onExitToApp }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [loggingIn, setLoggingIn] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushMessage, setPushMessage] = useState("");
+  const [pushError, setPushError] = useState("");
 
   const [bookings, setBookings] = useState([]);
   const [activeBookings, setActiveBookings] = useState([]);
@@ -4504,6 +4536,41 @@ function AdminTab({ onExitToApp }) {
     setLoggingIn(false);
   };
 
+  const enablePhoneNotifications = async () => {
+    setPushError("");
+    setPushMessage("");
+    setPushBusy(true);
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+        throw new Error("Browser ini belum mendukung notifikasi web. Coba Chrome di Android.");
+      }
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") throw new Error("Izin notifikasi belum diberikan di pengaturan browser.");
+      const registration = await navigator.serviceWorker.register("/service-worker.js", { scope: "/" });
+      await navigator.serviceWorker.ready;
+      const publicKey = await window.bookingService.getAdminPushPublicKey();
+      const decodeKey = value => {
+        const padding = "=".repeat((4 - value.length % 4) % 4);
+        const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
+        const raw = atob(base64);
+        return Uint8Array.from(raw, char => char.charCodeAt(0));
+      };
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: decodeKey(publicKey)
+        });
+      }
+      await window.bookingService.saveAdminPushSubscription(subscription);
+      setPushMessage("Notifikasi HP aktif di perangkat ini.");
+    } catch (error) {
+      setPushError(error && error.message ? error.message : "Gagal mengaktifkan notifikasi HP.");
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
   const doLogout = async () => {
     await window.bookingService.adminLogout();
     fetchRequestId.current += 1;
@@ -4527,9 +4594,11 @@ function AdminTab({ onExitToApp }) {
         <div className="sules-admin-heading">Dashboard Admin</div>
       </div>
       <div className="sules-admin-header-actions">
+        {loggedIn && <button type="button" onClick={enablePhoneNotifications} disabled={pushBusy} aria-label="Aktifkan notifikasi HP">{pushBusy ? "Mengaktifkan…" : "🔔 Aktifkan notifikasi HP"}</button>}
         <button type="button" onClick={onExitToApp}>← Kembali ke aplikasi</button>
         {loggedIn && <button type="button" className="sules-admin-logout" onClick={doLogout}>Logout</button>}
       </div>
+      {loggedIn && (pushMessage || pushError) && <div role={pushError ? "alert" : "status"} className={pushError ? "w-full text-sm text-red-700" : "w-full text-sm text-green-700"}>{pushError || pushMessage}</div>}
     </header>
   );
 
