@@ -21,12 +21,12 @@ function escapeHtml(value: unknown) {
   return String(value ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch] ?? ch);
 }
 
-async function sendAdminPush(supabaseAdmin: ReturnType<typeof createClient>, payload: Record<string, unknown>) {
+async function sendAdminPush(supabaseAdmin: any, payload: Record<string, unknown>) {
   try {
     const [publicResult, privateResult, subjectResult] = await Promise.all([
-      supabaseAdmin.rpc("get_secret", { secret_name: "web_push_vapid_public_key" }),
-      supabaseAdmin.rpc("get_secret", { secret_name: "web_push_vapid_private_key" }),
-      supabaseAdmin.rpc("get_secret", { secret_name: "web_push_vapid_subject" }),
+      supabaseAdmin.rpc("get_secret", { secret_name: "web_push_vapid_public_key" } as any),
+      supabaseAdmin.rpc("get_secret", { secret_name: "web_push_vapid_private_key" } as any),
+      supabaseAdmin.rpc("get_secret", { secret_name: "web_push_vapid_subject" } as any),
     ]);
     const publicKey = publicResult.data;
     const privateKey = privateResult.data;
