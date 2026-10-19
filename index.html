@@ -5006,7 +5006,7 @@ function AdminTab({ onExitToApp }) {
           <span className="rounded-full border border-indigo-100 bg-white px-3 py-1 text-xs font-semibold text-slate-600">{lastUpdated ? `Data ${lastUpdated}` : "Menunggu data"}</span>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-          <button type="button" onClick={() => { setFilterStatus("MENUNGGU"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="rounded-xl border border-amber-200 bg-white p-3 text-left hover:bg-amber-50">
+          <button type="button" onClick={() => { setActiveSchedulePeriod("today"); document.getElementById("active-bookings-heading")?.scrollIntoView({ behavior: "smooth", block: "start" }); }} className="rounded-xl border border-amber-200 bg-white p-3 text-left hover:bg-amber-50">
             <div className="text-xs font-semibold text-amber-800">Perlu diproses hari ini</div><div className="mt-1 text-2xl font-extrabold text-slate-900">{waitingTodayCount}</div><div className="mt-1 text-[11px] text-slate-500">Booking berstatus MENUNGGU</div>
           </button>
           <div className="rounded-xl border border-blue-100 bg-white p-3"><div className="text-xs font-semibold text-blue-800">Agenda hari ini</div><div className="mt-1 text-2xl font-extrabold text-slate-900">{activeTodayCount}</div><div className="mt-1 text-[11px] text-slate-500">Menunggu + diterima</div></div>
