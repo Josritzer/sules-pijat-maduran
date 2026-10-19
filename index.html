@@ -5039,9 +5039,9 @@ function ProfileMenuTab({ onOpenAdmin, customerSession, customerSessionReady, cu
 }
 
 function AppTabs() {
-  const [tab, setTab] = useState("home");
+  const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get("admin") === "1" ? "account" : "home");
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
-  const [menuView, setMenuView] = useState("menu");
+  const [menuView, setMenuView] = useState(() => new URLSearchParams(window.location.search).get("admin") === "1" ? "admin" : "menu");
   const [bookingPackageId, setBookingPackageId] = useState(SERVICE_PACKAGES[0].id);
   const [selectedCatalogPackageId, setSelectedCatalogPackageId] = useState(null);
   const [ordersView, setOrdersView] = useState("active");
