@@ -1641,6 +1641,151 @@ window.bookingService = { startVisitorPresence, getVisitorPresenceCounts, refres
   }
 </style>
 
+
+<style id="sl-relax-native-catalog-faq-ui">
+  /* Isolated UI polish: catalog and FAQ only. Booking logic and shared home styles remain untouched. */
+  #faq .public-details {
+    margin:10px 0 !important;
+    padding:0 !important;
+    overflow:hidden;
+    border:1px solid #E0E7F5 !important;
+    border-radius:14px !important;
+    background:#FFFFFF !important;
+    box-shadow:0 2px 8px rgba(34,62,126,.035) !important;
+  }
+  #faq .public-details > summary {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:15px 16px !important;
+    color:#1F3155 !important;
+    font-weight:750;
+    line-height:1.45;
+    cursor:pointer;
+    list-style:none;
+  }
+  #faq .public-details > summary::-webkit-details-marker { display:none; }
+  #faq .public-details > summary::after {
+    content:"+";
+    display:grid;
+    width:26px;
+    height:26px;
+    flex:0 0 26px;
+    place-items:center;
+    border-radius:9px;
+    color:#315BEA;
+    background:#EEF3FF;
+    font-size:19px;
+    font-weight:500;
+  }
+  #faq .public-details[open] > summary::after { content:"−"; }
+  #faq .public-details > p,
+  #faq .public-details > ul { margin:0 16px 15px !important; color:#586783 !important; line-height:1.65; }
+  #faq .public-details a { color:#315BEA !important; }
+  @media (max-width:600px) {
+    #root .sules-catalog-screen { gap:8px !important; padding:0 0 18px !important; }
+    #root .sules-catalog-heading {
+      padding:12px 14px !important;
+      border:1px solid #E0E7F5 !important;
+      border-radius:0 0 16px 16px !important;
+      background:#FFFFFF !important;
+      box-shadow:0 2px 9px rgba(34,62,126,.045) !important;
+    }
+    #root .sules-catalog-mobile-title {
+      max-width:none !important;
+      color:#1F3155 !important;
+      font-family:inherit !important;
+      font-size:20px !important;
+      font-weight:800 !important;
+      letter-spacing:-.025em !important;
+    }
+    #root .sules-catalog-ornament { display:none !important; }
+    #root .sules-catalog-subtitle-mobile { margin-top:4px !important; color:#71809A !important; font-size:11px !important; }
+    #root .sules-catalog-groups {
+      display:grid !important;
+      grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+      align-items:stretch !important;
+      gap:8px !important;
+    }
+    #root .sules-catalog-group { display:contents !important; }
+    #root .sules-catalog-group-heading { display:none !important; }
+    #root .sules-catalog-travel-note {
+      grid-column:1 / -1 !important;
+      margin:0 !important;
+      padding:7px 10px !important;
+      border:1px solid #DCE5F8 !important;
+      border-radius:10px !important;
+      background:#F5F7FC !important;
+      color:#52627F !important;
+      font-size:10px !important;
+      line-height:1.4 !important;
+    }
+    #root .sules-catalog-travel-note > span { font-size:8px !important; font-weight:800 !important; color:#315BEA !important; }
+    #root .sules-catalog-travel-note p { margin:3px 0 0 !important; }
+    #root .sules-catalog-grid { display:contents !important; }
+    #root .sules-catalog-grid .sules-service-card {
+      display:flex !important;
+      min-width:0 !important;
+      min-height:0 !important;
+      flex-direction:column !important;
+      align-items:stretch !important;
+      gap:6px !important;
+      padding:10px !important;
+      border:1px solid #E0E7F5 !important;
+      border-radius:13px !important;
+      background:#FFFFFF !important;
+      box-shadow:0 2px 7px rgba(34,62,126,.04) !important;
+    }
+    #root .sules-catalog-grid .sules-service-icon { display:none !important; }
+    #root .sules-catalog-grid .sules-service-copy { min-width:0 !important; }
+    #root .sules-catalog-grid .sules-service-card .sules-eyebrow {
+      padding:0 !important;
+      color:#315BEA !important;
+      font-size:8px !important;
+      letter-spacing:.055em !important;
+    }
+    #root .sules-catalog-grid .sules-service-card h3 {
+      margin:2px 0 !important;
+      color:#1F3155 !important;
+      font-size:13px !important;
+      font-weight:800 !important;
+      line-height:1.25 !important;
+      overflow-wrap:anywhere !important;
+    }
+    #root .sules-catalog-grid .sules-service-meta { color:#71809A !important; font-size:10px !important; line-height:1.35 !important; }
+    #root .sules-service-price-block { gap:2px !important; padding-top:5px !important; }
+    #root .sules-catalog-grid .sules-service-price {
+      color:#1F3155 !important;
+      font-size:16px !important;
+      font-weight:850 !important;
+      line-height:1.25 !important;
+    }
+    #root .sules-catalog-grid .sules-service-price small { font-size:9px !important; }
+    #root .sules-service-price-caption { font-size:9px !important; white-space:normal !important; }
+    #root .sules-catalog-grid .sules-service-card button.sules-primary {
+      min-height:38px !important;
+      margin-top:auto !important;
+      padding:8px 5px !important;
+      border:1px solid #315BEA !important;
+      border-radius:10px !important;
+      background:#315BEA !important;
+      box-shadow:none !important;
+      font-size:11px !important;
+    }
+    #faq .public-details { margin:8px 0 !important; border-radius:13px !important; }
+    #faq .public-details > summary { padding:13px 12px !important; font-size:13px !important; }
+    #faq .public-details > p,
+    #faq .public-details > ul { margin:0 12px 13px !important; font-size:12px !important; }
+  }
+  @media (max-width:360px) {
+    #root .sules-catalog-groups { gap:6px !important; }
+    #root .sules-catalog-grid .sules-service-card { padding:8px !important; }
+    #root .sules-catalog-grid .sules-service-card h3 { font-size:12px !important; }
+    #root .sules-catalog-grid .sules-service-price { font-size:15px !important; }
+  }
+</style>
+
 </head>
 <body>
 <header class="site-header">
