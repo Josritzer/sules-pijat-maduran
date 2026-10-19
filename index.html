@@ -279,6 +279,15 @@
     if (error) throw error;
     return data;
   }
+  async function getBookingIdsForCustomer(customerId) {
+    const id = String(customerId || "");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      throw new Error("ID pelanggan tidak valid.");
+    }
+    const { data, error } = await supabaseClient.from("bookings").select("id").eq("customer_id", id);
+    if (error) throw error;
+    return (data || []).map(row => row.id);
+  }
   async function acceptBooking(bookingId) {
     const { data, error } = await supabaseClient.rpc("accept_booking", { p_booking_id: bookingId });
     if (error) throw error;
@@ -658,7 +667,7 @@
     // Intentionally no personal identifiers are included in presence metadata.
   }
 
-window.bookingService = { startVisitorPresence, getVisitorPresenceCounts, refreshVisitorPresence, getPackagePricingConfig, savePackagePricingConfig, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, getAdminPushPublicKey, saveAdminPushSubscription, deleteAdminPushSubscription, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+window.bookingService = { startVisitorPresence, getVisitorPresenceCounts, refreshVisitorPresence, getPackagePricingConfig, savePackagePricingConfig, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, getBookingIdsForCustomer, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, getAdminPushPublicKey, saveAdminPushSubscription, deleteAdminPushSubscription, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -4513,6 +4522,7 @@ function AdminTab({ onExitToApp }) {
 
   const [bookings, setBookings] = useState([]);
   const [analyticsBookings, setAnalyticsBookings] = useState([]);
+  const [testAccountBookingIds, setTestAccountBookingIds] = useState([]);
   const [activeBookings, setActiveBookings] = useState([]);
   const [activeLoading, setActiveLoading] = useState(false);
   const [activeError, setActiveError] = useState("");
@@ -4662,16 +4672,18 @@ function AdminTab({ onExitToApp }) {
     setLoadingList(true);
     setListError("");
     try {
-      const [summaryData, bookingData, analyticsData] = await Promise.all([
+      const [summaryData, bookingData, analyticsData, testBookingIds] = await Promise.all([
         window.bookingService.getDashboardSummary(range.startDate, range.endDate),
         window.bookingService.getBookingsPeriod(range.startDate, range.endDate, filterStatus),
-        window.bookingService.getBookingsPeriod(range.startDate, range.endDate, null)
+        window.bookingService.getBookingsPeriod(range.startDate, range.endDate, null),
+        window.bookingService.getBookingIdsForCustomer("ecdd9a04-7e79-4008-842f-b06f9e767e1e")
       ]);
       if (requestId !== fetchRequestId.current) return false;
       setDashboardSummary(summaryData || {});
       setRevenueDays(Array.isArray(summaryData && summaryData.per_hari) ? summaryData.per_hari : []);
       setBookings(bookingData || []);
       setAnalyticsBookings(analyticsData || []);
+      setTestAccountBookingIds(testBookingIds || []);
       const refreshedAt = new Date();
       setLastUpdated(`${String(refreshedAt.getHours()).padStart(2,"0")}:${String(refreshedAt.getMinutes()).padStart(2,"0")}`);
       return true;
@@ -4780,6 +4792,7 @@ function AdminTab({ onExitToApp }) {
     setLoggedIn(false);
     setBookings([]);
     setAnalyticsBookings([]);
+    setTestAccountBookingIds([]);
     setActiveBookings([]);
     setActiveError("");
     setActiveLoading(false);
@@ -4866,7 +4879,7 @@ function AdminTab({ onExitToApp }) {
   const packageStats = packageStatCategories.map(category => ({
     key: category.key,
     label: category.label,
-    count: analyticsBookings.filter(b =>
+    count: analyticsBookings.filter(b => !testAccountBookingIds.includes(b.id)).filter(b =>
       category.packageKeys.includes(b.package_key) ||
       (!b.package_key && b.service_id === category.serviceId && b.tipe_lokasi === category.location)
     ).length
