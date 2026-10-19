@@ -7,3 +7,7 @@ verify_jwt = true
 # The handler validates the iPaymu X-Signature itself.
 [functions.ipaymu-callback]
 verify_jwt = false
+
+# The browser-authenticated Admin endpoint only returns the public VAPID key after role validation.
+[functions.admin-push-config]
+verify_jwt = true
