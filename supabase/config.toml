@@ -11,3 +11,7 @@ verify_jwt = false
 # The browser-authenticated Admin endpoint only returns the public VAPID key after role validation.
 [functions.admin-push-config]
 verify_jwt = true
+
+# Called by the database scheduler; the function validates the existing Vault webhook secret.
+[functions.google-review-email]
+verify_jwt = false
