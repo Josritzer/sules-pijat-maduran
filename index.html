@@ -1196,6 +1196,14 @@ window.bookingService = { startVisitorPresence, getVisitorPresenceCounts, refres
   .sules-home-hero h1 em { color:#E6D3A1; font-weight:400; }
   #root .sules-home-screen h2,#root .sules-home-screen h3 { color:var(--home-ink) !important; }
   .sules-home-hero-description { max-width:42ch; margin:17px 0 0; color:#E4EAF2; font-size:14px; line-height:1.7; }
+  .sules-home-shortcuts { margin-top:20px; padding:13px; border:1px solid rgba(226,211,164,.38); border-radius:19px; background:linear-gradient(135deg,rgba(43,76,139,.94),rgba(45,51,119,.92) 58%,rgba(83,48,125,.9)); box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 12px 26px rgba(3,12,35,.18); }
+  .sules-home-shortcuts-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 2px 10px; color:#F4E8C7; font-size:9px; font-weight:850; letter-spacing:.16em; }
+  .sules-home-shortcuts-heading span:last-child { color:rgba(255,255,255,.62); font-size:8px; font-weight:650; letter-spacing:.08em; }
+  .sules-home-shortcuts-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; }
+  #root .sules-home-shortcut { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-width:0; min-height:82px; padding:10px 3px 8px; border:1px solid rgba(255,255,255,.13) !important; border-radius:13px !important; color:#FFFDF7 !important; background:rgba(255,255,255,.075) !important; font-size:10px; font-weight:750; line-height:1.2; transition:background .18s ease,transform .18s ease,border-color .18s ease; }
+  #root .sules-home-shortcut:hover,#root .sules-home-shortcut:focus-visible { border-color:rgba(242,221,164,.65) !important; background:rgba(255,255,255,.15) !important; transform:translateY(-2px); outline:none; }
+  .sules-home-shortcut-icon { display:grid; width:37px; height:37px; place-items:center; border:1px solid rgba(255,255,255,.64); border-radius:12px; color:#213D79; background:linear-gradient(145deg,#FFFFFF,#E8EEFC); box-shadow:0 5px 12px rgba(7,18,49,.16); }
+  .sules-home-shortcut-icon svg { display:block; width:19px; height:19px; }
   .sules-home-hero-actions { display:flex; align-items:center; flex-wrap:wrap; gap:10px 18px; margin-top:23px; }
   #root .sules-home-primary { display:inline-flex; align-items:center; justify-content:center; gap:15px; min-height:48px; padding:12px 18px; border:1px solid #E8D7A7 !important; border-radius:999px !important; color:#1B2A40 !important; background:linear-gradient(135deg,#E7D5A4,#D2B879) !important; box-shadow:0 6px 18px rgba(7,22,45,.18); font-size:13px; font-weight:800; }
   #root .sules-home-primary:hover { transform:translateY(-1px); box-shadow:0 9px 22px rgba(7,22,45,.24); }
@@ -3722,7 +3730,13 @@ function HomeBookingTutorial({ onGoToCatalog }) {
   </section>;
 }
 
-function HomeBrandHero({ onGoToBooking, onGoToCatalog }) {
+function HomeBrandHero({ onGoToBooking, onGoToCatalog, onGoToOrders, onGoToNotifications, onGoToAccount }) {
+  const shortcuts = [
+    { label:"Katalog", icon:"catalog", action:onGoToCatalog },
+    { label:"Pesanan", icon:"orders", action:onGoToOrders },
+    { label:"Notifikasi", icon:"bell", action:onGoToNotifications },
+    { label:"Akun", icon:"profile", action:onGoToAccount }
+  ];
   return <React.Fragment>
     <section className="sules-home-hero" aria-labelledby="sules-home-hero-title">
       <div className="sules-home-hero-copy">
@@ -3730,6 +3744,15 @@ function HomeBrandHero({ onGoToBooking, onGoToCatalog }) {
         <p className="sules-home-wordmark">SULES <span>PIJAT MADURAN</span></p>
         <h1 id="sules-home-hero-title">Sebuah jeda.<br /><em>Untuk diri Anda.</em></h1>
         <p className="sules-home-hero-description">Pilih layanan pijat di Maduran dan jadwalkan waktu yang nyaman untuk Anda.</p>
+        <nav className="sules-home-shortcuts" aria-label="Pintasan menu SL Relax">
+          <div className="sules-home-shortcuts-heading"><span>JELAJAHI SL RELAX</span><span>AKSES CEPAT</span></div>
+          <div className="sules-home-shortcuts-grid">
+            {shortcuts.map(item => <button key={item.label} type="button" className="sules-home-shortcut" onClick={item.action} aria-label={item.label}>
+              <span className="sules-home-shortcut-icon"><SulesNavIcon name={item.icon} /></span>
+              <span>{item.label}</span>
+            </button>)}
+          </div>
+        </nav>
         <div className="sules-home-hero-actions">
           <button type="button" className="sules-home-primary" onClick={onGoToBooking}>Pesan Sekarang <span aria-hidden="true">↗</span></button>
           <button type="button" className="sules-home-secondary" onClick={onGoToCatalog}>Lihat layanan</button>
@@ -4023,7 +4046,7 @@ function NotificationsTab({ customerSession, customerSessionReady, customerSessi
   </div>;
 }
 
-function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToCatalog, onOpenPublicSection, customerSession: session, customerSessionReady, customerSessionError: sessionError, onRetryCustomerSession: retryCustomerSessionCheck, mode = "orders", initialView = "active" }) {
+function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToCatalog, onGoToNotifications, onGoToAccount, onOpenPublicSection, customerSession: session, customerSessionReady, customerSessionError: sessionError, onRetryCustomerSession: retryCustomerSessionCheck, mode = "orders", initialView = "active" }) {
   const checkingSession = !customerSessionReady;
   const [view, setView] = useState(initialView === "history" ? "history" : "active");
   const [orders, setOrders] = useState([]);
@@ -4243,7 +4266,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
   if (checkingSession) return <div className="text-center text-gray-500 text-sm py-16" role="status">Memeriksa akun pelanggan…</div>;
   if (!session) {
     if (mode === "home") return <div className="sules-home-screen">
-      <HomeBrandHero onGoToBooking={onGoToBooking} onGoToCatalog={onGoToCatalog} />
+      <HomeBrandHero onGoToBooking={onGoToBooking} onGoToCatalog={onGoToCatalog} onGoToOrders={onGoToOrders} onGoToNotifications={onGoToNotifications} onGoToAccount={onGoToAccount} />
       <section className="sules-home-account" aria-label="Akun pelanggan">
         <div className="sules-home-account-copy"><p className="sules-home-eyebrow">AREA PELANGGAN</p>
           <h2>{sessionError ? "Sesi akun belum dapat dipastikan" : "Sudah pernah booking?"}</h2>
@@ -4272,7 +4295,7 @@ function CustomerOrdersTab({ onGoToBooking, onBookPackage, onGoToOrders, onGoToC
   if (mode === "home") {
     const booking = activeOrders[0];
     return <div className="sules-home-screen">
-      <HomeBrandHero onGoToBooking={onGoToBooking} onGoToCatalog={onGoToCatalog} />
+      <HomeBrandHero onGoToBooking={onGoToBooking} onGoToCatalog={onGoToCatalog} onGoToOrders={onGoToOrders} onGoToNotifications={onGoToNotifications} onGoToAccount={onGoToAccount} />
       <section className="sules-home-account" aria-label="Ringkasan booking aktif">
         <div className="sules-home-account-heading"><div><p className="sules-home-eyebrow">AREA PELANGGAN · DARI SUPABASE</p><h2>Pesanan Anda</h2></div>
           <button type="button" className="sules-home-catalog-link" onClick={onGoToOrders}>Semua pesanan <span aria-hidden="true">↗</span></button>
@@ -5649,7 +5672,7 @@ function AppTabs() {
     <div className={isAdminScreen ? "sules-admin-shell" : "sules-app-shell"}>
       <div className={isAdminScreen ? "sules-admin-content" : `sules-app-content${tab === "catalog" ? " sules-app-content-catalog" : ""}`}>
         {tab === "home" && <HomeSesiBanner />}
-        {tab === "home" && <CustomerOrdersTab mode="home" onGoToBooking={()=>navigate("book")} onBookPackage={bookPackage} onGoToCatalog={openCatalog} onGoToOrders={goToOrders} onOpenPublicSection={openPublicSection} customerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
+        {tab === "home" && <CustomerOrdersTab mode="home" onGoToBooking={()=>navigate("book")} onBookPackage={bookPackage} onGoToCatalog={openCatalog} onGoToOrders={goToOrders} onGoToNotifications={()=>navigate("notifications")} onGoToAccount={()=>navigate("account")} onOpenPublicSection={openPublicSection} customerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
         {tab === "catalog" && <CatalogTab onBookPackage={bookPackage} selectedPackageId={selectedCatalogPackageId} />}
         {tab === "book" && <BookingTab initialPackageId={bookingPackageId} onCustomerSessionChange={updateCustomerSession} onGoToOrders={()=>goToOrders("active")} externalCustomerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
         {tab === "customer-auth" && <BookingTab initialPackageId={bookingPackageId} authOnly initialAuthMode={customerAuthMode} onAuthComplete={finishCustomerAuth} onAuthCancel={finishCustomerAuth} onCustomerSessionChange={updateCustomerSession} externalCustomerSession={customerSession} customerSessionReady={customerSessionReady} customerSessionError={customerSessionError} onRetryCustomerSession={retryCustomerSessionCheck} />}
