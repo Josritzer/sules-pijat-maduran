@@ -544,7 +544,104 @@
     if (channel) await supabaseClient.removeChannel(channel);
   }
 
-  window.bookingService = { getPackagePricingConfig, savePackagePricingConfig, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, getAdminPushPublicKey, saveAdminPushSubscription, deleteAdminPushSubscription, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+  
+  // Presence sementara: hanya metadata anonim, tanpa menyimpan riwayat pengunjung ke database.
+  let visitorPresenceChannel = null;
+  let visitorPresenceStarted = false;
+  let visitorPresenceCounts = null;
+  function getVisitorPresenceCounts() { return visitorPresenceCounts; }
+  function startVisitorPresence() {
+    if (visitorPresenceStarted) return;
+    visitorPresenceStarted = true;
+    const presenceKey = (window.crypto && typeof window.crypto.randomUUID === "function")
+      ? window.crypto.randomUUID()
+      : "v-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const channel = supabaseClient.channel("sules-active-presence-v1", { config: { presence: { key: presenceKey } } });
+    visitorPresenceChannel = channel;
+    let lastActivityAt = Date.now();
+    let lastTrackedAt = 0;
+    let currentUserId = null;
+    let currentIsAdmin = false;
+    let stopped = false;
+    let realtimeStatus = "Menyambungkan";
+    let presenceError = "";
+    const publishCounts = () => {
+      const now = Date.now();
+      const peers = Object.values(channel.presenceState() || {}).flat();
+      const active = peers.filter(meta => meta && Number.isFinite(Number(meta.lastActivityAt)) && now - Number(meta.lastActivityAt) < 300000);
+      const customers = active.filter(meta => !meta.isAdmin);
+      const counts = {
+        visitors: customers.length,
+        loggedIn: customers.filter(meta => meta.isLoggedIn === true).length,
+        updatedAt: now,
+        status: realtimeStatus,
+        rawPeers: peers.length,
+        error: presenceError
+      };
+      visitorPresenceCounts = counts;
+      window.dispatchEvent(new CustomEvent("sules-presence-counts", { detail: counts }));
+    };
+    const trackPresence = async (force) => {
+      if (stopped || document.visibilityState === "hidden" || Date.now() - lastActivityAt >= 300000) {
+        try { await channel.untrack(); } catch (_) {}
+        publishCounts();
+        return;
+      }
+      if (!force && Date.now() - lastTrackedAt < 25000) return;
+      lastTrackedAt = Date.now();
+      try {
+        const result = await channel.track({ isLoggedIn: !!currentUserId && !currentIsAdmin, isAdmin: currentIsAdmin, lastActivityAt: lastActivityAt });
+        if (result && result !== "ok") presenceError = "track: " + String(result);
+        else presenceError = "";
+      } catch (error) {
+        presenceError = "Presence: " + String(error && error.message || error);
+      }
+      publishCounts();
+    };
+    const markActivity = () => {
+      lastActivityAt = Date.now();
+      void trackPresence(false);
+    };
+    const activityEvents = ["pointerdown", "keydown", "scroll", "touchstart", "click"];
+    activityEvents.forEach(name => document.addEventListener(name, markActivity, { passive: true }));
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") markActivity();
+      else void channel.untrack().finally(publishCounts);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    const timer = window.setInterval(() => {
+      if (Date.now() - lastActivityAt < 300000 && document.visibilityState === "visible") void trackPresence(true);
+      else { void channel.untrack(); publishCounts(); }
+    }, 30000);
+    channel.on("presence", { event: "sync" }, publishCounts)
+      .on("presence", { event: "join" }, publishCounts)
+      .on("presence", { event: "leave" }, publishCounts)
+      .subscribe((status, error) => {
+        realtimeStatus = status || "Tidak diketahui";
+        if (error) presenceError = String(error.message || error);
+        publishCounts();
+        if (status === "SUBSCRIBED") void trackPresence(true);
+      });
+    const authSubscription = supabaseClient.auth.onAuthStateChange((_event, session) => {
+      currentUserId = session && session.user ? session.user.id : null;
+      window.setTimeout(async () => {
+        try { currentIsAdmin = !!currentUserId && await isAdminUser(currentUserId); }
+        catch (_) { currentIsAdmin = false; }
+        void trackPresence(true);
+      }, 0);
+    });
+    // Check existing session after the initial auth event settles.
+    supabaseClient.auth.getSession().then(async ({ data }) => {
+      const session = data && data.session;
+      currentUserId = session && session.user ? session.user.id : null;
+      try { currentIsAdmin = !!currentUserId && await isAdminUser(currentUserId); } catch (_) { currentIsAdmin = false; }
+      void trackPresence(true);
+    }).catch(() => {});
+    window.addEventListener("pagehide", () => { stopped = true; window.clearInterval(timer); void channel.untrack(); });
+    // Intentionally no personal identifiers are included in presence metadata.
+  }
+
+window.bookingService = { startVisitorPresence, getVisitorPresenceCounts, getPackagePricingConfig, savePackagePricingConfig, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, getAdminPushPublicKey, saveAdminPushSubscription, deleteAdminPushSubscription, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -4393,6 +4490,7 @@ function AdminTab({ onExitToApp }) {
   const [pushBusy, setPushBusy] = useState(false);
   const [pushMessage, setPushMessage] = useState("");
   const [pushError, setPushError] = useState("");
+  const [presenceCounts, setPresenceCounts] = useState(() => window.bookingService.getVisitorPresenceCounts());
 
   const [bookings, setBookings] = useState([]);
   const [activeBookings, setActiveBookings] = useState([]);
@@ -4414,6 +4512,14 @@ function AdminTab({ onExitToApp }) {
   const [actionLoading, setActionLoading] = useState({});
   const fetchRequestId = useRef(0);
   const fetchDashboardRef = useRef(null);
+
+  useEffect(() => {
+    const onPresenceCounts = event => setPresenceCounts(event && event.detail ? event.detail : null);
+    window.addEventListener("sules-presence-counts", onPresenceCounts);
+    const currentCounts = window.bookingService.getVisitorPresenceCounts();
+    if (currentCounts) setPresenceCounts(currentCounts);
+    return () => window.removeEventListener("sules-presence-counts", onPresenceCounts);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -4780,6 +4886,22 @@ function AdminTab({ onExitToApp }) {
     <div className="sules-admin-page">
       {adminHeader}
       <div className="sules-admin-dashboard pb-8">
+
+      <div className="grid grid-cols-2 gap-3 mb-4" aria-label="Aktivitas pengunjung">
+        <section className="bg-white rounded-xl p-3 border border-gray-200">
+          <div className="flex items-center gap-2 text-xs text-gray-600"><span aria-hidden="true">👥</span> Pengunjung Aktif</div>
+          <div className="text-2xl font-bold text-slate-800 mt-1">{presenceCounts ? presenceCounts.visitors : "—"}</div>
+          <div className="text-xs text-gray-500 mt-1">Sedang aktif di SL Relax</div>
+          <div className="text-[10px] text-gray-400 mt-1">Realtime: {presenceCounts ? presenceCounts.status : "Menyambungkan"} · Sesi terbaca: {presenceCounts ? presenceCounts.rawPeers : 0}</div>
+          {presenceCounts && presenceCounts.error ? <div className="text-[10px] text-red-600 mt-1 break-words">Info: {presenceCounts.error}</div> : null}
+        </section>
+        <section className="bg-white rounded-xl p-3 border border-gray-200">
+          <div className="flex items-center gap-2 text-xs text-gray-600"><span aria-hidden="true">🔐</span> Login Aktif</div>
+          <div className="text-2xl font-bold text-slate-800 mt-1">{presenceCounts ? presenceCounts.loggedIn : "—"}</div>
+          <div className="text-xs text-gray-500 mt-1">Pelanggan yang sudah login</div>
+        </section>
+      </div>
+      <div className="text-xs text-gray-500 mb-3">Diperbarui otomatis. Aktivitas berakhir setelah 5 menit tanpa interaksi; hitungan bersifat perkiraan dan membutuhkan koneksi Realtime.</div>
 
       <SesiAdminPanel />
       <PackagePricingAdminPanel />
@@ -5410,6 +5532,7 @@ function AppTabs() {
   );
 }
 
+window.bookingService.startVisitorPresence();
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
 <script>
