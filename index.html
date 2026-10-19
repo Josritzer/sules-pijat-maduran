@@ -1581,6 +1581,66 @@ window.bookingService = { startVisitorPresence, getVisitorPresenceCounts, refres
   }
 </style>
 
+
+<style id="sules-native-home-refresh">
+  /* Mobile home: native-app hierarchy, calm cobalt palette, compact first screen. */
+  #root .sules-bottom-nav { border:1px solid #DCE5F8 !important; background:rgba(255,255,255,.97) !important; box-shadow:0 8px 26px rgba(25,54,115,.13) !important; }
+  #root .sules-bottom-nav button[data-nav] { --nav-accent:#315BEA; --nav-tint:#EEF3FF; --nav-line:#D8E3FF; }
+  #root .sules-bottom-nav button[data-nav="notifications"] { --nav-accent:#315BEA; --nav-tint:#EEF3FF; --nav-line:#D8E3FF; }
+  #root .sules-bottom-nav button[aria-current="page"] { font-weight:800 !important; }
+  #root .sules-bottom-nav button[aria-current="page"] svg { stroke-width:2.4; }
+  @media (max-width:600px) {
+    #root .sules-home-screen {
+      gap:16px !important; padding:0 0 12px !important; border:0 !important; border-radius:0 !important;
+      color:#172B52 !important; background:#F5F7FC !important;
+    }
+    #root .sules-home-hero {
+      display:block !important; min-height:0 !important; padding:19px 16px 17px !important;
+      border:0 !important; border-radius:0 0 23px 23px !important; color:#172B52 !important;
+      background:#FFFFFF !important; box-shadow:0 3px 15px rgba(24,48,105,.055) !important;
+    }
+    #root .sules-home-hero::before,#root .sules-home-hero::after { display:none !important; }
+    #root .sules-home-kicker { gap:7px !important; color:#315BEA !important; font-size:9px !important; letter-spacing:.12em !important; }
+    #root .sules-home-kicker span { background:#315BEA !important; box-shadow:0 0 0 4px #EEF3FF !important; }
+    #root .sules-home-wordmark { margin:12px 0 7px !important; color:#243F82 !important; font-family:inherit !important; font-size:10px !important; letter-spacing:.13em !important; }
+    #root .sules-home-wordmark span { color:#71809D !important; font-size:9px !important; letter-spacing:.08em !important; }
+    #root .sules-home-hero h1 { max-width:none !important; color:#172B52 !important; font-family:inherit !important; font-size:clamp(29px,8vw,35px) !important; font-weight:850 !important; line-height:1.08 !important; letter-spacing:-.045em !important; }
+    #root .sules-home-hero h1 em { color:#315BEA !important; font-weight:750 !important; }
+    #root .sules-home-hero-description { max-width:34ch !important; margin:9px 0 0 !important; color:#66738D !important; font-size:12px !important; line-height:1.55 !important; }
+    #root .sules-home-shortcuts {
+      margin-top:16px !important; padding:12px !important; border:1px solid #E0E8FA !important; border-radius:18px !important;
+      background:#F2F5FD !important; box-shadow:none !important;
+    }
+    #root .sules-home-shortcuts-heading { margin:0 2px 9px !important; color:#263E7B !important; font-size:10px !important; font-weight:850 !important; letter-spacing:.08em !important; }
+    #root .sules-home-shortcuts-heading span:last-child { color:#7B87A1 !important; font-size:9px !important; letter-spacing:.04em !important; }
+    #root .sules-home-shortcuts-grid { gap:7px !important; }
+    #root .sules-home-shortcut {
+      min-height:76px !important; gap:7px !important; padding:9px 2px 8px !important;
+      border:1px solid #E2E9F7 !important; border-radius:14px !important; color:#263E7B !important;
+      background:#FFFFFF !important; box-shadow:0 2px 5px rgba(28,54,111,.035) !important;
+      font-size:10px !important; font-weight:750 !important; transition:background .16s ease,border-color .16s ease !important;
+    }
+    #root .sules-home-shortcut:hover,#root .sules-home-shortcut:focus-visible { transform:none !important; border-color:#9FB6FA !important; background:#F8FAFF !important; }
+    #root .sules-home-shortcut-icon {
+      width:34px !important; height:34px !important; border:0 !important; border-radius:11px !important;
+      color:#315BEA !important; background:#EDF2FF !important; box-shadow:none !important;
+    }
+    #root .sules-home-shortcut-icon svg { width:19px !important; height:19px !important; }
+    #root .sules-home-hero-actions { display:grid !important; grid-template-columns:1.15fr 1fr !important; gap:8px !important; margin-top:13px !important; }
+    #root .sules-home-primary { min-height:45px !important; padding:10px 12px !important; border:1px solid #315BEA !important; border-radius:13px !important; color:#FFFFFF !important; background:#315BEA !important; box-shadow:0 4px 10px rgba(49,91,234,.18) !important; font-size:12px !important; }
+    #root .sules-home-secondary { min-height:45px !important; padding:10px 12px !important; border:1px solid #DCE5F8 !important; border-radius:13px !important; color:#315BEA !important; background:#FFFFFF !important; font-size:12px !important; }
+    #root .sules-home-emblem { display:none !important; }
+    #root .sules-home-facts { grid-template-columns:repeat(3,minmax(0,1fr)) !important; gap:7px !important; padding:0 12px 3px !important; border:0 !important; }
+    #root .sules-home-facts > div { display:flex !important; flex-direction:column !important; align-items:flex-start !important; justify-content:flex-start !important; gap:5px !important; min-width:0 !important; padding:10px 9px !important; border:1px solid #E5EAF5 !important; border-radius:12px !important; background:#FFFFFF !important; }
+    #root .sules-home-facts span { flex:none !important; color:#7B87A1 !important; font-size:8px !important; letter-spacing:.06em !important; }
+    #root .sules-home-facts strong { max-width:none !important; color:#263E7B !important; font-family:inherit !important; font-size:10px !important; font-weight:750 !important; line-height:1.35 !important; text-align:left !important; overflow-wrap:anywhere !important; }
+    #root .sules-home-account { margin:0 12px !important; padding:15px !important; border:1px solid #E2E8F5 !important; border-radius:17px !important; background:#FFFFFF !important; box-shadow:0 3px 12px rgba(28,54,111,.035) !important; }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    #root .sules-home-shortcut { transition:none !important; }
+  }
+</style>
+
 </head>
 <body>
 <header class="site-header">
@@ -3745,7 +3805,7 @@ function HomeBrandHero({ onGoToBooking, onGoToCatalog, onGoToOrders, onGoToNotif
         <h1 id="sules-home-hero-title">Sebuah jeda.<br /><em>Untuk diri Anda.</em></h1>
         <p className="sules-home-hero-description">Pilih layanan pijat di Maduran dan jadwalkan waktu yang nyaman untuk Anda.</p>
         <nav className="sules-home-shortcuts" aria-label="Pintasan menu SL Relax">
-          <div className="sules-home-shortcuts-heading"><span>JELAJAHI SL RELAX</span><span>AKSES CEPAT</span></div>
+          <div className="sules-home-shortcuts-heading"><span>MENU CEPAT</span><span>4 PINTASAN</span></div>
           <div className="sules-home-shortcuts-grid">
             {shortcuts.map(item => <button key={item.label} type="button" className="sules-home-shortcut" onClick={item.action} aria-label={item.label}>
               <span className="sules-home-shortcut-icon"><SulesNavIcon name={item.icon} /></span>
