@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import webpush from "npm:web-push@3.6.7";
 
 const SERVICE_LABEL: Record<string, string> = { "90m": "Pijat 90 Menit", "120m": "Pijat 2 Jam" };
 
@@ -18,6 +19,58 @@ function constantTimeEqual(a: string, b: string) {
 
 function escapeHtml(value: unknown) {
   return String(value ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch] ?? ch);
+}
+
+async function sendAdminPush(supabaseAdmin: any, payload: Record<string, unknown>) {
+  try {
+    const [publicResult, privateResult, subjectResult] = await Promise.all([
+      supabaseAdmin.rpc("get_secret", { secret_name: "web_push_vapid_public_key" } as any),
+      supabaseAdmin.rpc("get_secret", { secret_name: "web_push_vapid_private_key" } as any),
+      supabaseAdmin.rpc("get_secret", { secret_name: "web_push_vapid_subject" } as any),
+    ]);
+    const publicKey = publicResult.data;
+    const privateKey = privateResult.data;
+    const subject = subjectResult.data;
+    if (publicResult.error || privateResult.error || subjectResult.error ||
+        typeof publicKey !== "string" || typeof privateKey !== "string" || typeof subject !== "string" ||
+        !publicKey || !privateKey || !subject) return;
+
+    webpush.setVapidDetails(subject, publicKey, privateKey);
+    const { data: subscriptions, error } = await supabaseAdmin
+      .from("admin_push_subscriptions").select("id,endpoint,p256dh,auth");
+    if (error || !Array.isArray(subscriptions) || subscriptions.length === 0) return;
+
+    const safeDate = String(payload.tanggal ?? "");
+    const safeTime = String(payload.jam_mulai ?? "");
+    const service = SERVICE_LABEL[String(payload.service_id)] ?? String(payload.service_id ?? "Booking baru");
+    const pushPayload = JSON.stringify({
+      title: "Booking baru — SL Relax",
+      body: `${String(payload.nama ?? "Pelanggan")} · ${service} · ${safeDate} ${safeTime}`,
+      tag: `booking-${String(payload.booking_id ?? safeDate + "-" + safeTime).slice(0, 100)}`,
+      url: "/?admin=1",
+    });
+    const results = await Promise.allSettled(subscriptions.map((row: { id: string; endpoint: string; p256dh: string; auth: string }) =>
+      webpush.sendNotification({
+        endpoint: row.endpoint,
+        keys: { p256dh: row.p256dh, auth: row.auth },
+      }, pushPayload, { TTL: 60 * 60 })
+    ));
+    const expired = subscriptions.filter((_: unknown, i: number) =>
+      results[i].status === "rejected" &&
+      ((results[i] as PromiseRejectedResult).reason?.statusCode === 404 ||
+       (results[i] as PromiseRejectedResult).reason?.statusCode === 410)
+    );
+    if (expired.length) {
+      await supabaseAdmin.from("admin_push_subscriptions")
+        .delete().in("id", expired.map((row: { id: string }) => row.id));
+    }
+    if (results.some(result => result.status === "rejected")) {
+      console.error("One or more admin push deliveries failed.");
+    }
+  } catch {
+    // Push is best-effort: it must never block or undo booking creation or email notification.
+    console.error("Admin push delivery failed.");
+  }
 }
 
 function formatRupiah(value: unknown) {
@@ -104,6 +157,8 @@ Deno.serve(async (req: Request) => {
       headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ from: "Sules Booking <booking@bookingpijat.com>", to: [to], subject, html }),
     })));
+    // Push is an additional best-effort channel; it never changes booking state.
+    await sendAdminPush(supabaseAdmin, payload);
     if (responses.some(response => !response.ok)) {
       console.error("Booking notification provider returned a non-success status.");
       return json({ error: "notification_failed" }, 502);
