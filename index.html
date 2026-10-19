@@ -570,12 +570,19 @@
       const peers = Object.values(channel.presenceState() || {}).flat();
       const active = peers.filter(meta => meta && Number.isFinite(Number(meta.lastActivityAt)) && now - Number(meta.lastActivityAt) < 300000);
       const customers = active.filter(meta => !meta.isAdmin);
+      const diagnostics = peers.slice(0, 5).map(meta => ({
+        ageSeconds: meta && Number.isFinite(Number(meta.lastActivityAt)) ? Math.round((now - Number(meta.lastActivityAt)) / 1000) : null,
+        isAdmin: !!(meta && meta.isAdmin),
+        isLoggedIn: !!(meta && meta.isLoggedIn),
+        hasActivityTimestamp: !!(meta && Number.isFinite(Number(meta.lastActivityAt)))
+      }));
       const counts = {
         visitors: customers.length,
         loggedIn: customers.filter(meta => meta.isLoggedIn === true).length,
         updatedAt: now,
         status: realtimeStatus,
         rawPeers: peers.length,
+        diagnostics,
         error: presenceError
       };
       visitorPresenceCounts = counts;
@@ -4893,6 +4900,7 @@ function AdminTab({ onExitToApp }) {
           <div className="text-2xl font-bold text-slate-800 mt-1">{presenceCounts ? presenceCounts.visitors : "—"}</div>
           <div className="text-xs text-gray-500 mt-1">Sedang aktif di SL Relax</div>
           <div className="text-[10px] text-gray-400 mt-1">Realtime: {presenceCounts ? presenceCounts.status : "Menyambungkan"} · Sesi terbaca: {presenceCounts ? presenceCounts.rawPeers : 0}</div>
+          {presenceCounts && presenceCounts.diagnostics ? <div className="text-[10px] text-gray-400 mt-1 break-words">Sesi: {presenceCounts.diagnostics.map((item, index) => "#" + (index + 1) + " umur=" + (item.ageSeconds === null ? "?" : item.ageSeconds + "d") + " admin=" + item.isAdmin + " login=" + item.isLoggedIn + " waktu=" + item.hasActivityTimestamp).join(" | ")}</div> : null}
           {presenceCounts && presenceCounts.error ? <div className="text-[10px] text-red-600 mt-1 break-words">Info: {presenceCounts.error}</div> : null}
         </section>
         <section className="bg-white rounded-xl p-3 border border-gray-200">
