@@ -73,13 +73,14 @@ const timeout = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
     const publicNav = page.locator('nav[aria-label="Navigasi publik"]');
     const navLabels = await publicNav.locator('a').allTextContents().catch(() => []);
-    const navTargets = await publicNav.locator('a').evaluateAll(links => links.map(a => a.getAttribute('href')));
-    const invalidNavTargets = navTargets.filter(href => !href || !document.querySelector(href));
+    const invalidNavTargets = await publicNav.locator('a').evaluateAll(links => links
+      .map(a => a.getAttribute('href'))
+      .filter(href => !href || !document.querySelector(href)));
     add('Navigasi publik', navLabels.length >= 5 && invalidNavTargets.length === 0 ? 'LULUS' : 'GAGAL',
       `Tautan navigasi: ${navLabels.map(s => s.trim()).filter(Boolean).join(', ')}; target tidak ditemukan: ${invalidNavTargets.length}.`);
 
     const rootCount = await page.locator('#root').count();
-    const rootChildren = rootCount ? await page.locator('#root').locator('> *').count().catch(() => 0) : 0;
+    const rootChildren = rootCount ? await page.locator('#root').locator(':scope > *').count().catch(() => 0) : 0;
     add('Aplikasi React termuat', rootCount === 1 && rootChildren > 0 ? 'LULUS' : 'GAGAL',
       `Elemen #root: ${rootCount}; elemen aplikasi di dalam root: ${rootChildren}.`);
 
