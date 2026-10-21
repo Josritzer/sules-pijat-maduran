@@ -80,7 +80,7 @@ RETURNS TABLE(
   package_key text, base_price numeric, price_level smallint, package_price numeric,
   subtotal numeric, promo_type text, promo_value numeric, promo_discount numeric,
   final_total numeric, service_price numeric, travel_fee numeric, grand_total numeric,
-  status public.booking_status, created_at timestamptz
+  status public.booking_status, created_at timestamptz, is_test_booking boolean
 )
 LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'public'
 AS $admin_period$
@@ -97,7 +97,7 @@ BEGIN
       b.alamat, b.lat, b.lng, b.jarak_meter,
       b.package_key, b.base_price, b.price_level, b.package_price, b.subtotal,
       b.promo_type, b.promo_value, b.promo_discount, b.final_total,
-      b.service_price, b.travel_fee, b.grand_total, b.status, b.created_at
+      b.service_price, b.travel_fee, b.grand_total, b.status, b.created_at, b.is_test_booking
     FROM public.bookings b
     JOIN public.customers c ON c.id = b.customer_id
     WHERE b.tanggal BETWEEN p_start_date AND p_end_date
