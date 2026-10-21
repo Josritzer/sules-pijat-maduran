@@ -47,35 +47,35 @@ jobs:
           fi
 
       - name: Checkout kode aplikasi
-        if: steps.claim.outputs.request_id != ''
+        if: steps.claim.outputs.request_id != '' || github.event_name == 'push'
         uses: actions/checkout@v7
 
       - name: Siapkan Node.js
-        if: steps.claim.outputs.request_id != ''
+        if: steps.claim.outputs.request_id != '' || github.event_name == 'push'
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Pasang Playwright
-        if: steps.claim.outputs.request_id != ''
+        if: steps.claim.outputs.request_id != '' || github.event_name == 'push'
         run: |
           npm init -y
           npm install --no-audit --no-fund playwright
           npx playwright install --with-deps chromium
 
       - name: Jalankan pemeriksaan website
-        if: steps.claim.outputs.request_id != ''
+        if: steps.claim.outputs.request_id != '' || github.event_name == 'push'
         id: website_check
         continue-on-error: true
         run: node .github/scripts/cek-bookingpijat.js
 
       - name: Jalankan laporan terpadu alur booking
-        if: steps.claim.outputs.request_id != ''
+        if: steps.claim.outputs.request_id != '' || github.event_name == 'push'
         continue-on-error: true
         run: node .github/scripts/cek-alur-booking.js
 
       - name: Kirim hasil ke Dashboard Admin
-        if: always() && steps.claim.outputs.request_id != ''
+        if: always() && (steps.claim.outputs.request_id != '' || github.event_name == 'push')
         env:
           SULES_MONITORING_SECRET: ${{ secrets.SULES_MONITORING_SECRET }}
           REQUEST_ID: ${{ steps.claim.outputs.request_id }}
