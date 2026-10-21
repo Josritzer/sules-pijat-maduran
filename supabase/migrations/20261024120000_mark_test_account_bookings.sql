@@ -34,6 +34,7 @@ UPDATE public.bookings b
 SET is_test_booking = true
 FROM auth.users u
 WHERE b.customer_id = u.id
+  AND u.email_confirmed_at IS NOT NULL
   AND lower(btrim(coalesce(u.email, ''))) = 'academialycium12@gmail.com'
   AND b.is_test_booking IS DISTINCT FROM true;
 
