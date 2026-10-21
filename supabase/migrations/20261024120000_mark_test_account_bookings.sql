@@ -15,6 +15,7 @@ BEGIN
     SELECT 1
     FROM auth.users u
     WHERE u.id = NEW.customer_id
+      AND u.email_confirmed_at IS NOT NULL
       AND lower(btrim(coalesce(u.email, ''))) = 'academialycium12@gmail.com'
   );
   RETURN NEW;
