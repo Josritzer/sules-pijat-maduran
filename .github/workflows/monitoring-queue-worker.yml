@@ -69,6 +69,11 @@ jobs:
         continue-on-error: true
         run: node .github/scripts/cek-bookingpijat.js
 
+      - name: Jalankan laporan terpadu alur booking
+        if: steps.claim.outputs.request_id != ''
+        continue-on-error: true
+        run: node .github/scripts/cek-alur-booking.js
+
       - name: Kirim hasil ke Dashboard Admin
         if: always() && steps.claim.outputs.request_id != ''
         env:
@@ -88,7 +93,7 @@ jobs:
             --arg checked_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --arg workflow_run_url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --arg commit_sha "$GITHUB_SHA" \
-            --arg summary "$(head -n 12 laporan.txt 2>/dev/null || echo 'Laporan pemeriksaan tidak tersedia.')" \
+            --arg summary "$(head -n 12 laporan-alur-booking.txt 2>/dev/null || head -n 12 laporan.txt 2>/dev/null || echo 'Laporan pemeriksaan tidak tersedia.')" \
             --arg http_status "$HTTP_STATUS" \
             --arg duration_seconds "$DURATION" \
             --arg workflow_run_id "$GITHUB_RUN_ID" \
@@ -100,6 +105,16 @@ jobs:
             -H "x-monitoring-secret: $SULES_MONITORING_SECRET" \
             --data-binary @monitoring-payload.json
 
+      - name: Tampilkan laporan terpadu alur booking
+        if: always() && steps.claim.outputs.request_id != ''
+        shell: bash
+        run: |
+          if [ -f laporan-alur-booking.txt ]; then
+            { echo "## Laporan terpadu alur booking"; echo; cat laporan-alur-booking.txt; } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Laporan terpadu alur booking belum tersedia." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Simpan laporan dan screenshot
         if: always() && steps.claim.outputs.request_id != ''
         uses: actions/upload-artifact@v7
@@ -108,6 +123,8 @@ jobs:
           path: |
             laporan.txt
             hasil-beranda.png
+            laporan-alur-booking.txt
+            hasil-alur-booking.json
           if-no-files-found: warn
           retention-days: 30
 
