@@ -106,7 +106,7 @@ jobs:
             --data-binary @monitoring-payload.json
 
       - name: Tampilkan laporan terpadu alur booking
-        if: always() && steps.claim.outputs.request_id != ''
+        if: always() && (steps.claim.outputs.request_id != '' || github.event_name == 'push')
         shell: bash
         run: |
           if [ -f laporan-alur-booking.txt ]; then
@@ -116,7 +116,7 @@ jobs:
           fi
 
       - name: Simpan laporan dan screenshot
-        if: always() && steps.claim.outputs.request_id != ''
+        if: always() && (steps.claim.outputs.request_id != '' || github.event_name == 'push')
         uses: actions/upload-artifact@v7
         with:
           name: hasil-cek-manual-${{ github.run_number }}
