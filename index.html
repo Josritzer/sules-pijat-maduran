@@ -238,7 +238,7 @@
     const text = String(message || "").trim();
     if (!text || text.length > 240) throw new Error("Pesan harus berisi 1–240 karakter.");
     const { data, error } = await supabaseClient.from("chat_messages")
-      .insert({ sender_id: user.id, message: text })
+      .insert({ message: text })
       .select("id,sender_name,message,is_hidden,created_at")
       .single();
     if (error) throw error;
