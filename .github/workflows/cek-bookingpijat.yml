@@ -46,22 +46,22 @@ jobs:
           if [ "${{ steps.website_check.outcome }}" = "success" ]; then STATUS="success"; fi
           HTTP_STATUS="$(sed -n 's/^Status halaman: //p' laporan.txt 2>/dev/null | head -n 1)"
           case "$HTTP_STATUS" in *[!0-9]*|"") HTTP_STATUS="" ;; esac
-          DURATION="$(sed -n 's/^Waktu pemeriksaan: \\([0-9.]*\\) detik.*/\\1/p' laporan.txt 2>/dev/null | head -n 1)"
+          DURATION="$(sed -n 's/^Waktu pemeriksaan: \([0-9.]*\) detik.*/\1/p' laporan.txt 2>/dev/null | head -n 1)"
           case "$DURATION" in *[!0-9.]*|"") DURATION="" ;; esac
-          jq -n \\
-            --arg status "$STATUS" \\
-            --arg checked_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \\
-            --arg workflow_run_url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \\
-            --arg commit_sha "$GITHUB_SHA" \\
-            --arg summary "$(head -n 12 laporan.txt 2>/dev/null || echo 'Laporan pemeriksaan tidak tersedia.')" \\
-            --arg http_status "$HTTP_STATUS" \\
-            --arg duration_seconds "$DURATION" \\
-            --arg workflow_run_id "$GITHUB_RUN_ID" \\
+          jq -n \
+            --arg status "$STATUS" \
+            --arg checked_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg workflow_run_url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --arg commit_sha "$GITHUB_SHA" \
+            --arg summary "$(head -n 12 laporan.txt 2>/dev/null || echo 'Laporan pemeriksaan tidak tersedia.')" \
+            --arg http_status "$HTTP_STATUS" \
+            --arg duration_seconds "$DURATION" \
+            --arg workflow_run_id "$GITHUB_RUN_ID" \
             '{status:$status,checked_at:$checked_at,workflow_run_url:$workflow_run_url,commit_sha:$commit_sha,summary:$summary,http_status:(if $http_status == "" then null else ($http_status|tonumber) end),duration_seconds:(if $duration_seconds == "" then null else ($duration_seconds|tonumber) end),workflow_run_id:($workflow_run_id|tonumber)}' > monitoring-payload.json
-          if curl --silent --show-error --fail --max-time 20 \\
-            -X POST "https://tzupkourtcmqemymszgt.supabase.co/functions/v1/github-monitoring-status" \\
-            -H "Content-Type: application/json" \\
-            -H "x-monitoring-secret: $GITHUB_MONITORING_SECRET" \\
+          if curl --silent --show-error --fail --max-time 20 \
+            -X POST "https://tzupkourtcmqemymszgt.supabase.co/functions/v1/github-monitoring-status" \
+            -H "Content-Type: application/json" \
+            -H "x-monitoring-secret: $GITHUB_MONITORING_SECRET" \
             --data-binary @monitoring-payload.json; then
             echo "Status pemeriksaan berhasil dikirim ke Dashboard Admin SL RELAX." >> "$GITHUB_STEP_SUMMARY"
           else
