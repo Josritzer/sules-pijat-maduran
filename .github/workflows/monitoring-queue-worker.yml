@@ -7,7 +7,7 @@ on:
     paths:
       - '.github/workflows/monitoring-queue-worker.yml'
   schedule:
-    # Antrean tombol Dashboard Admin diproses maksimal sekitar 5 menit setelah diminta.
+    # Cadangan jika pemicu langsung dari Dashboard tidak tersedia.
     - cron: '*/5 * * * *'
   workflow_dispatch: {}
 
