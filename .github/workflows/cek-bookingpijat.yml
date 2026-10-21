@@ -23,7 +23,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      # v5 runs on the current Node.js 24 action runtime and avoids the
+      # Node.js 20 deprecation warning emitted by setup-node@v4.
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
 
