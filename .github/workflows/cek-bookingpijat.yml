@@ -92,7 +92,17 @@ jobs:
             echo "Laporan tidak dibuat. Periksa log job untuk penyebabnya." >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Tampilkan laporan terpadu alur booking\n        if: always()\n        shell: bash\n        run: |\n          if [ -f laporan-alur-booking.txt ]; then\n            { echo \"## Laporan terpadu alur booking\"; echo; cat laporan-alur-booking.txt; } >> \"$GITHUB_STEP_SUMMARY\"\n          else\n            echo \"Laporan terpadu alur booking belum tersedia.\" >> \"$GITHUB_STEP_SUMMARY\"\n          fi\n\n      - name: Simpan laporan dan screenshot
+      - name: Tampilkan laporan terpadu alur booking
+        if: always()
+        shell: bash
+        run: |
+          if [ -f laporan-alur-booking.txt ]; then
+            { echo "## Laporan terpadu alur booking"; echo; cat laporan-alur-booking.txt; } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Laporan terpadu alur booking belum tersedia." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Simpan laporan dan screenshot
         if: always()
         uses: actions/upload-artifact@v7
         with:
