@@ -4653,7 +4653,6 @@ function AdminTab({ onExitToApp }) {
 
   async function fetchGitHubMonitoringStatus() {
     setMonitoringLoading(true);
-    setMonitoringError("");
     try {
       const [status, request] = await Promise.all([
         window.bookingService.getGitHubMonitoringStatus(),
