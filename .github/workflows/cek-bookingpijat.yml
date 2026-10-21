@@ -31,7 +31,12 @@ jobs:
         continue-on-error: true
         run: node .github/scripts/cek-bookingpijat.js
 
-      - name: Jalankan laporan terpadu alur booking\n        if: always()\n        continue-on-error: true\n        run: node .github/scripts/cek-alur-booking.js\n\n      - name: Kirim status ke Dashboard Admin
+      - name: Jalankan laporan terpadu alur booking
+        if: always()
+        continue-on-error: true
+        run: node .github/scripts/cek-alur-booking.js
+
+      - name: Kirim status ke Dashboard Admin
         if: always()
         continue-on-error: true
         env:
@@ -95,5 +100,7 @@ jobs:
           path: |
             laporan.txt
             hasil-beranda.png
+            laporan-alur-booking.txt
+            hasil-alur-booking.json
           if-no-files-found: warn
           retention-days: 30
