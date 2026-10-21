@@ -16,7 +16,7 @@
     .slch-status{padding:7px 14px;background:#151f38;border-bottom:1px solid #293653;display:flex;justify-content:space-between;align-items:center;color:#64748b;font-size:11px}
     #slch-connection{display:flex;align-items:center;gap:6px}#slch-connection:before{content:"";width:7px;height:7px;border-radius:50%;background:#9ca3af}
     #slch-connection.is-online:before{background:#22c55e}
-    #slch-feed{flex:1;min-height:0;overflow-y:auto;padding:9px;background:linear-gradient(180deg,#10182d,#131d35);display:flex;flex-direction:column;gap:6px;position:relative}
+    #slch-feed{flex:1;min-height:0;overflow-y:auto;padding:9px 56px 9px 9px;background:linear-gradient(180deg,#10182d,#131d35);display:flex;flex-direction:column;gap:6px;position:relative}
     .slch-note{font-size:11px;color:#64748b;background:#edf3fb;padding:9px 10px;border-radius:10px}
     .slch-msg{width:fit-content;max-width:80%;align-self:flex-start;background:#202c47;color:#f5f7ff;border:1px solid #344463;border-radius:4px 11px 11px 11px;padding:5px 7px;overflow-wrap:anywhere}
     .slch-msg.mine{align-self:flex-end;background:linear-gradient(135deg,#244aa7,#4b3d9c);color:#fff;border-color:#5d67cb;border-radius:11px 4px 11px 11px}
