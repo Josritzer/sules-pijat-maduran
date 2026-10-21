@@ -15,3 +15,8 @@ verify_jwt = true
 # Called by the database scheduler; the function validates the existing Vault webhook secret.
 [functions.google-review-email]
 verify_jwt = false
+
+# Receives signed GitHub Actions monitoring reports and serves status to authenticated Admins.
+# JWT validation is performed in the handler because GitHub Actions uses a shared secret.
+[functions.github-monitoring-status]
+verify_jwt = false

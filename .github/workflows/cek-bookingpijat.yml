@@ -27,7 +27,50 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Jalankan pengecekan
+        id: website_check
+        continue-on-error: true
         run: node .github/scripts/cek-bookingpijat.js
+
+      - name: Kirim status ke Dashboard Admin
+        if: always()
+        continue-on-error: true
+        env:
+          GITHUB_MONITORING_SECRET: ${{ secrets.GITHUB_MONITORING_SECRET }}
+        shell: bash
+        run: |
+          if [ -z "$GITHUB_MONITORING_SECRET" ]; then
+            echo "Status Dashboard Admin belum dikirim: secret GITHUB_MONITORING_SECRET belum disetel." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          STATUS="failure"
+          if [ "${{ steps.website_check.outcome }}" = "success" ]; then STATUS="success"; fi
+          HTTP_STATUS="$(sed -n 's/^Status halaman: //p' laporan.txt 2>/dev/null | head -n 1)"
+          case "$HTTP_STATUS" in *[!0-9]*|"") HTTP_STATUS="" ;; esac
+          DURATION="$(sed -n 's/^Waktu pemeriksaan: \([0-9.]*\) detik.*/\1/p' laporan.txt 2>/dev/null | head -n 1)"
+          case "$DURATION" in *[!0-9.]*|"") DURATION="" ;; esac
+          jq -n \
+            --arg status "$STATUS" \
+            --arg checked_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg workflow_run_url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --arg commit_sha "$GITHUB_SHA" \
+            --arg summary "$(head -n 12 laporan.txt 2>/dev/null || echo 'Laporan pemeriksaan tidak tersedia.')" \
+            --arg http_status "$HTTP_STATUS" \
+            --arg duration_seconds "$DURATION" \
+            --arg workflow_run_id "$GITHUB_RUN_ID" \
+            '{status:$status,checked_at:$checked_at,workflow_run_url:$workflow_run_url,commit_sha:$commit_sha,summary:$summary,http_status:(if $http_status == "" then null else ($http_status|tonumber) end),duration_seconds:(if $duration_seconds == "" then null else ($duration_seconds|tonumber) end),workflow_run_id:($workflow_run_id|tonumber)}' > monitoring-payload.json
+          if curl --silent --show-error --fail --max-time 20 \
+            -X POST "https://tzupkourtcmqemymszgt.supabase.co/functions/v1/github-monitoring-status" \
+            -H "Content-Type: application/json" \
+            -H "x-monitoring-secret: $GITHUB_MONITORING_SECRET" \
+            --data-binary @monitoring-payload.json; then
+            echo "Status pemeriksaan berhasil dikirim ke Dashboard Admin SL RELAX." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Peringatan: pengiriman status ke Dashboard Admin gagal; hasil Playwright tetap tersedia di artifact." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Tandai workflow gagal bila pemeriksaan situs gagal
+        if: always() && steps.website_check.outcome == 'failure'
+        run: exit 1
 
       - name: Tampilkan laporan pada ringkasan Actions
         if: always()
