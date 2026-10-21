@@ -1,0 +1,45 @@
+name: Ambil skill desain (SkillUI)
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Alamat situs yang desainnya diambil'
+        required: true
+        default: 'https://bookingpijat.com'
+
+permissions:
+  contents: read
+
+jobs:
+  skillui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Pasang SkillUI dan Playwright
+        run: |
+          npm init -y
+          npm install playwright
+          npx playwright install --with-deps chromium
+          npm install -g skillui
+
+      - name: Ambil desain
+        run: |
+          mkdir -p skill-desain-bookingpijat
+          cd skill-desain-bookingpijat
+          skillui --url "${{ github.event.inputs.url }}" --mode ultra
+
+      - name: Simpan hasil
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skill-desain-bookingpijat
+          path: skill-desain-bookingpijat/**
+          if-no-files-found: warn
+          retention-days: 30
