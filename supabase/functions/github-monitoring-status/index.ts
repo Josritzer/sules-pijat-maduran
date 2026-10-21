@@ -63,6 +63,17 @@ Deno.serve(async (req: Request) => {
     } catch {
       return json({ error: "invalid_json" }, 400);
     }
+    if (payload.action === "claim") {
+      const { data: pending, error: pendingError } = await admin.from("github_monitoring_run_queue")
+        .select("id,requested_at").eq("status", "pending").order("requested_at", { ascending: true }).limit(1).maybeSingle();
+      if (pendingError) return json({ error: "queue_read_failed" }, 500);
+      if (!pending) return json({ request: null });
+      const { data: claimed, error: claimError } = await admin.from("github_monitoring_run_queue")
+        .update({ status: "running", started_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq("id", pending.id).eq("status", "pending").select("id,requested_at").maybeSingle();
+      if (claimError) return json({ error: "queue_claim_failed" }, 500);
+      return json({ request: claimed || null });
+    }
     const status = payload.status === "success" || payload.status === "failure" ? payload.status : null;
     const checkedAt = typeof payload.checked_at === "string" ? payload.checked_at : "";
     const checkedDate = new Date(checkedAt);
@@ -96,6 +107,13 @@ Deno.serve(async (req: Request) => {
       console.error("monitoring_status_write_failed", error.message);
       return json({ error: "status_write_failed" }, 500);
     }
+    if (typeof payload.request_id === "string" && /^[0-9a-f-]{36}$/i.test(payload.request_id)) {
+      const { error: queueError } = await admin.from("github_monitoring_run_queue").update({
+        status, finished_at: new Date().toISOString(), workflow_run_id: runId,
+        workflow_run_url: runUrl || null, result_summary: summary, updated_at: new Date().toISOString()
+      }).eq("id", payload.request_id).eq("status", "running");
+      if (queueError) console.error("monitoring_queue_finish_failed", queueError.message);
+    }
     return json({ ok: true });
   }
 
@@ -107,6 +125,26 @@ Deno.serve(async (req: Request) => {
   const { data: adminRow, error: adminError } = await admin.from("admins")
     .select("id").eq("id", userData.user.id).maybeSingle();
   if (adminError || !adminRow) return json({ error: "admin_only" }, 403, cors);
+
+  let browserPayload: Record<string, unknown> = {};
+  try { browserPayload = await req.json(); } catch { browserPayload = {}; }
+  if (browserPayload.action === "enqueue") {
+    const { data: queued, error: queueError } = await admin.from("github_monitoring_run_queue")
+      .insert({ requested_by: userData.user.id, status: "pending" })
+      .select("id,status,requested_at").single();
+    if (queueError) {
+      console.error("monitoring_queue_enqueue_failed", queueError.message);
+      return json({ error: "queue_enqueue_failed" }, 500, cors);
+    }
+    return json({ request: queued }, 202, cors);
+  }
+  if (browserPayload.action === "queue_status") {
+    const { data: queue, error: queueError } = await admin.from("github_monitoring_run_queue")
+      .select("id,status,requested_at,started_at,finished_at,workflow_run_url,result_summary")
+      .eq("requested_by", userData.user.id).order("requested_at", { ascending: false }).limit(1).maybeSingle();
+    if (queueError) return json({ error: "queue_status_failed" }, 500, cors);
+    return json({ request: queue || null }, 200, cors);
+  }
 
   const { data, error } = await admin.from("github_monitoring_status")
     .select("status,checked_at,workflow_run_id,workflow_run_url,commit_sha,http_status,duration_seconds,summary,updated_at")
