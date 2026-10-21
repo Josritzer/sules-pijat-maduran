@@ -30,15 +30,21 @@
     .slch-foot{font-size:9px;color:#a5b2cc}.slch-error{font-size:10px;color:#ff9caa;margin-bottom:4px}
     @media(max-width:480px){#sl-chat-launcher{right:10px;bottom:calc(76px + env(safe-area-inset-bottom,0px));padding:11px 13px}#sl-chat-panel{right:8px;bottom:calc(132px + env(safe-area-inset-bottom,0px));width:calc(100vw - 16px);height:min(560px,calc(100dvh - 174px))}}
 
-    .slch-mascot{position:absolute;right:5px;top:44%;width:48px;height:58px;z-index:3;pointer-events:none;display:grid;place-items:center;animation:slch-float 3.4s ease-in-out infinite;filter:drop-shadow(0 5px 9px #050b1870)}
-    .slch-mascot-bubble{width:38px;height:32px;border-radius:13px 13px 13px 5px;background:linear-gradient(135deg,#2875ff,#7954e8);border:1px solid #9aa8ff;display:grid;place-items:center;color:white;font-size:16px;box-shadow:0 0 16px #536cff55}
-    .slch-mascot-hand{position:absolute;right:-1px;top:0;font-size:17px;transform-origin:70% 80%;animation:slch-wave 2.8s ease-in-out infinite}
-    .slch-mascot-spark{position:absolute;left:0;top:4px;color:#c7d2fe;font-size:12px;animation:slch-twinkle 1.8s ease-in-out infinite}
-    .slch-mascot-dot{position:absolute;right:1px;bottom:1px;width:9px;height:9px;border-radius:50%;background:#b6a2ff;box-shadow:0 0 10px #9275ff;animation:slch-twinkle 2.2s ease-in-out infinite .5s}
-    @keyframes slch-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-    @keyframes slch-wave{0%,55%,100%{transform:rotate(0)}62%,74%,86%{transform:rotate(16deg)}68%,80%{transform:rotate(-12deg)}}
-    @keyframes slch-twinkle{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
-    @media(prefers-reduced-motion:reduce){.slch-mascot,.slch-mascot-hand,.slch-mascot-spark,.slch-mascot-dot{animation:none!important}}
+    .slch-mascot{position:absolute;right:7px;top:43%;width:54px;height:66px;z-index:3;pointer-events:none;display:grid;place-items:center;animation:slch-mascot-float 4.6s cubic-bezier(.4,0,.2,1) infinite;filter:drop-shadow(0 7px 10px #050b1870)}
+    .slch-mascot-bubble{position:relative;width:43px;height:40px;border:1px solid #a9bcff;border-radius:15px 15px 15px 6px;background:linear-gradient(145deg,#4597ff 0%,#4165ed 48%,#8053e8 100%);box-shadow:inset 0 2px 3px #ffffff65,inset 0 -4px 7px #1e2e9c55,0 5px 14px #405de855;display:flex;align-items:center;justify-content:center;gap:4px}
+    .slch-mascot-bubble:after{content:"";position:absolute;left:8px;bottom:-5px;width:10px;height:10px;background:#4968ed;border-left:1px solid #a9bcff;border-bottom:1px solid #a9bcff;transform:skewY(-35deg) rotate(-8deg);border-bottom-left-radius:3px}
+    .slch-mascot-eye{width:4px;height:6px;border-radius:50%;background:#fff;box-shadow:0 1px 1px #182b7c55;position:relative;z-index:1}
+    .slch-mascot-smile{position:absolute;z-index:1;left:17px;top:22px;width:9px;height:5px;border-bottom:2px solid #fff;border-radius:0 0 9px 9px}
+    .slch-mascot-arm{position:absolute;right:0;top:21px;width:11px;height:7px;border-radius:8px;background:linear-gradient(90deg,#6f70f4,#b3a0ff);transform-origin:2px 4px;animation:slch-mascot-wave 3.8s ease-in-out infinite}
+    .slch-mascot-spark{position:absolute;left:0;top:8px;color:#dbeafe;font-size:12px;animation:slch-mascot-sparkle 3.4s ease-in-out infinite}
+    .slch-mascot-mini{position:absolute;right:0;top:4px;width:11px;height:9px;border-radius:5px 5px 5px 2px;background:linear-gradient(135deg,#a5b4fc,#d8b4fe);box-shadow:0 2px 5px #050b1840;animation:slch-mascot-pop 3.8s ease-in-out infinite 1s}
+    .slch-mascot-mini:after{content:"";position:absolute;left:2px;bottom:-2px;width:4px;height:4px;background:#c4b5fd;transform:skewY(-35deg)}
+    .slch-mascot-dot{position:absolute;right:3px;bottom:5px;width:5px;height:5px;border-radius:50%;background:#e0e7ff;box-shadow:0 0 7px #b9a6ff;animation:slch-mascot-sparkle 3s ease-in-out infinite .7s}
+    @keyframes slch-mascot-float{0%,100%{transform:translateY(0)}45%{transform:translateY(-4px)}65%{transform:translateY(-2px)}}
+    @keyframes slch-mascot-wave{0%,68%,100%{transform:rotate(0)}76%,84%{transform:rotate(-22deg)}80%,88%{transform:rotate(20deg)}}
+    @keyframes slch-mascot-sparkle{0%,72%,100%{opacity:.4;transform:scale(.75)}82%{opacity:1;transform:scale(1.12)}}
+    @keyframes slch-mascot-pop{0%,60%,100%{opacity:0;transform:translate(2px,3px) scale(.5)}70%,86%{opacity:1;transform:translate(0,0) scale(1)}}
+    @media(prefers-reduced-motion:reduce){.slch-mascot,.slch-mascot-arm,.slch-mascot-spark,.slch-mascot-mini,.slch-mascot-dot{animation:none!important}}
     body.sules-admin-mode #sl-chat-launcher,body.sules-admin-mode #sl-chat-panel{display:none!important}
   `;
   const style = document.createElement("style");
@@ -56,7 +62,7 @@
   panel.id = "sl-chat-panel";
   panel.setAttribute("role", "dialog");
   panel.setAttribute("aria-label", "Obrolan Bersama SL RELAX");
-  panel.innerHTML = '<header class="slch-head"><div class="slch-icon">💬</div><div><div class="slch-title">Obrolan Bersama</div><div class="slch-sub">Ruang publik SL RELAX</div></div><button id="slch-close" aria-label="Tutup obrolan" type="button">×</button></header><div class="slch-status"><span id="slch-connection">Menghubungkan…</span><span id="slch-online">0 di ruang</span></div><div id="slch-feed" aria-live="polite"><div class="slch-note">Memuat percakapan…</div><div class="slch-mascot" aria-hidden="true"><span class="slch-mascot-spark">✦</span><span class="slch-mascot-bubble">•••</span><span class="slch-mascot-hand">👋</span><span class="slch-mascot-dot"></span></div></div><form class="slch-entry" id="slch-form"><div class="slch-row"><textarea id="slch-input" rows="1" maxlength="240" placeholder="Login untuk ikut mengobrol…" aria-label="Tulis pesan" disabled></textarea><button id="slch-send" type="submit" disabled>Kirim</button></div><div id="slch-error" class="slch-error" role="status"></div><div id="slch-foot" class="slch-foot">Pengunjung tanpa login dapat membaca. Masuk ke akun SL RELAX untuk mengirim pesan.</div></form>';
+  panel.innerHTML = '<header class="slch-head"><div class="slch-icon">💬</div><div><div class="slch-title">Obrolan Bersama</div><div class="slch-sub">Ruang publik SL RELAX</div></div><button id="slch-close" aria-label="Tutup obrolan" type="button">×</button></header><div class="slch-status"><span id="slch-connection">Menghubungkan…</span><span id="slch-online">0 di ruang</span></div><div id="slch-feed" aria-live="polite"><div class="slch-note">Memuat percakapan…</div><div class="slch-mascot" aria-hidden="true"><span class="slch-mascot-spark">✦</span><span class="slch-mascot-mini"></span><span class="slch-mascot-bubble"><i class="slch-mascot-eye"></i><i class="slch-mascot-eye"></i><i class="slch-mascot-smile"></i></span><span class="slch-mascot-arm"></span><span class="slch-mascot-dot"></span></div></div><form class="slch-entry" id="slch-form"><div class="slch-row"><textarea id="slch-input" rows="1" maxlength="240" placeholder="Login untuk ikut mengobrol…" aria-label="Tulis pesan" disabled></textarea><button id="slch-send" type="submit" disabled>Kirim</button></div><div id="slch-error" class="slch-error" role="status"></div><div id="slch-foot" class="slch-foot">Pengunjung tanpa login dapat membaca. Masuk ke akun SL RELAX untuk mengirim pesan.</div></form>';
   panel.appendChild(panel.querySelector(".slch-mascot"));
   document.body.append(button, panel);
 
