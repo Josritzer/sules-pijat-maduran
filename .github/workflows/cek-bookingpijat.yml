@@ -58,7 +58,7 @@ jobs:
             --arg checked_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --arg workflow_run_url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --arg commit_sha "$GITHUB_SHA" \
-            --arg summary "$(head -n 12 laporan.txt 2>/dev/null || echo 'Laporan pemeriksaan tidak tersedia.')" \
+            --arg summary "$(head -n 12 laporan-alur-booking.txt 2>/dev/null || head -n 12 laporan.txt 2>/dev/null || echo 'Laporan pemeriksaan tidak tersedia.')" \
             --arg http_status "$HTTP_STATUS" \
             --arg duration_seconds "$DURATION" \
             --arg workflow_run_id "$GITHUB_RUN_ID" \
