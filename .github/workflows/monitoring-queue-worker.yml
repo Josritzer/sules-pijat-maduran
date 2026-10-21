@@ -8,7 +8,7 @@ on:
       - '.github/workflows/monitoring-queue-worker.yml'
   schedule:
     # Cadangan jika pemicu langsung dari Dashboard tidak tersedia.
-    - cron: '* * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch: {}
 
 permissions:
