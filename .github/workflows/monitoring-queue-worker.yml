@@ -23,12 +23,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Ambil satu permintaan pemeriksaan
+      - name: Tentukan pemicu pemeriksaan
         id: claim
         env:
           SULES_MONITORING_SECRET: ${{ secrets.SULES_MONITORING_SECRET }}
         shell: bash
         run: |
+          # Run workflow manual di GitHub harus langsung menguji website,
+          # tanpa bergantung pada token atau antrean Dashboard Admin.
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "request_id=" >> "$GITHUB_OUTPUT"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Pemicu manual: Playwright akan langsung memeriksa website."
+            exit 0
+          fi
           if [ -z "$SULES_MONITORING_SECRET" ]; then
             echo "Secret monitoring belum dikonfigurasi."
             exit 1
@@ -41,36 +49,38 @@ jobs:
           REQUEST_ID="$(printf '%s' "$RESPONSE" | jq -r '.request.id // empty')"
           echo "request_id=$REQUEST_ID" >> "$GITHUB_OUTPUT"
           if [ -z "$REQUEST_ID" ]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
             echo "Tidak ada permintaan pemeriksaan baru."
           else
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
             echo "Permintaan pemeriksaan diterima."
           fi
 
       - name: Checkout kode aplikasi
-        if: steps.claim.outputs.request_id != '' || github.event_name == 'push'
+        if: steps.claim.outputs.should_run == 'true'
         uses: actions/checkout@v7
 
       - name: Siapkan Node.js
-        if: steps.claim.outputs.request_id != '' || github.event_name == 'push'
+        if: steps.claim.outputs.should_run == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Pasang Playwright
-        if: steps.claim.outputs.request_id != '' || github.event_name == 'push'
+        if: steps.claim.outputs.should_run == 'true'
         run: |
           npm init -y
           npm install --no-audit --no-fund playwright
           npx playwright install --with-deps chromium
 
       - name: Jalankan pemeriksaan website
-        if: steps.claim.outputs.request_id != '' || github.event_name == 'push'
+        if: steps.claim.outputs.should_run == 'true'
         id: website_check
         continue-on-error: true
         run: node .github/scripts/cek-bookingpijat.js
 
       - name: Jalankan laporan terpadu alur booking
-        if: steps.claim.outputs.request_id != '' || github.event_name == 'push'
+        if: steps.claim.outputs.should_run == 'true'
         continue-on-error: true
         run: node .github/scripts/cek-alur-booking.js
 
@@ -106,7 +116,7 @@ jobs:
             --data-binary @monitoring-payload.json
 
       - name: Tampilkan laporan terpadu alur booking
-        if: always() && (steps.claim.outputs.request_id != '' || github.event_name == 'push')
+        if: always() && (steps.claim.outputs.should_run == 'true')
         shell: bash
         run: |
           if [ -f laporan-alur-booking.txt ]; then
@@ -116,7 +126,7 @@ jobs:
           fi
 
       - name: Simpan laporan dan screenshot
-        if: always() && (steps.claim.outputs.request_id != '' || github.event_name == 'push')
+        if: always() && (steps.claim.outputs.should_run == 'true')
         uses: actions/upload-artifact@v7
         with:
           name: hasil-cek-manual-${{ github.run_number }}
@@ -129,5 +139,5 @@ jobs:
           retention-days: 30
 
       - name: Tandai workflow gagal bila pemeriksaan gagal
-        if: always() && (steps.claim.outputs.request_id != '' || github.event_name == 'push') && steps.website_check.outcome == 'failure'
+        if: always() && (steps.claim.outputs.should_run == 'true') && steps.website_check.outcome == 'failure'
         run: exit 1
