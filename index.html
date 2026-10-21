@@ -347,6 +347,16 @@
     if (error) throw await getFunctionError(error);
     return data && data.status ? data.status : null;
   }
+  async function requestGitHubMonitoringCheck() {
+    const { data, error } = await supabaseClient.functions.invoke("github-monitoring-status", { body: { action: "enqueue" } });
+    if (error) throw await getFunctionError(error);
+    return data && data.request ? data.request : null;
+  }
+  async function getGitHubMonitoringQueueStatus() {
+    const { data, error } = await supabaseClient.functions.invoke("github-monitoring-status", { body: { action: "queue_status" } });
+    if (error) throw await getFunctionError(error);
+    return data && data.request ? data.request : null;
+  }
 
   async function getAdminPushPublicKey() {
     const { data, error } = await supabaseClient.functions.invoke("admin-push-config", { body: {} });
@@ -673,7 +683,7 @@
     // Intentionally no personal identifiers are included in presence metadata.
   }
 
-window.bookingService = { startVisitorPresence, getVisitorPresenceCounts, refreshVisitorPresence, getPackagePricingConfig, savePackagePricingConfig, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, getBookingIdsForCustomer, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, getAdminPushPublicKey, getGitHubMonitoringStatus, saveAdminPushSubscription, deleteAdminPushSubscription, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+window.bookingService = { startVisitorPresence, getVisitorPresenceCounts, refreshVisitorPresence, getPackagePricingConfig, savePackagePricingConfig, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, getBookingIdsForCustomer, acceptBooking, rejectBooking, completeBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, getAdminPushPublicKey, getGitHubMonitoringStatus, requestGitHubMonitoringCheck, getGitHubMonitoringQueueStatus, saveAdminPushSubscription, deleteAdminPushSubscription, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
@@ -4610,6 +4620,8 @@ function AdminTab({ onExitToApp }) {
   const [monitoringStatus, setMonitoringStatus] = useState(null);
   const [monitoringLoading, setMonitoringLoading] = useState(false);
   const [monitoringError, setMonitoringError] = useState("");
+  const [monitoringRequest, setMonitoringRequest] = useState(null);
+  const [monitoringRunBusy, setMonitoringRunBusy] = useState(false);
   const [presenceCounts, setPresenceCounts] = useState(() => window.bookingService.getVisitorPresenceCounts());
 
   const [bookings, setBookings] = useState([]);
@@ -4633,6 +4645,38 @@ function AdminTab({ onExitToApp }) {
   const [actionLoading, setActionLoading] = useState({});
   const fetchRequestId = useRef(0);
   const fetchDashboardRef = useRef(null);
+
+  async function fetchGitHubMonitoringStatus() {
+    setMonitoringLoading(true);
+    setMonitoringError("");
+    try {
+      const [status, request] = await Promise.all([
+        window.bookingService.getGitHubMonitoringStatus(),
+        window.bookingService.getGitHubMonitoringQueueStatus()
+      ]);
+      setMonitoringStatus(status);
+      setMonitoringRequest(request);
+    } catch (error) {
+      setMonitoringError((error && error.message) || "Status pemeriksaan belum dapat dimuat.");
+    } finally {
+      setMonitoringLoading(false);
+    }
+  }
+
+  async function handleRunGitHubMonitoringCheck() {
+    if (monitoringRunBusy || (monitoringRequest && ["pending", "running"].includes(monitoringRequest.status))) return;
+    setMonitoringRunBusy(true);
+    setMonitoringError("");
+    try {
+      const request = await window.bookingService.requestGitHubMonitoringCheck();
+      if (!request) throw new Error("Permintaan pemeriksaan tidak berhasil dibuat.");
+      setMonitoringRequest(request);
+    } catch (error) {
+      setMonitoringError((error && error.message) || "Gagal meminta pemeriksaan. Coba lagi.");
+    } finally {
+      setMonitoringRunBusy(false);
+    }
+  }
 
   useEffect(() => {
     const onPresenceCounts = event => setPresenceCounts(event && event.detail ? event.detail : null);
@@ -4667,6 +4711,8 @@ function AdminTab({ onExitToApp }) {
       return;
     }
     void fetchGitHubMonitoringStatus();
+    const monitorRefresh = window.setInterval(() => { void fetchGitHubMonitoringStatus(); }, 10000);
+    return () => window.clearInterval(monitorRefresh);
   }, [loggedIn]);
 
   // Pulihkan status notifikasi dari langganan perangkat setiap kali sesi Admin aktif.
@@ -5106,11 +5152,25 @@ function AdminTab({ onExitToApp }) {
             <h2 id="github-monitoring-heading" className="text-base font-extrabold text-slate-900">Pemantauan Website</h2>
             <p className="mt-1 text-xs text-slate-500">Hasil otomatis Playwright bookingpijat.com.</p>
           </div>
-          <button type="button" onClick={fetchGitHubMonitoringStatus} disabled={monitoringLoading}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">
-            {monitoringLoading ? "Memuat…" : "↻ Periksa status"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={handleRunGitHubMonitoringCheck}
+              disabled={monitoringRunBusy || (monitoringRequest && ["pending", "running"].includes(monitoringRequest.status))}
+              className="rounded-lg bg-indigo-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">
+              {monitoringRunBusy ? "Mengirim permintaan…" : monitoringRequest && ["pending", "running"].includes(monitoringRequest.status) ? "Pemeriksaan dalam antrean…" : "▶ Jalankan Pemeriksaan"}
+            </button>
+            <button type="button" onClick={fetchGitHubMonitoringStatus} disabled={monitoringLoading}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">
+              {monitoringLoading ? "Memuat…" : "↻ Perbarui status"}
+            </button>
+          </div>
         </div>
+        {monitoringRequest && (
+          <div role="status" className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-900">
+            <strong>Status permintaan:</strong> {monitoringRequest.status === "pending" ? "Menunggu dijalankan (biasanya hingga 5 menit)." : monitoringRequest.status === "running" ? "Playwright sedang memeriksa website." : monitoringRequest.status === "success" ? "Pemeriksaan selesai berhasil." : monitoringRequest.status === "failure" ? "Pemeriksaan selesai dengan kegagalan." : monitoringRequest.status}
+            {monitoringRequest.workflow_run_url && <a href={monitoringRequest.workflow_run_url} target="_blank" rel="noopener noreferrer" className="ml-2 font-semibold underline">Buka log ↗</a>}
+            {monitoringRequest.result_summary && <pre className="mt-2 whitespace-pre-wrap break-words">{monitoringRequest.result_summary}</pre>}
+          </div>
+        )}
         {monitoringError ? (
           <div role="alert" className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
             {monitoringError} <span className="block text-xs mt-1">Pastikan PR pemantauan sudah dipasang, migrasi database diterapkan, dan secret GitHub/Supabase disetel.</span>
