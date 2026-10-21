@@ -54,7 +54,7 @@ jobs:
 
       - name: Simpan hasil
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: skill-desain-bookingpijat
           path: skill-desain-bookingpijat/**

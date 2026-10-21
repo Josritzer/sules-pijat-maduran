@@ -46,7 +46,7 @@ jobs:
 
       - name: Simpan laporan dan screenshot
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hasil-cek-${{ github.run_number }}
           path: |
