@@ -136,7 +136,33 @@ Deno.serve(async (req: Request) => {
       console.error("monitoring_queue_enqueue_failed", queueError.message);
       return json({ error: "queue_enqueue_failed" }, 500, cors);
     }
-    return json({ request: queued }, 202, cors);
+
+    // Start GitHub Actions immediately when the server-side dispatch secret is configured.
+    // The secret never reaches the browser. The periodic worker remains a fallback.
+    const dispatchToken = Deno.env.get("GITHUB_ACTIONS_DISPATCH_TOKEN") || "";
+    let workerTriggered = false;
+    if (dispatchToken) {
+      try {
+        const response = await fetch("https://api.github.com/repos/Josritzer/sules-pijat-maduran/actions/workflows/monitoring-queue-worker.yml/dispatches", {
+          method: "POST",
+          headers: {
+            "Accept": "application/vnd.github+json",
+            "Authorization": "Bearer " + dispatchToken,
+            "X-GitHub-Api-Version": "2022-11-28",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ref: "main" }),
+        });
+        workerTriggered = response.status === 204;
+        if (!workerTriggered) console.error("monitoring_worker_dispatch_failed", response.status);
+      } catch (error) {
+        console.error("monitoring_worker_dispatch_error", error instanceof Error ? error.message : "unknown");
+      }
+    } else {
+      console.error("monitoring_worker_dispatch_token_missing");
+    }
+
+    return json({ request: queued, worker_triggered: workerTriggered }, 202, cors);
   }
   if (browserPayload.action === "queue_status") {
     const { data: queue, error: queueError } = await admin.from("github_monitoring_run_queue")
