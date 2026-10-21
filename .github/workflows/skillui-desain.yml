@@ -7,6 +7,7 @@ on:
         description: 'Alamat situs yang desainnya diambil'
         required: true
         default: 'https://bookingpijat.com'
+        type: string
 
 permissions:
   contents: read
@@ -22,18 +23,34 @@ jobs:
         with:
           node-version: 20
 
+      - name: Validasi alamat situs
+        env:
+          SITE_URL: ${{ inputs.url }}
+        run: |
+          node --input-type=module -e '
+            const value = process.env.SITE_URL || "";
+            let url;
+            try { url = new URL(value); } catch { throw new Error("Alamat URL tidak valid"); }
+            const allowed = new Set(["bookingpijat.com", "www.bookingpijat.com"]);
+            if (url.protocol !== "https:" || !allowed.has(url.hostname) || url.username || url.password) {
+              throw new Error("Hanya URL HTTPS bookingpijat.com atau www.bookingpijat.com yang diizinkan");
+            }
+          '
+
       - name: Pasang SkillUI dan Playwright
         run: |
           npm init -y
-          npm install playwright
+          npm install --no-audit --no-fund playwright
           npx playwright install --with-deps chromium
-          npm install -g skillui
+          npm install --global --no-audit --no-fund skillui
 
       - name: Ambil desain
+        env:
+          SITE_URL: ${{ inputs.url }}
         run: |
           mkdir -p skill-desain-bookingpijat
           cd skill-desain-bookingpijat
-          skillui --url "${{ github.event.inputs.url }}" --mode ultra
+          skillui --url "$SITE_URL" --mode ultra
 
       - name: Simpan hasil
         if: always()
