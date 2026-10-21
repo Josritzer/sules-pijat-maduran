@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: sules-monitoring-queue-worker
+  cancel-in-progress: false
+
 jobs:
   process-queue:
     runs-on: ubuntu-latest
