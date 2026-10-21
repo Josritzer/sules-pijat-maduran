@@ -124,6 +124,7 @@
     updateComposer();
   }
   async function loadHistory() {
+    if (feed.firstElementChild && feed.firstElementChild.classList.contains("slch-note") && feed.firstElementChild.textContent === "Memuat percakapan…") feed.firstElementChild.remove();
     try {
       const rows = await window.bookingService.getChatMessages(50);
       if (!rows.length && !feed.children.length) note("Belum ada pesan. Jadilah yang pertama menyapa 😊");
