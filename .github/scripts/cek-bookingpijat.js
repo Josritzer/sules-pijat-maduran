@@ -1,61 +1,94 @@
 // Cek otomatis bookingpijat.com dengan Playwright
-// Cara pakai (sekali pasang):
-//   npm install playwright
-//   npx playwright install chromium
-// Jalankan:
-//   node cek-bookingpijat.js
-
 const { chromium } = require('playwright');
+const fs = require('node:fs');
 
-const URL = 'https://bookingpijat.com';
+const URL_UTAMA = 'https://bookingpijat.com';
+const HOST_VALID = new Set(['bookingpijat.com', 'www.bookingpijat.com']);
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } }); // ukuran HP
-
+  const mulai = Date.now();
   const errorKonsol = [];
   const requestGagal = [];
-  page.on('console', (m) => { if (m.type() === 'error') errorKonsol.push(m.text()); });
-  page.on('requestfailed', (r) => requestGagal.push(`${r.url()} (${r.failure()?.errorText})`));
-
-  const mulai = Date.now();
-  const respon = await page.goto(URL, { waitUntil: 'networkidle', timeout: 60000 });
-  const detik = ((Date.now() - mulai) / 1000).toFixed(1);
-
-  const status = respon ? respon.status() : 'tidak ada respon';
-  const judul = await page.title();
-
-  // Kumpulkan semua link internal lalu cek satu per satu
-  const links = await page.$$eval('a[href]', (as) => [...new Set(as.map((a) => a.href))]);
-  const internal = links.filter((l) => l.startsWith(URL));
   const linkRusak = [];
-  for (const l of internal) {
-    try {
-      const r = await page.request.get(l);
-      if (r.status() >= 400) linkRusak.push(`${l} -> ${r.status()}`);
-    } catch (e) {
-      linkRusak.push(`${l} -> gagal dibuka`);
+  let browser;
+  let status = 'tidak ada respons';
+  let judul = '(belum tersedia)';
+  let jumlahLink = 0;
+  let errorFatal = '';
+
+  try {
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') errorKonsol.push(msg.text());
+    });
+    page.on('requestfailed', (req) => {
+      requestGagal.push(`${req.url()} (${req.failure()?.errorText || 'request gagal'})`);
+    });
+
+    const response = await page.goto(URL_UTAMA, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    status = response ? response.status() : 'tidak ada respons';
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+    judul = await page.title();
+
+    const pageUrl = new URL(page.url());
+    if (!HOST_VALID.has(pageUrl.hostname)) {
+      throw new Error(`Situs dialihkan ke host yang tidak diizinkan: ${pageUrl.hostname}`);
     }
+
+    const links = await page.$$eval('a[href]', (as) =>
+      [...new Set(as.map((a) => a.href))]
+    );
+    const internal = links.filter((raw) => {
+      try {
+        const parsed = new URL(raw);
+        return ['http:', 'https:'].includes(parsed.protocol) && HOST_VALID.has(parsed.hostname);
+      } catch {
+        return false;
+      }
+    });
+    jumlahLink = internal.length;
+
+    for (const link of internal) {
+      try {
+        const responseLink = await page.request.get(link, { timeout: 15000, maxRedirects: 5 });
+        if (responseLink.status() >= 400) linkRusak.push(`${link} -> HTTP ${responseLink.status()}`);
+      } catch (error) {
+        linkRusak.push(`${link} -> ${error.message}`);
+      }
+    }
+
+    await page.screenshot({ path: 'hasil-beranda.png', fullPage: true }).catch((error) => {
+      errorFatal = `Screenshot gagal: ${error.message}`;
+    });
+  } catch (error) {
+    errorFatal = error.message;
+  } finally {
+    if (browser) await browser.close().catch(() => {});
   }
 
-  await page.screenshot({ path: 'hasil-beranda.png', fullPage: true });
-  await browser.close();
-
+  const detik = ((Date.now() - mulai) / 1000).toFixed(1);
   const laporan = [
     `Waktu: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}`,
     `Status halaman: ${status}`,
     `Judul: ${judul}`,
-    `Waktu muat: ${detik} detik`,
-    `Link internal dicek: ${internal.length}, rusak: ${linkRusak.length}`,
-    ...linkRusak.map((x) => `  - ${x}`),
+    `Waktu pemeriksaan: ${detik} detik`,
+    `Link internal diperiksa: ${jumlahLink}, rusak: ${linkRusak.length}`,
+    ...linkRusak.map((item) => `  - ${item}`),
     `Error konsol: ${errorKonsol.length}`,
-    ...errorKonsol.slice(0, 10).map((x) => `  - ${x}`),
+    ...errorKonsol.slice(0, 10).map((item) => `  - ${item}`),
     `Request gagal: ${requestGagal.length}`,
-    ...requestGagal.slice(0, 10).map((x) => `  - ${x}`),
-    `Screenshot: hasil-beranda.png`,
-  ].join('\n');
+    ...requestGagal.slice(0, 10).map((item) => `  - ${item}`),
+    ...(errorFatal ? [`Kesalahan pemeriksaan: ${errorFatal}`] : []),
+    'Screenshot: hasil-beranda.png (jika berhasil dibuat)',
+  ].join('\\n');
 
   console.log(laporan);
-  require('fs').writeFileSync('laporan.txt', laporan);
-  process.exit(status === 200 && linkRusak.length === 0 ? 0 : 1);
+  fs.writeFileSync('laporan.txt', laporan);
+
+  const statusOK = status === 200;
+  const gagal = !statusOK || linkRusak.length > 0 || errorKonsol.length > 0 ||
+    requestGagal.length > 0 || Boolean(errorFatal);
+  process.exitCode = gagal ? 1 : 0;
 })();
