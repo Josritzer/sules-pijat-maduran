@@ -174,7 +174,13 @@ Deno.serve(async (req: Request) => {
       console.error("monitoring_worker_dispatch_token_missing");
     }
 
-    return json({ request: queued, worker_triggered: workerTriggered, worker_trigger_error: workerTriggerError }, 202, cors);
+    if (!workerTriggered && workerTriggerError) {
+      const { error: diagnosticError } = await admin.from("github_monitoring_run_queue")
+        .update({ result_summary: workerTriggerError, updated_at: new Date().toISOString() })
+        .eq("id", queued.id).eq("status", "pending");
+      if (diagnosticError) console.error("monitoring_dispatch_diagnostic_save_failed", diagnosticError.message);
+    }
+    return json({ request: { ...queued, result_summary: workerTriggerError || null }, worker_triggered: workerTriggered, worker_trigger_error: workerTriggerError }, 202, cors);
   }
   if (browserPayload.action === "queue_status") {
     const { data: latest, error: latestError } = await admin.from("github_monitoring_run_queue")
@@ -188,9 +194,13 @@ Deno.serve(async (req: Request) => {
       const staleAfterMs = queue.status === "running" ? 15 * 60 * 1000 : 5 * 60 * 1000;
       if (ageMs > staleAfterMs) {
         const now = new Date().toISOString();
-        const message = queue.status === "pending"
-          ? "Pemicu GitHub belum mengambil antrean dalam 5 menit. Periksa pesan pemicu lalu tekan pemeriksaan lagi."
+        const previousDiagnostic = typeof queue.result_summary === "string" ? queue.result_summary.trim() : "";
+        const staleMessage = queue.status === "pending"
+          ? "Pemicu GitHub belum mengambil antrean dalam 5 menit. Antrean ditutup agar bisa dicoba ulang."
           : "Pemeriksaan GitHub tidak mengirim hasil dalam 15 menit. Antrean ditutup agar bisa dicoba ulang.";
+        const message = previousDiagnostic && previousDiagnostic !== staleMessage
+          ? staleMessage + "\\nPenyebab pemicu: " + previousDiagnostic
+          : staleMessage;
         const { data: recovered, error: recoverError } = await admin.from("github_monitoring_run_queue")
           .update({ status: "failure", finished_at: now, result_summary: message, updated_at: now })
           .eq("id", queue.id).eq("status", queue.status)
