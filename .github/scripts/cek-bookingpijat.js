@@ -82,7 +82,7 @@ const HOST_VALID = new Set(['bookingpijat.com', 'www.bookingpijat.com']);
     ...requestGagal.slice(0, 10).map((item) => `  - ${item}`),
     ...(errorFatal ? [`Kesalahan pemeriksaan: ${errorFatal}`] : []),
     'Screenshot: hasil-beranda.png (jika berhasil dibuat)',
-  ].join('\\n');
+  ].join('\n');
 
   console.log(laporan);
   fs.writeFileSync('laporan.txt', laporan);
