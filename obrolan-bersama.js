@@ -13,11 +13,11 @@
     .slch-icon{width:38px;height:38px;border-radius:13px;background:#ffffff20;display:grid;place-items:center;font-size:20px}
     .slch-title{font-weight:800;font-size:15px}.slch-sub{font-size:11px;color:#dbeafe}
     #slch-close{margin-left:auto;border:0;background:#ffffff20;color:#fff;width:32px;height:32px;border-radius:10px;font-size:21px}
-    .slch-status{padding:7px 14px;background:#151f38;border-bottom:1px solid #293653;display:flex;justify-content:space-between;align-items:center;color:#64748b;font-size:11px}
+    .slch-status{padding:7px 14px;background:#151f38;border-bottom:1px solid #293653;display:flex;justify-content:space-between;align-items:center;color:#aab8d4;font-size:11px}
     #slch-connection{display:flex;align-items:center;gap:6px}#slch-connection:before{content:"";width:7px;height:7px;border-radius:50%;background:#9ca3af}
     #slch-connection.is-online:before{background:#22c55e}
     #slch-feed{flex:1;min-height:0;overflow-y:auto;padding:9px 56px 9px 9px;background:linear-gradient(180deg,#10182d,#131d35);display:flex;flex-direction:column;gap:6px;position:relative}
-    .slch-note{font-size:11px;color:#64748b;background:#edf3fb;padding:9px 10px;border-radius:10px}
+    .slch-note{font-size:10px;color:#c1cde5;background:#202d4b;border:1px solid #2b3b61;padding:7px 8px;border-radius:9px}
     .slch-msg{width:fit-content;max-width:80%;align-self:flex-start;background:#202c47;color:#f5f7ff;border:1px solid #344463;border-radius:4px 11px 11px 11px;padding:5px 7px;overflow-wrap:anywhere}
     .slch-msg.mine{align-self:flex-end;background:linear-gradient(135deg,#244aa7,#4b3d9c);color:#fff;border-color:#5d67cb;border-radius:11px 4px 11px 11px}
     .slch-name{font-weight:800;font-size:10px;color:#a9bcff;margin-bottom:3px}.slch-name.slch-admin{display:inline-flex;align-items:center;gap:5px;color:#a56b00;background:linear-gradient(135deg,#fff6d8,#ffe9a8);border:1px solid #e5bf54;border-radius:999px;padding:3px 8px;letter-spacing:.2px}.slch-name.slch-admin:before{content:'◆';font-size:10px;color:#c18b12}.slch-body{white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.38}
@@ -57,6 +57,7 @@
   panel.setAttribute("role", "dialog");
   panel.setAttribute("aria-label", "Obrolan Bersama SL RELAX");
   panel.innerHTML = '<header class="slch-head"><div class="slch-icon">💬</div><div><div class="slch-title">Obrolan Bersama</div><div class="slch-sub">Ruang publik SL RELAX</div></div><button id="slch-close" aria-label="Tutup obrolan" type="button">×</button></header><div class="slch-status"><span id="slch-connection">Menghubungkan…</span><span id="slch-online">0 di ruang</span></div><div id="slch-feed" aria-live="polite"><div class="slch-note">Memuat percakapan…</div><div class="slch-mascot" aria-hidden="true"><span class="slch-mascot-spark">✦</span><span class="slch-mascot-bubble">•••</span><span class="slch-mascot-hand">👋</span><span class="slch-mascot-dot"></span></div></div><form class="slch-entry" id="slch-form"><div class="slch-row"><textarea id="slch-input" rows="1" maxlength="240" placeholder="Login untuk ikut mengobrol…" aria-label="Tulis pesan" disabled></textarea><button id="slch-send" type="submit" disabled>Kirim</button></div><div id="slch-error" class="slch-error" role="status"></div><div id="slch-foot" class="slch-foot">Pengunjung tanpa login dapat membaca. Masuk ke akun SL RELAX untuk mengirim pesan.</div></form>';
+  panel.appendChild(panel.querySelector(".slch-mascot"));
   document.body.append(button, panel);
 
   const $ = id => panel.querySelector("#" + id);
