@@ -31,7 +31,7 @@ jobs:
         run: |
           # Run workflow manual di GitHub harus langsung menguji website,
           # tanpa bergantung pada token atau antrean Dashboard Admin.
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [ "$GITHUB_EVENT_NAME" = "push" ]; then
             echo "request_id=" >> "$GITHUB_OUTPUT"
             echo "should_run=true" >> "$GITHUB_OUTPUT"
             echo "Pemicu manual: Playwright akan langsung memeriksa website."
