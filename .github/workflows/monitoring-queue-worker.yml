@@ -1,6 +1,11 @@
 name: Proses antrean pemeriksaan Admin
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/monitoring-queue-worker.yml'
   schedule:
     # Antrean tombol Dashboard Admin diproses maksimal sekitar 5 menit setelah diminta.
     - cron: '*/5 * * * *'
