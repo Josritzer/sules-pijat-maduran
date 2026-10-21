@@ -71,6 +71,21 @@ const timeout = (ms) => new Promise(resolve => setTimeout(resolve, ms));
     add('Tombol pilih paket', packageButtonCount === 5 ? 'LULUS' : 'GAGAL',
       `Tombol pilih paket mengarah ke aplikasi booking: ${packageButtonCount}/5.`);
 
+    // Tahap 3: uji klik tombol paket pertama. Hanya menguji navigasi ke bagian
+    // booking; tidak mengisi atau mengirim formulir dan tidak membuat booking.
+    let packageNavigationOk = false;
+    if (packageButtonCount > 0) {
+      await packageButtons.first().click().catch(() => {});
+      await page.waitForTimeout(300);
+      const hash = new URL(page.url()).hash;
+      const bookingTargetExists = await page.locator('#booking-app').count() > 0;
+      packageNavigationOk = hash === '#booking-app' && bookingTargetExists;
+    }
+    add('Navigasi tombol paket ke booking', packageNavigationOk ? 'LULUS' : 'GAGAL',
+      packageNavigationOk
+        ? 'Klik tombol paket pertama membuka target #booking-app; formulir tidak dikirim.'
+        : `Klik tombol paket tidak mengonfirmasi target booking (hash saat ini: ${new URL(page.url()).hash || '(kosong)'}).`);
+
     const publicNav = page.locator('nav[aria-label="Navigasi publik"]');
     const navLabels = await publicNav.locator('a').allTextContents().catch(() => []);
     const invalidNavTargets = await publicNav.locator('a').evaluateAll(links => links
