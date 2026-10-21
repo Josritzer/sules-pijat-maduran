@@ -35,11 +35,11 @@ jobs:
         if: always()
         continue-on-error: true
         env:
-          GITHUB_MONITORING_SECRET: ${{ secrets.GITHUB_MONITORING_SECRET }}
+          SULES_MONITORING_SECRET: ${{ secrets.SULES_MONITORING_SECRET }}
         shell: bash
         run: |
-          if [ -z "$GITHUB_MONITORING_SECRET" ]; then
-            echo "Status Dashboard Admin belum dikirim: secret GITHUB_MONITORING_SECRET belum disetel." >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$SULES_MONITORING_SECRET" ]; then
+            echo "Status Dashboard Admin belum dikirim: secret SULES_MONITORING_SECRET belum disetel." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           STATUS="failure"
@@ -61,7 +61,7 @@ jobs:
           if curl --silent --show-error --fail --max-time 20 \
             -X POST "https://tzupkourtcmqemymszgt.supabase.co/functions/v1/github-monitoring-status" \
             -H "Content-Type: application/json" \
-            -H "x-monitoring-secret: $GITHUB_MONITORING_SECRET" \
+            -H "x-monitoring-secret: $SULES_MONITORING_SECRET" \
             --data-binary @monitoring-payload.json; then
             echo "Status pemeriksaan berhasil dikirim ke Dashboard Admin SL RELAX." >> "$GITHUB_STEP_SUMMARY"
           else
