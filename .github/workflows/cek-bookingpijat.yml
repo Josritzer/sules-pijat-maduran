@@ -29,6 +29,21 @@ jobs:
       - name: Jalankan pengecekan
         run: node .github/scripts/cek-bookingpijat.js
 
+      - name: Tampilkan laporan pada ringkasan Actions
+        if: always()
+        shell: bash
+        run: |
+          if [ -f laporan.txt ]; then
+            {
+              echo "## Hasil cek bookingpijat.com"
+              echo
+              cat laporan.txt
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## Hasil cek bookingpijat.com" >> "$GITHUB_STEP_SUMMARY"
+            echo "Laporan tidak dibuat. Periksa log job untuk penyebabnya." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Simpan laporan dan screenshot
         if: always()
         uses: actions/upload-artifact@v4
