@@ -75,7 +75,7 @@ jobs:
         run: node .github/scripts/cek-alur-booking.js
 
       - name: Kirim hasil ke Dashboard Admin
-        if: always() && (steps.claim.outputs.request_id != '' || github.event_name == 'push')
+        if: always() && steps.claim.outputs.request_id != ''
         env:
           SULES_MONITORING_SECRET: ${{ secrets.SULES_MONITORING_SECRET }}
           REQUEST_ID: ${{ steps.claim.outputs.request_id }}
@@ -129,5 +129,5 @@ jobs:
           retention-days: 30
 
       - name: Tandai workflow gagal bila pemeriksaan gagal
-        if: always() && steps.claim.outputs.request_id != '' && steps.website_check.outcome == 'failure'
+        if: always() && (steps.claim.outputs.request_id != '' || github.event_name == 'push') && steps.website_check.outcome == 'failure'
         run: exit 1
