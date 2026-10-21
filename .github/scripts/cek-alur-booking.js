@@ -50,6 +50,46 @@ const timeout = (ms) => new Promise(resolve => setTimeout(resolve, ms));
     add('Tautan internal', brokenLinks.length ? 'GAGAL' : 'LULUS', `${internal.length} diperiksa; ${brokenLinks.length} rusak`);
 
     const bodyText = await page.locator('body').innerText().catch(() => '');
+
+    // Pemeriksaan UI publik yang aman: hanya membaca halaman, tanpa membuat booking.
+    const publicSections = ['#beranda', '#katalog', '#faq', '#pesanan', '#booking-app'];
+    const missingSections = [];
+    for (const selector of publicSections) {
+      if (await page.locator(selector).count() === 0) missingSections.push(selector);
+    }
+    add('Bagian utama website', missingSections.length ? 'GAGAL' : 'LULUS',
+      missingSections.length ? `Bagian tidak ditemukan: ${missingSections.join(', ')}` : `${publicSections.length} bagian utama ditemukan.`);
+
+    const packageCards = page.locator('.sules-catalog-public-card');
+    const packageCount = await packageCards.count();
+    const packageNames = await packageCards.locator('h3').allTextContents().catch(() => []);
+    add('Katalog 5 paket', packageCount === 5 ? 'LULUS' : 'GAGAL',
+      `Kartu paket ditemukan: ${packageCount}/5. Nama paket: ${packageNames.map(s => s.trim()).filter(Boolean).join(' | ') || 'tidak terbaca'}`);
+
+    const packageButtons = page.locator('a.sules-public-package-button[href="#booking-app"]');
+    const packageButtonCount = await packageButtons.count();
+    add('Tombol pilih paket', packageButtonCount === 5 ? 'LULUS' : 'GAGAL',
+      `Tombol pilih paket mengarah ke aplikasi booking: ${packageButtonCount}/5.`);
+
+    const publicNav = page.locator('nav[aria-label="Navigasi publik"]');
+    const navLabels = await publicNav.locator('a').allTextContents().catch(() => []);
+    const invalidNavTargets = await publicNav.locator('a').evaluateAll(links => links
+      .map(a => a.getAttribute('href'))
+      .filter(href => !href || !document.querySelector(href)));
+    add('Navigasi publik', navLabels.length >= 5 && invalidNavTargets.length === 0 ? 'LULUS' : 'GAGAL',
+      `Tautan navigasi: ${navLabels.map(s => s.trim()).filter(Boolean).join(', ')}; target tidak ditemukan: ${invalidNavTargets.length}.`);
+
+    const rootCount = await page.locator('#root').count();
+    const rootChildren = rootCount ? await page.locator('#root').locator(':scope > *').count().catch(() => 0) : 0;
+    add('Aplikasi React termuat', rootCount === 1 && rootChildren > 0 ? 'LULUS' : 'GAGAL',
+      `Elemen #root: ${rootCount}; elemen aplikasi di dalam root: ${rootChildren}.`);
+
+    const manifestCount = await page.locator('link[rel="manifest"]').count();
+    const serviceWorkerScript = await page.locator('script').evaluateAll(scripts =>
+      scripts.some(s => (s.textContent || '').includes('serviceWorker') || (s.src || '').includes('service-worker'))
+    ).catch(() => false);
+    add('Prasyarat PWA', manifestCount > 0 ? 'LULUS' : 'BELUM DIUJI',
+      `Manifest terhubung: ${manifestCount > 0 ? 'ya' : 'tidak ditemukan'}; pendaftaran service worker terlihat di script inline/eksternal: ${serviceWorkerScript ? 'ya' : 'tidak terdeteksi'}.`);
     const emailInputs = await page.locator('input[type="email"]').count().catch(() => 0);
     const otpInputs = await page.locator('input[inputmode="numeric"], input[autocomplete="one-time-code"], input[maxlength="6"]').count().catch(() => 0);
     const bookingWords = /buat booking|buat pesanan|pesan sekarang|pilih paket|jadwal booking/i.test(bodyText);
