@@ -22,6 +22,7 @@
     .slch-msg.mine{align-self:flex-end;background:linear-gradient(135deg,#245be8,#6549c7);color:#fff;border-color:#7c83f5;border-radius:14px 4px 14px 14px;box-shadow:0 3px 10px #4038a52b}
     .slch-name{font-weight:800;font-size:11px;color:#b8c9ff;margin-bottom:5px}.slch-name.slch-admin{display:inline-flex;align-items:center;gap:5px;color:#a56b00;background:linear-gradient(135deg,#fff6d8,#ffe9a8);border:1px solid #e5bf54;border-radius:999px;padding:3px 8px;letter-spacing:.2px}.slch-name.slch-admin:before{content:'◆';font-size:10px;color:#c18b12}.slch-body{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;font-size:14px;line-height:1.55;letter-spacing:.05px}
     .slch-time{font-size:10px;color:#b4c0dc;text-align:right;margin-top:6px}
+    .slch-reply{align-self:flex-start;margin-top:5px;border:1px solid #5369a0;border-radius:999px;padding:4px 9px;background:#1a2744;color:#c7d2fe;font:700 11px system-ui;cursor:pointer}.slch-reply:active{background:#344b88}
     .slch-entry{padding:12px;background:#111a30;border-top:1px solid #35466c}
     .slch-row{display:flex;gap:7px;margin-bottom:8px}
     .slch-row textarea{min-width:0;flex:1;border:1px solid #465c91;border-radius:12px;padding:10px 11px;font:14px/1.45 system-ui;color:#f4f7ff;background:#182744;resize:none;max-height:120px}
@@ -57,6 +58,7 @@
   const seen = new Set();
   let messageChannel = null, presenceChannel = null, authSubscription = null;
   let connected = false, presenceConnected = false, opening = false, currentSession = null, profile = null;
+  let replyPrefix = "";
 
   function safeText(value) { return String(value == null ? "" : value); }
   function trimFeed() { while (feed.children.length > 60) feed.removeChild(feed.firstElementChild); }
@@ -87,6 +89,29 @@
     const date = new Date(row.created_at);
     time.textContent = Number.isNaN(date.getTime()) ? "" : date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
     box.append(title, body, time);
+    const reply = document.createElement("button");
+    reply.type = "button";
+    reply.className = "slch-reply";
+    reply.textContent = "Balas";
+    reply.setAttribute("aria-label", "Balas pesan " + name);
+    reply.addEventListener("click", () => {
+      if (input.disabled) {
+        error.textContent = !currentSession || !currentSession.user || !currentSession.user.id
+          ? "Masuk ke akun SL RELAX terlebih dahulu untuk membalas pesan."
+          : "Lengkapi nama profil di menu Akun sebelum membalas pesan.";
+        return;
+      }
+      error.textContent = "";
+      let draft = input.value;
+      if (replyPrefix && draft.startsWith(replyPrefix)) draft = draft.slice(replyPrefix.length);
+      replyPrefix = "@" + name.replace(/^@+/, "").trim() + " ";
+      input.value = replyPrefix + draft.trimStart();
+      input.focus();
+      input.style.height = "auto";
+      input.style.height = Math.min(input.scrollHeight, 86) + "px";
+      input.setSelectionRange(input.value.length, input.value.length);
+    });
+    box.appendChild(reply);
     feed.appendChild(box);
     trimFeed();
     feed.scrollTop = feed.scrollHeight;
@@ -218,6 +243,7 @@
       const row = await window.bookingService.sendChatMessage(text);
       render(row);
       input.value = "";
+      replyPrefix = "";
       input.style.height = "auto";
     } catch (e) {
       const detail = safeText(e && e.message).toLowerCase();
