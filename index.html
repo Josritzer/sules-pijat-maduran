@@ -223,7 +223,7 @@
   async function getChatMessages(limit = 50) {
     const safeLimit = Math.max(1, Math.min(50, Number(limit) || 50));
     const { data, error } = await supabaseClient.from("chat_messages")
-      .select("id,sender_name,message,is_hidden,created_at")
+      .select("id,sender_name,message,is_hidden,is_admin,created_at")
       .eq("is_hidden", false)
       .order("created_at", { ascending: false })
       .limit(safeLimit);
@@ -239,7 +239,7 @@
     if (!text || text.length > 240) throw new Error("Pesan harus berisi 1–240 karakter.");
     const { data, error } = await supabaseClient.from("chat_messages")
       .insert({ message: text })
-      .select("id,sender_name,message,is_hidden,created_at")
+      .select("id,sender_name,message,is_hidden,is_admin,created_at")
       .single();
     if (error) throw error;
     return data;
