@@ -41,3 +41,11 @@ end;
 $function$;
 
 revoke all on function public.set_chat_message_sender() from public, anon, authenticated;
+
+-- Re-label existing messages only when the private owner mapping verifies Admin authorship.
+update public.chat_messages as cm
+set sender_name = 'Admin',
+    is_admin = true
+from private.chat_message_owners as owner_map
+join public.admins as a on a.id = owner_map.sender_id
+where cm.id = owner_map.message_id;
