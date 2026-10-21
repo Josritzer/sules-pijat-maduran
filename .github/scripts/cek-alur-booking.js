@@ -90,12 +90,21 @@ const timeout = (ms) => new Promise(resolve => setTimeout(resolve, ms));
     ).catch(() => false);
     add('Prasyarat PWA', manifestCount > 0 ? 'LULUS' : 'BELUM DIUJI',
       `Manifest terhubung: ${manifestCount > 0 ? 'ya' : 'tidak ditemukan'}; pendaftaran service worker terlihat di script inline/eksternal: ${serviceWorkerScript ? 'ya' : 'tidak terdeteksi'}.`);
-    const emailInputs = await page.locator('input[type="email"]').count().catch(() => 0);
-    const otpInputs = await page.locator('input[inputmode="numeric"], input[autocomplete="one-time-code"], input[maxlength="6"]').count().catch(() => 0);
-    const bookingWords = /buat booking|buat pesanan|pesan sekarang|pilih paket|jadwal booking/i.test(bodyText);
-    add('Antarmuka login/OTP', emailInputs > 0 || otpInputs > 0 ? 'LULUS' : 'BELUM DIUJI',
-      emailInputs > 0 || otpInputs > 0 ? `Form email: ${emailInputs}; kemungkinan kolom kode: ${otpInputs}. Pengiriman dan verifikasi OTP belum dilakukan.` : 'Form login/OTP tidak terlihat pada tampilan awal; perlu membuka alur aplikasi.');
+    // Tahap 2: interaksi UI pelanggan yang aman. Tidak mengirim OTP dan tidak membuat booking.
+    const accountShortcut = page.locator('a.site-app-shortcut[aria-label="Buka Akun"]');
+    if (await accountShortcut.count()) {
+      await accountShortcut.click().catch(() => {});
+      await page.waitForTimeout(500);
+    }
+    const customerRoot = page.locator('#root');
+    const emailInput = customerRoot.locator('input[type="email"]');
+    const sendOtpButton = customerRoot.getByRole('button', { name: /Kirim Kode OTP/ });
+    const emailVisible = await emailInput.isVisible().catch(() => false);
+    const sendOtpVisible = await sendOtpButton.isVisible().catch(() => false);
+    add('Form akun pelanggan', emailVisible && sendOtpVisible ? 'LULUS' : 'GAGAL',
+      `Kolom email terlihat: ${emailVisible ? 'ya' : 'tidak'}; tombol Kirim Kode OTP terlihat: ${sendOtpVisible ? 'ya' : 'tidak'}. Tombol tidak ditekan agar email tidak terkirim.`);
 
+    const bookingWords = /buat booking|buat pesanan|pesan sekarang|pilih paket|jadwal booking/i.test(bodyText);
     add('Antarmuka booking', bookingWords ? 'LULUS' : 'BELUM DIUJI',
       bookingWords ? 'Teks alur booking ditemukan; booking nyata belum dibuat.' : 'Tombol/alur booking belum teridentifikasi dari tampilan awal; booking nyata tidak dibuat.');
 
