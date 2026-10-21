@@ -355,7 +355,7 @@
   async function requestGitHubMonitoringCheck() {
     const { data, error } = await supabaseClient.functions.invoke("github-monitoring-status", { body: { action: "enqueue" } });
     if (error) throw await getFunctionError(error);
-    return data && data.request ? data.request : null;
+    return data || null;
   }
   async function getGitHubMonitoringQueueStatus() {
     const { data, error } = await supabaseClient.functions.invoke("github-monitoring-status", { body: { action: "queue_status" } });
@@ -4673,9 +4673,13 @@ function AdminTab({ onExitToApp }) {
     setMonitoringRunBusy(true);
     setMonitoringError("");
     try {
-      const request = await window.bookingService.requestGitHubMonitoringCheck();
+      const result = await window.bookingService.requestGitHubMonitoringCheck();
+      const request = result && result.request;
       if (!request) throw new Error("Permintaan pemeriksaan tidak berhasil dibuat.");
       setMonitoringRequest(request);
+      if (result.worker_triggered === false) {
+        setMonitoringError(result.worker_trigger_error || "Pemicu langsung belum dikonfirmasi. Antrean akan dicoba worker cadangan.");
+      }
     } catch (error) {
       setMonitoringError((error && error.message) || "Gagal meminta pemeriksaan. Coba lagi.");
     } finally {

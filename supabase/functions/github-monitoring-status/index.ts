@@ -141,6 +141,7 @@ Deno.serve(async (req: Request) => {
     // The secret never reaches the browser. The periodic worker remains a fallback.
     const dispatchToken = Deno.env.get("GITHUB_ACTIONS_DISPATCH_TOKEN") || "";
     let workerTriggered = false;
+    let workerTriggerError = "";
     if (dispatchToken) {
       try {
         const response = await fetch("https://api.github.com/repos/Josritzer/sules-pijat-maduran/actions/workflows/monitoring-queue-worker.yml/dispatches", {
@@ -154,21 +155,50 @@ Deno.serve(async (req: Request) => {
           body: JSON.stringify({ ref: "main" }),
         });
         workerTriggered = response.status === 204;
-        if (!workerTriggered) console.error("monitoring_worker_dispatch_failed", response.status);
+        if (!workerTriggered) {
+          const responseBody = (await response.text()).slice(0, 500);
+          let detail = responseBody;
+          try {
+            const parsed = JSON.parse(responseBody);
+            detail = typeof parsed.message === "string" ? parsed.message : responseBody;
+          } catch (_) {}
+          workerTriggerError = "GitHub menolak pemicu (HTTP " + response.status + ")" + (detail ? ": " + detail : ".");
+          console.error("monitoring_worker_dispatch_failed", response.status, detail);
+        }
       } catch (error) {
+        workerTriggerError = "Koneksi ke GitHub gagal. Worker cadangan akan mencoba menjalankan antrean.";
         console.error("monitoring_worker_dispatch_error", error instanceof Error ? error.message : "unknown");
       }
     } else {
+      workerTriggerError = "Secret GITHUB_ACTIONS_DISPATCH_TOKEN belum terbaca oleh Edge Function.";
       console.error("monitoring_worker_dispatch_token_missing");
     }
 
-    return json({ request: queued, worker_triggered: workerTriggered }, 202, cors);
+    return json({ request: queued, worker_triggered: workerTriggered, worker_trigger_error: workerTriggerError }, 202, cors);
   }
   if (browserPayload.action === "queue_status") {
-    const { data: queue, error: queueError } = await admin.from("github_monitoring_run_queue")
+    const { data: latest, error: latestError } = await admin.from("github_monitoring_run_queue")
       .select("id,status,requested_at,started_at,finished_at,workflow_run_url,result_summary")
       .eq("requested_by", userData.user.id).order("requested_at", { ascending: false }).limit(1).maybeSingle();
-    if (queueError) return json({ error: "queue_status_failed" }, 500, cors);
+    if (latestError) return json({ error: "queue_status_failed" }, 500, cors);
+    let queue = latest;
+    if (queue && (queue.status === "pending" || queue.status === "running")) {
+      const referenceTime = queue.status === "running" ? queue.started_at : queue.requested_at;
+      const ageMs = referenceTime ? Date.now() - new Date(referenceTime).getTime() : 0;
+      const staleAfterMs = queue.status === "running" ? 15 * 60 * 1000 : 5 * 60 * 1000;
+      if (ageMs > staleAfterMs) {
+        const now = new Date().toISOString();
+        const message = queue.status === "pending"
+          ? "Pemicu GitHub belum mengambil antrean dalam 5 menit. Periksa pesan pemicu lalu tekan pemeriksaan lagi."
+          : "Pemeriksaan GitHub tidak mengirim hasil dalam 15 menit. Antrean ditutup agar bisa dicoba ulang.";
+        const { data: recovered, error: recoverError } = await admin.from("github_monitoring_run_queue")
+          .update({ status: "failure", finished_at: now, result_summary: message, updated_at: now })
+          .eq("id", queue.id).eq("status", queue.status)
+          .select("id,status,requested_at,started_at,finished_at,workflow_run_url,result_summary").maybeSingle();
+        if (recoverError) console.error("monitoring_queue_stale_recovery_failed", recoverError.message);
+        if (recovered) queue = recovered;
+      }
+    }
     return json({ request: queue || null }, 200, cors);
   }
 
