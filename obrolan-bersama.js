@@ -20,7 +20,7 @@
     .slch-note{font-size:11px;color:#64748b;background:#edf3fb;padding:9px 10px;border-radius:10px}
     .slch-msg{max-width:88%;align-self:flex-start;background:#fff;border:1px solid #e2eaf4;border-radius:4px 14px 14px 14px;padding:8px 10px;overflow-wrap:anywhere}
     .slch-msg.mine{align-self:flex-end;background:#e8efff;border-color:#d5e0ff;border-radius:14px 4px 14px 14px}
-    .slch-name{font-weight:800;font-size:11px;color:#465db1;margin-bottom:3px}.slch-body{white-space:pre-wrap;word-break:break-word}
+    .slch-name{font-weight:800;font-size:11px;color:#465db1;margin-bottom:3px}.slch-name.slch-admin{display:inline-flex;align-items:center;gap:5px;color:#a56b00;background:linear-gradient(135deg,#fff6d8,#ffe9a8);border:1px solid #e5bf54;border-radius:999px;padding:3px 8px;letter-spacing:.2px}.slch-name.slch-admin:before{content:'◆';font-size:10px;color:#c18b12}.slch-body{white-space:pre-wrap;word-break:break-word}
     .slch-time{font-size:9px;color:#8390a4;text-align:right;margin-top:4px}
     .slch-entry{padding:10px 12px;background:#fff;border-top:1px solid #e4ebf3}
     .slch-row{display:flex;gap:7px;margin-bottom:8px}
@@ -75,7 +75,7 @@
     const box = document.createElement("article");
     box.className = "slch-msg";
     const title = document.createElement("div");
-    title.className = "slch-name";
+    title.className = row.is_admin === true ? "slch-name slch-admin" : "slch-name";
     title.textContent = name;
     const body = document.createElement("div");
     body.className = "slch-body";
