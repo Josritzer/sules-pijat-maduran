@@ -31,7 +31,7 @@ jobs:
         continue-on-error: true
         run: node .github/scripts/cek-bookingpijat.js
 
-      - name: Kirim status ke Dashboard Admin
+      - name: Jalankan laporan terpadu alur booking\n        if: always()\n        continue-on-error: true\n        run: node .github/scripts/cek-alur-booking.js\n\n      - name: Kirim status ke Dashboard Admin
         if: always()
         continue-on-error: true
         env:
@@ -87,7 +87,7 @@ jobs:
             echo "Laporan tidak dibuat. Periksa log job untuk penyebabnya." >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Simpan laporan dan screenshot
+      - name: Tampilkan laporan terpadu alur booking\n        if: always()\n        shell: bash\n        run: |\n          if [ -f laporan-alur-booking.txt ]; then\n            { echo \"## Laporan terpadu alur booking\"; echo; cat laporan-alur-booking.txt; } >> \"$GITHUB_STEP_SUMMARY\"\n          else\n            echo \"Laporan terpadu alur booking belum tersedia.\" >> \"$GITHUB_STEP_SUMMARY\"\n          fi\n\n      - name: Simpan laporan dan screenshot
         if: always()
         uses: actions/upload-artifact@v7
         with:
