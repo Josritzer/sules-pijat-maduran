@@ -100,7 +100,7 @@ jobs:
             -H "x-monitoring-secret: $SULES_MONITORING_SECRET" \
             --data-binary @monitoring-payload.json
 
-      - name: Simpan laporan dan screenshot
+      - name: Tampilkan laporan terpadu alur booking\n        if: always()\n        shell: bash\n        run: |\n          if [ -f laporan-alur-booking.txt ]; then\n            { echo \"## Laporan terpadu alur booking\"; echo; cat laporan-alur-booking.txt; } >> \"$GITHUB_STEP_SUMMARY\"\n          else\n            echo \"Laporan terpadu alur booking belum tersedia.\" >> \"$GITHUB_STEP_SUMMARY\"\n          fi\n\n      - name: Simpan laporan dan screenshot
         if: always() && steps.claim.outputs.request_id != ''
         uses: actions/upload-artifact@v7
         with:
