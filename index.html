@@ -5075,7 +5075,7 @@ function AdminTab({ onExitToApp }) {
   };
 
   const exportCSV = () => {
-    const header = ["id","nama","wa","service_id","jumlah_orang","tanggal","jam_mulai","tipe_lokasi","alamat","lat","lng","jarak_meter","package_key","base_price","price_level","package_price","service_price","travel_fee","subtotal","promo_type","promo_value","promo_discount","final_total","grand_total","status","created_at"];
+    const header = ["id","nama","wa","service_id","jumlah_orang","tanggal","jam_mulai","tipe_lokasi","alamat","lat","lng","jarak_meter","package_key","base_price","price_level","package_price","service_price","travel_fee","subtotal","promo_type","promo_value","promo_discount","final_total","grand_total","status","created_at","is_test_booking"];
     const rows = bookings.map(b => header.map(h => `"${(b[h] ?? "").toString().replace(/"/g,'""')}"`).join(","));
     const csv = [header.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -5092,7 +5092,7 @@ function AdminTab({ onExitToApp }) {
     return (
       <div key={b.id} className="bg-white rounded-xl p-3 border border-gray-200 text-sm">
         <div className="flex justify-between items-start gap-2 mb-2">
-          <span className="font-semibold text-base break-words">{b.nama}</span>
+          <div className="min-w-0"><span className="font-semibold text-base break-words">{b.nama}</span>{b.is_test_booking && <span className="ml-2 inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold tracking-wide text-amber-800">AKUN UJI</span>}</div>
           <StatusBadge status={b.status} />
         </div>
         <div className="grid grid-cols-2 gap-2 text-xs mb-2">
