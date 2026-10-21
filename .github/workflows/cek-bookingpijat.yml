@@ -4,7 +4,7 @@ on:
   schedule:
     # Setiap hari jam 08:00 WIB (= 01:00 UTC)
     - cron: '0 1 * * *'
-  workflow_dispatch: {}   # tombol "Run workflow" untuk menjalankan manual
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -23,7 +23,7 @@ jobs:
       - name: Pasang Playwright
         run: |
           npm init -y
-          npm install playwright
+          npm install --no-audit --no-fund playwright
           npx playwright install --with-deps chromium
 
       - name: Jalankan pengecekan
