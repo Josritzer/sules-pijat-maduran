@@ -1,0 +1,107 @@
+name: Proses antrean pemeriksaan Admin
+
+on:
+  schedule:
+    # Antrean tombol Dashboard Admin diproses maksimal sekitar 5 menit setelah diminta.
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  process-queue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Ambil satu permintaan pemeriksaan
+        id: claim
+        env:
+          SULES_MONITORING_SECRET: ${{ secrets.SULES_MONITORING_SECRET }}
+        shell: bash
+        run: |
+          if [ -z "$SULES_MONITORING_SECRET" ]; then
+            echo "Secret monitoring belum dikonfigurasi."
+            exit 1
+          fi
+          RESPONSE="$(curl --silent --show-error --fail --max-time 20 \
+            -X POST "https://tzupkourtcmqemymszgt.supabase.co/functions/v1/github-monitoring-status" \
+            -H "Content-Type: application/json" \
+            -H "x-monitoring-secret: $SULES_MONITORING_SECRET" \
+            --data '{"action":"claim"}')"
+          REQUEST_ID="$(printf '%s' "$RESPONSE" | jq -r '.request.id // empty')"
+          echo "request_id=$REQUEST_ID" >> "$GITHUB_OUTPUT"
+          if [ -z "$REQUEST_ID" ]; then
+            echo "Tidak ada permintaan pemeriksaan baru."
+          else
+            echo "Permintaan pemeriksaan diterima."
+          fi
+
+      - name: Checkout kode aplikasi
+        if: steps.claim.outputs.request_id != ''
+        uses: actions/checkout@v7
+
+      - name: Siapkan Node.js
+        if: steps.claim.outputs.request_id != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Pasang Playwright
+        if: steps.claim.outputs.request_id != ''
+        run: |
+          npm init -y
+          npm install --no-audit --no-fund playwright
+          npx playwright install --with-deps chromium
+
+      - name: Jalankan pemeriksaan website
+        if: steps.claim.outputs.request_id != ''
+        id: website_check
+        continue-on-error: true
+        run: node .github/scripts/cek-bookingpijat.js
+
+      - name: Kirim hasil ke Dashboard Admin
+        if: always() && steps.claim.outputs.request_id != ''
+        env:
+          SULES_MONITORING_SECRET: ${{ secrets.SULES_MONITORING_SECRET }}
+          REQUEST_ID: ${{ steps.claim.outputs.request_id }}
+          CHECK_OUTCOME: ${{ steps.website_check.outcome }}
+        shell: bash
+        run: |
+          STATUS="failure"
+          if [ "$CHECK_OUTCOME" = "success" ]; then STATUS="success"; fi
+          HTTP_STATUS="$(sed -n 's/^Status halaman: //p' laporan.txt 2>/dev/null | head -n 1)"
+          case "$HTTP_STATUS" in *[!0-9]*|"") HTTP_STATUS="" ;; esac
+          DURATION="$(sed -n 's/^Waktu pemeriksaan: \([0-9.]*\) detik.*/\1/p' laporan.txt 2>/dev/null | head -n 1)"
+          case "$DURATION" in *[!0-9.]*|"") DURATION="" ;; esac
+          jq -n \
+            --arg status "$STATUS" \
+            --arg checked_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg workflow_run_url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --arg commit_sha "$GITHUB_SHA" \
+            --arg summary "$(head -n 12 laporan.txt 2>/dev/null || echo 'Laporan pemeriksaan tidak tersedia.')" \
+            --arg http_status "$HTTP_STATUS" \
+            --arg duration_seconds "$DURATION" \
+            --arg workflow_run_id "$GITHUB_RUN_ID" \
+            --arg request_id "$REQUEST_ID" \
+            '{status:$status,checked_at:$checked_at,workflow_run_url:$workflow_run_url,commit_sha:$commit_sha,summary:$summary,http_status:(if $http_status == "" then null else ($http_status|tonumber) end),duration_seconds:(if $duration_seconds == "" then null else ($duration_seconds|tonumber) end),workflow_run_id:($workflow_run_id|tonumber),request_id:$request_id}' > monitoring-payload.json
+          curl --silent --show-error --fail --max-time 20 \
+            -X POST "https://tzupkourtcmqemymszgt.supabase.co/functions/v1/github-monitoring-status" \
+            -H "Content-Type: application/json" \
+            -H "x-monitoring-secret: $SULES_MONITORING_SECRET" \
+            --data-binary @monitoring-payload.json
+
+      - name: Simpan laporan dan screenshot
+        if: always() && steps.claim.outputs.request_id != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: hasil-cek-manual-${{ github.run_number }}
+          path: |
+            laporan.txt
+            hasil-beranda.png
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Tandai workflow gagal bila pemeriksaan gagal
+        if: always() && steps.claim.outputs.request_id != '' && steps.website_check.outcome == 'failure'
+        run: exit 1
