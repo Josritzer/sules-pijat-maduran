@@ -21,6 +21,7 @@
     .slch-msg{width:fit-content;max-width:88%;align-self:flex-start;background:linear-gradient(145deg,#202e50,#252b4a);color:#f5f7ff;border:1px solid #3b4f7c;border-radius:4px 11px 11px 11px;padding:6px 9px;overflow-wrap:anywhere;box-shadow:0 2px 7px #050b1818}
     .slch-msg.mine{align-self:flex-end;background:linear-gradient(135deg,#245be8,#6549c7);color:#fff;border-color:#7c83f5;border-radius:11px 4px 11px 11px;box-shadow:0 2px 7px #4038a52b}
     .slch-name{font-weight:800;font-size:10px;color:#b8c9ff;margin-bottom:2px}.slch-name.slch-admin{display:inline-flex;align-items:center;gap:5px;color:#a56b00;background:linear-gradient(135deg,#fff6d8,#ffe9a8);border:1px solid #e5bf54;border-radius:999px;padding:2px 6px;letter-spacing:.2px}.slch-name.slch-admin:before{content:'◆';font-size:10px;color:#c18b12}.slch-body{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;font-size:13px;line-height:1.4;letter-spacing:.02px}
+    .slch-mention{color:#a5b4fc;font-weight:900;text-shadow:0 0 10px #818cf833}.slch-msg.mine .slch-mention{color:#f0d9ff;text-shadow:0 0 8px #c084fc55}
     .slch-time{font-size:9px;color:#b4c0dc;text-align:right;margin-top:3px}
     .slch-reply{align-self:flex-start;margin-top:2px;border:1px solid #5369a0;border-radius:999px;padding:2px 7px;background:#1a2744;color:#c7d2fe;font:700 10px system-ui;cursor:pointer}.slch-reply:active{background:#344b88}
     .slch-entry{padding:12px;background:#111a30;border-top:1px solid #35466c}
@@ -83,7 +84,15 @@
     title.textContent = name;
     const body = document.createElement("div");
     body.className = "slch-body";
-    body.textContent = message;
+    const mention = message.match(/^(@[^\s]+)([\s\S]*)$/);
+    if (mention) {
+      const highlighted = document.createElement("span");
+      highlighted.className = "slch-mention";
+      highlighted.textContent = mention[1];
+      body.append(highlighted, document.createTextNode(mention[2]));
+    } else {
+      body.textContent = message;
+    }
     const time = document.createElement("div");
     time.className = "slch-time";
     const date = new Date(row.created_at);
