@@ -95,6 +95,8 @@
   function updateReplyPreview() {
     const active = !!replyTarget;
     replyPreview.classList.toggle("is-active", active);
+    // Inline display prevents site-wide CSS from hiding the reply preview.
+    replyPreview.style.display = active ? "flex" : "none";
     if (active) {
       replyPreviewName.textContent = "Membalas " + replyTarget.name;
       const excerpt = replyTarget.message.replace(/\s+/g, " ").trim();
