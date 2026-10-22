@@ -141,7 +141,7 @@
     const title = document.createElement("div");
     title.className = row.is_admin === true ? "slch-name slch-admin" : "slch-name";
     title.textContent = name;
-    if (row.reply_to_id != null && row.reply_to_message) {
+    if (row.reply_to_message) {
       const quote = document.createElement("button");
       quote.type = "button";
       quote.className = "slch-quoted";
@@ -154,13 +154,18 @@
       quoteText.textContent = safeText(row.reply_to_message).replace(/\s+/g, " ").trim();
       quote.title = safeText(row.reply_to_message);
       quote.append(quoteName, quoteText);
-      quote.addEventListener("click", () => {
-        const original = feed.querySelector('[data-message-id="' + String(row.reply_to_id).replace(/[^0-9]/g, "") + '"]');
-        if (original) {
-          original.scrollIntoView({ behavior: "smooth", block: "center" });
-          original.animate([{ outline: "2px solid #c4b5fd" }, { outline: "2px solid transparent" }], { duration: 1100 });
-        }
-      });
+      if (row.reply_to_id != null) {
+        quote.addEventListener("click", () => {
+          const original = feed.querySelector('[data-message-id="' + String(row.reply_to_id).replace(/[^0-9]/g, "") + '"]');
+          if (original) {
+            original.scrollIntoView({ behavior: "smooth", block: "center" });
+            original.animate([{ outline: "2px solid #c4b5fd" }, { outline: "2px solid transparent" }], { duration: 1100 });
+          }
+        });
+      } else {
+        quote.disabled = true;
+        quote.style.cursor = "default";
+      }
       box.appendChild(quote);
     }
     const body = document.createElement("div");
