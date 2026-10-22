@@ -42,7 +42,7 @@
     #slch-context-menu{position:fixed;z-index:10000;display:none;min-width:190px;padding:8px;border:1px solid #53658e;border-radius:14px;background:#17233d;box-shadow:0 12px 35px #0008;color:#fff}
     #slch-context-menu.is-open{display:block}
     .slch-context-emojis{display:flex;justify-content:space-between;gap:4px;padding-bottom:7px;margin-bottom:6px;border-bottom:1px solid #3b4f70}
-    .slch-context-menu button{border:0;background:transparent;color:inherit;border-radius:8px;cursor:pointer}
+    #slch-context-menu button{border:0;background:transparent;color:inherit;border-radius:8px;cursor:pointer}
     .slch-context-emojis button{font-size:22px;padding:4px}
     .slch-context-emojis button:active,.slch-context-action:active{background:#354b75}
     .slch-context-action{display:flex;align-items:center;gap:9px;width:100%;padding:9px 8px;text-align:left;font:13px system-ui}
@@ -415,7 +415,7 @@
     try {
       const rows = await window.bookingService.getChatReactions([messageId]);
       reactionCache.set(String(messageId), rows || []);
-      const container = feed.querySelector('[data-reactions-for="' + String(messageId).replace(/[^0-9]/g, "") + '"]');
+      const container = Array.from(feed.querySelectorAll(".slch-reactions")).find(node => node.dataset.reactionsFor === String(messageId));
       if (container) renderReactionBadges(messageId, container);
     } catch (_) {}
   }
