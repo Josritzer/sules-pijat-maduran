@@ -31,6 +31,12 @@
     .slch-mention{color:#a5b4fc;font-weight:900;text-shadow:0 0 10px #818cf833}.slch-msg.mine .slch-mention{color:#f0d9ff;text-shadow:0 0 8px #c084fc55}
     .slch-time{font-size:9px;color:#b4c0dc;text-align:right;margin-top:0}
     .slch-reply{align-self:flex-start;margin-top:2px;border:1px solid #5369a0;border-radius:999px;padding:2px 7px;background:#1a2744;color:#c7d2fe;font:700 10px system-ui;cursor:pointer}.slch-reply:active{background:#344b88}
+    .slch-reply-preview{display:none;align-items:center;gap:8px;margin-bottom:8px;padding:7px 8px;border:1px solid #465c91;border-left:3px solid #8b7bff;border-radius:9px;background:#182744;min-width:0}
+    .slch-reply-preview.is-active{display:flex}
+    .slch-reply-preview-content{min-width:0;flex:1;overflow:hidden}
+    .slch-reply-preview-name{font-size:10px;font-weight:800;color:#b8a8ff;margin-bottom:2px}
+    .slch-reply-preview-text{font-size:11px;color:#dbe5ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .slch-reply-cancel{flex:0 0 28px;width:28px;height:28px;padding:0!important;border:0;border-radius:8px;background:#ffffff12!important;color:#dbe5ff;font-size:20px;line-height:1;cursor:pointer}
     .slch-entry{padding:12px;background:#111a30;border-top:1px solid #35466c}
     .slch-row{display:flex;gap:7px;margin-bottom:8px}
     .slch-row textarea{min-width:0;flex:1;border:1px solid #465c91;border-radius:12px;padding:10px 11px;font:14px/1.45 system-ui;color:#f4f7ff;background:#182744;resize:none;max-height:120px}
@@ -56,7 +62,7 @@
   panel.id = "sl-chat-panel";
   panel.setAttribute("role", "dialog");
   panel.setAttribute("aria-label", "Obrolan Bersama SL RELAX");
-  panel.innerHTML = '<header class="slch-head"><div class="slch-icon">💬</div><div><div class="slch-title">Obrolan Bersama</div><div class="slch-sub">Ruang publik SL RELAX</div></div><button id="slch-close" aria-label="Tutup obrolan" type="button">×</button></header><div class="slch-status"><span id="slch-connection">Menghubungkan…</span><span id="slch-online">0 di ruang</span></div><div id="slch-feed" aria-live="polite"><div class="slch-note">Memuat percakapan…</div></div><div id="slch-typing" aria-label="Pengguna sedang mengetik" aria-live="polite"><span></span><span></span><span></span></div><form class="slch-entry" id="slch-form"><div class="slch-row"><textarea id="slch-input" rows="1" maxlength="240" placeholder="Login untuk ikut mengobrol…" aria-label="Tulis pesan" disabled></textarea><button id="slch-send" type="submit" disabled>Kirim</button></div><div id="slch-error" class="slch-error" role="status"></div><div id="slch-foot" class="slch-foot">Pengunjung tanpa login dapat membaca. Masuk ke akun SL RELAX untuk mengirim pesan.</div></form>';
+  panel.innerHTML = '<header class="slch-head"><div class="slch-icon">💬</div><div><div class="slch-title">Obrolan Bersama</div><div class="slch-sub">Ruang publik SL RELAX</div></div><button id="slch-close" aria-label="Tutup obrolan" type="button">×</button></header><div class="slch-status"><span id="slch-connection">Menghubungkan…</span><span id="slch-online">0 di ruang</span></div><div id="slch-feed" aria-live="polite"><div class="slch-note">Memuat percakapan…</div></div><div id="slch-typing" aria-label="Pengguna sedang mengetik" aria-live="polite"><span></span><span></span><span></span></div><form class="slch-entry" id="slch-form"><div id="slch-reply-preview" class="slch-reply-preview" role="status" aria-live="polite"><div class="slch-reply-preview-content"><div id="slch-reply-preview-name" class="slch-reply-preview-name"></div><div id="slch-reply-preview-text" class="slch-reply-preview-text"></div></div><button id="slch-reply-cancel" class="slch-reply-cancel" type="button" aria-label="Batalkan balasan">×</button></div><div class="slch-row"><textarea id="slch-input" rows="1" maxlength="240" placeholder="Login untuk ikut mengobrol…" aria-label="Tulis pesan" disabled></textarea><button id="slch-send" type="submit" disabled>Kirim</button></div><div id="slch-error" class="slch-error" role="status"></div><div id="slch-foot" class="slch-foot">Pengunjung tanpa login dapat membaca. Masuk ke akun SL RELAX untuk mengirim pesan.</div></form>';
   
   document.body.append(button, panel);
 
@@ -64,10 +70,11 @@
   const feed = $("slch-feed"), conn = $("slch-connection"), online = $("slch-online");
   const input = $("slch-input"), send = $("slch-send"), error = $("slch-error"), foot = $("slch-foot");
   const typingIndicator = $("slch-typing");
+  const replyPreview = $("slch-reply-preview"), replyPreviewName = $("slch-reply-preview-name"), replyPreviewText = $("slch-reply-preview-text");
   const seen = new Set();
   let messageChannel = null, presenceChannel = null, typingChannel = null, authSubscription = null;
   let connected = false, presenceConnected = false, typingConnected = false, opening = false, currentSession = null, profile = null;
-  let replyPrefix = "", typingStopTimer = null, localTypingActive = false;
+  let replyPrefix = "", replyTarget = null, typingStopTimer = null, localTypingActive = false;
   const remoteTypingPeers = new Set(), remoteTypingTimers = new Map();
   function clearRemoteTyping() { remoteTypingTimers.forEach(timer => window.clearTimeout(timer)); remoteTypingTimers.clear(); remoteTypingPeers.clear(); typingIndicator.classList.remove("is-active"); }
   function broadcastTyping(isTyping) { if (typingConnected && typingChannel) void window.bookingService.sendChatTyping(typingChannel, isTyping); }
@@ -85,6 +92,29 @@
   }
 
   function safeText(value) { return String(value == null ? "" : value); }
+  function updateReplyPreview() {
+    const active = !!replyTarget;
+    replyPreview.classList.toggle("is-active", active);
+    if (active) {
+      replyPreviewName.textContent = "Membalas " + replyTarget.name;
+      const excerpt = replyTarget.message.replace(/\s+/g, " ").trim();
+      replyPreviewText.textContent = excerpt.length > 120 ? excerpt.slice(0, 117) + "…" : excerpt;
+      replyPreviewText.title = replyTarget.message;
+    } else {
+      replyPreviewName.textContent = "";
+      replyPreviewText.textContent = "";
+      replyPreviewText.removeAttribute("title");
+    }
+  }
+  function cancelReply() {
+    if (replyPrefix && input.value.startsWith(replyPrefix)) input.value = input.value.slice(replyPrefix.length);
+    replyPrefix = "";
+    replyTarget = null;
+    updateReplyPreview();
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 86) + "px";
+    input.focus();
+  }
   function trimFeed() { while (feed.children.length > 60) feed.removeChild(feed.firstElementChild); }
   function note(message) {
     const item = document.createElement("div");
@@ -137,7 +167,9 @@
       let draft = input.value;
       if (replyPrefix && draft.startsWith(replyPrefix)) draft = draft.slice(replyPrefix.length);
       replyPrefix = "@" + name.replace(/^@+/, "").trim() + " ";
+      replyTarget = { name, message };
       input.value = replyPrefix + draft.trimStart();
+      updateReplyPreview();
       input.focus();
       input.style.height = "auto";
       input.style.height = Math.min(input.scrollHeight, 86) + "px";
@@ -284,6 +316,7 @@
 
   button.addEventListener("click", () => panel.classList.contains("open") ? close() : open());
   $("slch-close").addEventListener("click", close);
+  $("slch-reply-cancel").addEventListener("click", cancelReply);
   $("slch-form").addEventListener("submit", async event => {
     event.preventDefault();
     error.textContent = "";
@@ -304,6 +337,8 @@
       render(row);
       input.value = "";
       replyPrefix = "";
+      replyTarget = null;
+      updateReplyPreview();
       input.style.height = "auto";
     } catch (e) {
       const detail = safeText(e && e.message).toLowerCase();
