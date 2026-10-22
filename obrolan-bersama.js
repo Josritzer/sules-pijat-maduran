@@ -18,6 +18,13 @@
     #slch-connection.is-online:before{background:#22c55e}
      #slch-feed{flex:1;min-height:0;overflow-y:auto;padding:8px 10px 10px;background:linear-gradient(180deg,#10182d,#131d35);display:flex;flex-direction:column;gap:2px;position:relative}
     .slch-note{font-size:10px;color:#c1cde5;background:#202d4b;border:1px solid #2b3b61;padding:7px 8px;border-radius:9px}
+    #slch-typing{display:none;align-items:center;gap:4px;height:20px;padding:0 14px 5px;background:#10182d}
+    #slch-typing.is-active{display:flex}
+    #slch-typing span{width:5px;height:5px;border-radius:50%;background:#a5b4fc;animation:slch-dot-bounce .9s infinite ease-in-out}
+    #slch-typing span:nth-child(2){animation-delay:.15s}
+    #slch-typing span:nth-child(3){animation-delay:.3s}
+    @keyframes slch-dot-bounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-4px);opacity:1}}
+    @media(prefers-reduced-motion:reduce){#slch-typing span{animation:none;opacity:1}}
     .slch-msg{width:fit-content;max-width:88%;align-self:flex-start;background:linear-gradient(145deg,#202e50,#252b4a);color:#f5f7ff;border:1px solid #3b4f7c;border-radius:4px 11px 11px 11px;padding:2px 9px;overflow-wrap:anywhere;box-shadow:0 2px 7px #050b1818}
     .slch-msg.mine{align-self:flex-end;background:linear-gradient(135deg,#245be8,#6549c7);color:#fff;border-color:#7c83f5;border-radius:11px 4px 11px 11px;box-shadow:0 2px 7px #4038a52b}
     .slch-name{font-weight:800;font-size:10px;color:#b8c9ff;margin-bottom:0}.slch-name.slch-admin{display:inline-flex;align-items:center;gap:5px;color:#a56b00;background:linear-gradient(135deg,#fff6d8,#ffe9a8);border:1px solid #e5bf54;border-radius:999px;padding:2px 6px;letter-spacing:.2px}.slch-name.slch-admin:before{content:'◆';font-size:10px;color:#c18b12}.slch-body{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;font-size:13px;line-height:1.2;letter-spacing:.02px}
@@ -49,17 +56,32 @@
   panel.id = "sl-chat-panel";
   panel.setAttribute("role", "dialog");
   panel.setAttribute("aria-label", "Obrolan Bersama SL RELAX");
-  panel.innerHTML = '<header class="slch-head"><div class="slch-icon">💬</div><div><div class="slch-title">Obrolan Bersama</div><div class="slch-sub">Ruang publik SL RELAX</div></div><button id="slch-close" aria-label="Tutup obrolan" type="button">×</button></header><div class="slch-status"><span id="slch-connection">Menghubungkan…</span><span id="slch-online">0 di ruang</span></div><div id="slch-feed" aria-live="polite"><div class="slch-note">Memuat percakapan…</div></div><form class="slch-entry" id="slch-form"><div class="slch-row"><textarea id="slch-input" rows="1" maxlength="240" placeholder="Login untuk ikut mengobrol…" aria-label="Tulis pesan" disabled></textarea><button id="slch-send" type="submit" disabled>Kirim</button></div><div id="slch-error" class="slch-error" role="status"></div><div id="slch-foot" class="slch-foot">Pengunjung tanpa login dapat membaca. Masuk ke akun SL RELAX untuk mengirim pesan.</div></form>';
+  panel.innerHTML = '<header class="slch-head"><div class="slch-icon">💬</div><div><div class="slch-title">Obrolan Bersama</div><div class="slch-sub">Ruang publik SL RELAX</div></div><button id="slch-close" aria-label="Tutup obrolan" type="button">×</button></header><div class="slch-status"><span id="slch-connection">Menghubungkan…</span><span id="slch-online">0 di ruang</span></div><div id="slch-feed" aria-live="polite"><div class="slch-note">Memuat percakapan…</div></div><div id="slch-typing" aria-label="Pengguna sedang mengetik" aria-live="polite"><span></span><span></span><span></span></div><form class="slch-entry" id="slch-form"><div class="slch-row"><textarea id="slch-input" rows="1" maxlength="240" placeholder="Login untuk ikut mengobrol…" aria-label="Tulis pesan" disabled></textarea><button id="slch-send" type="submit" disabled>Kirim</button></div><div id="slch-error" class="slch-error" role="status"></div><div id="slch-foot" class="slch-foot">Pengunjung tanpa login dapat membaca. Masuk ke akun SL RELAX untuk mengirim pesan.</div></form>';
   
   document.body.append(button, panel);
 
   const $ = id => panel.querySelector("#" + id);
   const feed = $("slch-feed"), conn = $("slch-connection"), online = $("slch-online");
   const input = $("slch-input"), send = $("slch-send"), error = $("slch-error"), foot = $("slch-foot");
+  const typingIndicator = $("slch-typing");
   const seen = new Set();
-  let messageChannel = null, presenceChannel = null, authSubscription = null;
-  let connected = false, presenceConnected = false, opening = false, currentSession = null, profile = null;
-  let replyPrefix = "";
+  let messageChannel = null, presenceChannel = null, typingChannel = null, authSubscription = null;
+  let connected = false, presenceConnected = false, typingConnected = false, opening = false, currentSession = null, profile = null;
+  let replyPrefix = "", typingStopTimer = null, remoteTypingTimer = null, localTypingActive = false;
+  function clearRemoteTyping() { if (remoteTypingTimer) window.clearTimeout(remoteTypingTimer); remoteTypingTimer = null; typingIndicator.classList.remove("is-active"); }
+  function broadcastTyping(isTyping) { if (typingConnected && typingChannel) void window.bookingService.sendChatTyping(typingChannel, isTyping); }
+  function markLocalTyping() {
+    if (input.disabled || !typingConnected || !typingChannel) return;
+    if (!localTypingActive) { localTypingActive = true; broadcastTyping(true); }
+    if (typingStopTimer) window.clearTimeout(typingStopTimer);
+    typingStopTimer = window.setTimeout(() => { localTypingActive = false; broadcastTyping(false); typingStopTimer = null; }, 1800);
+  }
+  function stopLocalTyping() {
+    if (typingStopTimer) window.clearTimeout(typingStopTimer);
+    typingStopTimer = null;
+    if (localTypingActive) broadcastTyping(false);
+    localTypingActive = false;
+  }
 
   function safeText(value) { return String(value == null ? "" : value); }
   function trimFeed() { while (feed.children.length > 60) feed.removeChild(feed.firstElementChild); }
@@ -198,6 +220,18 @@
         }
         updateStatus();
       });
+      typingChannel = window.bookingService.subscribeChatTyping(payload => {
+        if (payload.is_typing === true) {
+          typingIndicator.classList.add("is-active");
+          if (remoteTypingTimer) window.clearTimeout(remoteTypingTimer);
+          remoteTypingTimer = window.setTimeout(clearRemoteTyping, 2200);
+        } else {
+          clearRemoteTyping();
+        }
+      }, status => {
+        typingConnected = status === "SUBSCRIBED";
+        if (!typingConnected) { stopLocalTyping(); clearRemoteTyping(); }
+      });
     } catch (_) {
       opening = false;
       connected = false;
@@ -206,16 +240,21 @@
     }
   }
   async function disconnect() {
-    const oldMessages = messageChannel, oldPresence = presenceChannel;
+    const oldMessages = messageChannel, oldPresence = presenceChannel, oldTyping = typingChannel;
+    stopLocalTyping();
+    clearRemoteTyping();
     messageChannel = null;
     presenceChannel = null;
+    typingChannel = null;
     connected = false;
     presenceConnected = false;
+    typingConnected = false;
     opening = false;
     updateStatus("Obrolan ditutup");
     updateComposer();
     try { await window.bookingService.removeChatChannel(oldMessages); } catch (_) {}
     try { await window.bookingService.removeChatChannel(oldPresence); } catch (_) {}
+    try { await window.bookingService.removeChatChannel(oldTyping); } catch (_) {}
   }
   function open() {
     panel.classList.add("open");
@@ -238,6 +277,7 @@
     event.preventDefault();
     error.textContent = "";
     const text = input.value.trim();
+    stopLocalTyping();
     if (!text) return;
     if (!currentSession || !currentSession.user || !currentSession.user.id) {
       error.textContent = "Masuk ke akun SL RELAX terlebih dahulu untuk mengirim pesan.";
@@ -266,6 +306,7 @@
   input.addEventListener("input", () => {
     input.style.height = "auto";
     input.style.height = Math.min(input.scrollHeight, 86) + "px";
+    if (input.value.trim()) markLocalTyping(); else stopLocalTyping();
   });
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && panel.classList.contains("open")) close();
