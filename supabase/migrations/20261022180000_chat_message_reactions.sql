@@ -29,8 +29,7 @@ drop policy if exists "users delete own chat reactions" on public.chat_message_r
 create policy "users delete own chat reactions" on public.chat_message_reactions
   for delete to authenticated using (auth.uid() = user_id);
 
-do $
-begin
+do $$begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
      and not exists (
        select 1 from pg_publication_tables
@@ -41,4 +40,4 @@ begin
     alter publication supabase_realtime add table public.chat_message_reactions;
   end if;
 end;
-$;
+$$;
