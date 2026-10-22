@@ -33,9 +33,9 @@
     .slch-reply{align-self:flex-start;margin-top:2px;border:1px solid #5369a0;border-radius:999px;padding:2px 7px;background:#1a2744;color:#c7d2fe;font:700 10px system-ui;cursor:pointer}.slch-reply:active{background:#344b88}
     .slch-reply-preview{display:none;align-items:center;gap:8px;margin-bottom:8px;padding:7px 8px;border:1px solid #465c91;border-left:3px solid #8b7bff;border-radius:9px;background:#182744;min-width:0}
     .slch-reply-preview.is-active{display:flex}
-    .slch-reply-preview-content{min-width:0;flex:1;overflow:hidden}
-    .slch-reply-preview-name{font-size:10px;font-weight:800;color:#b8a8ff;margin-bottom:2px}
-    .slch-reply-preview-text{font-size:11px;color:#dbe5ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .slch-reply-preview-content{display:flex;align-items:center;gap:8px;min-width:0;flex:1;overflow:hidden}
+    .slch-reply-preview-name{flex:0 1 92px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:700;color:#b8a8ff;margin:0}
+    .slch-reply-preview-text{flex:1;min-width:0;font-size:11px;color:#dbe5ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .slch-reply-cancel{flex:0 0 28px;width:28px;height:28px;padding:0!important;border:0;border-radius:8px;background:#ffffff12!important;color:#dbe5ff;font-size:20px;line-height:1;cursor:pointer}
     .slch-entry{padding:12px;background:#111a30;border-top:1px solid #35466c}
     .slch-row{display:flex;gap:7px;margin-bottom:8px}
@@ -98,7 +98,7 @@
     // Inline display prevents site-wide CSS from hiding the reply preview.
     replyPreview.style.display = active ? "flex" : "none";
     if (active) {
-      replyPreviewName.textContent = "Membalas " + replyTarget.name;
+      replyPreviewName.textContent = replyTarget.name;
       const excerpt = replyTarget.message.replace(/\s+/g, " ").trim();
       replyPreviewText.textContent = excerpt.length > 120 ? excerpt.slice(0, 117) + "…" : excerpt;
       replyPreviewText.title = replyTarget.message;
