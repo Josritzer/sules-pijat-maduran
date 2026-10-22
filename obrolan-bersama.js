@@ -363,7 +363,8 @@
     updateComposer();
     try { await window.bookingService.removeChatChannel(oldMessages); } catch (_) {}
     try { await window.bookingService.removeChatChannel(oldPresence); } catch (_) {}
-    try { await window.bookingService.removeChatChannel(oldTyping); } catch (_) {}\n    try { await window.bookingService.removeChatChannel(oldReactions); } catch (_) {}
+    try { await window.bookingService.removeChatChannel(oldTyping); } catch (_) {}
+    try { await window.bookingService.removeChatChannel(oldReactions); } catch (_) {}
   }
   function open() {
     panel.classList.add("open");
