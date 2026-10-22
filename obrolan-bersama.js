@@ -97,7 +97,7 @@
     replyPreview.classList.toggle("is-active", active);
     if (active) {
       replyPreviewName.textContent = "Membalas " + replyTarget.name;
-      const excerpt = replyTarget.message.replace(/\\s+/g, " ").trim();
+      const excerpt = replyTarget.message.replace(/\s+/g, " ").trim();
       replyPreviewText.textContent = excerpt.length > 120 ? excerpt.slice(0, 117) + "…" : excerpt;
       replyPreviewText.title = replyTarget.message;
     } else {
