@@ -67,8 +67,9 @@
   const seen = new Set();
   let messageChannel = null, presenceChannel = null, typingChannel = null, authSubscription = null;
   let connected = false, presenceConnected = false, typingConnected = false, opening = false, currentSession = null, profile = null;
-  let replyPrefix = "", typingStopTimer = null, remoteTypingTimer = null, localTypingActive = false;
-  function clearRemoteTyping() { if (remoteTypingTimer) window.clearTimeout(remoteTypingTimer); remoteTypingTimer = null; typingIndicator.classList.remove("is-active"); }
+  let replyPrefix = "", typingStopTimer = null, localTypingActive = false;
+  const remoteTypingPeers = new Set(), remoteTypingTimers = new Map();
+  function clearRemoteTyping() { remoteTypingTimers.forEach(timer => window.clearTimeout(timer)); remoteTypingTimers.clear(); remoteTypingPeers.clear(); typingIndicator.classList.remove("is-active"); }
   function broadcastTyping(isTyping) { if (typingConnected && typingChannel) void window.bookingService.sendChatTyping(typingChannel, isTyping); }
   function markLocalTyping() {
     if (input.disabled || !typingConnected || !typingChannel) return;
@@ -221,12 +222,22 @@
         updateStatus();
       });
       typingChannel = window.bookingService.subscribeChatTyping(payload => {
+        const peerKey = String(payload.client_key || "");
+        if (!peerKey) return;
+        const oldTimer = remoteTypingTimers.get(peerKey);
+        if (oldTimer) window.clearTimeout(oldTimer);
         if (payload.is_typing === true) {
+          remoteTypingPeers.add(peerKey);
           typingIndicator.classList.add("is-active");
-          if (remoteTypingTimer) window.clearTimeout(remoteTypingTimer);
-          remoteTypingTimer = window.setTimeout(clearRemoteTyping, 2200);
+          remoteTypingTimers.set(peerKey, window.setTimeout(() => {
+            remoteTypingTimers.delete(peerKey);
+            remoteTypingPeers.delete(peerKey);
+            typingIndicator.classList.toggle("is-active", remoteTypingPeers.size > 0);
+          }, 2200));
         } else {
-          clearRemoteTyping();
+          remoteTypingTimers.delete(peerKey);
+          remoteTypingPeers.delete(peerKey);
+          typingIndicator.classList.toggle("is-active", remoteTypingPeers.size > 0);
         }
       }, status => {
         typingConnected = status === "SUBSCRIBED";
