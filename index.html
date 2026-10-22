@@ -238,6 +238,14 @@
     if (error) throw error;
     return data || [];
   }
+  function subscribeChatReactions(onChange, onStatus) {
+    return supabaseClient.channel("sl-relax-chat-reactions-v1")
+      .on("postgres_changes", { event: "*", schema: "public", table: "chat_message_reactions" }, payload => {
+        const messageId = payload && ((payload.new && payload.new.message_id) || (payload.old && payload.old.message_id));
+        if (messageId != null && typeof onChange === "function") onChange(messageId);
+      })
+      .subscribe(status => { if (typeof onStatus === "function") onStatus(status); });
+  }
   async function toggleChatReaction(messageId, emoji) {
     const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
     if (sessionError) throw sessionError;
@@ -789,7 +797,7 @@
     // Intentionally no personal identifiers are included in presence metadata.
   }
 
-window.bookingService = { startVisitorPresence, getVisitorPresenceCounts, refreshVisitorPresence, getPackagePricingConfig, savePackagePricingConfig, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, getChatMessages, getChatReactions, toggleChatReaction, sendChatMessage, subscribeChatMessages, subscribeChatPresence, subscribeChatTyping, sendChatTyping, removeChatChannel, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, getBookingIdsForCustomer, acceptBooking, rejectBooking, completeBooking, deleteTestBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, getAdminPushPublicKey, getGitHubMonitoringStatus, requestGitHubMonitoringCheck, getGitHubMonitoringQueueStatus, saveAdminPushSubscription, deleteAdminPushSubscription, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+window.bookingService = { startVisitorPresence, getVisitorPresenceCounts, refreshVisitorPresence, getPackagePricingConfig, savePackagePricingConfig, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, getChatMessages, getChatReactions, toggleChatReaction, subscribeChatReactions, sendChatMessage, subscribeChatMessages, subscribeChatPresence, subscribeChatTyping, sendChatTyping, removeChatChannel, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, getBookingIdsForCustomer, acceptBooking, rejectBooking, completeBooking, deleteTestBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, getAdminPushPublicKey, getGitHubMonitoringStatus, requestGitHubMonitoringCheck, getGitHubMonitoringQueueStatus, saveAdminPushSubscription, deleteAdminPushSubscription, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
