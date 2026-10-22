@@ -265,6 +265,28 @@
     });
     return channel;
   }
+  function subscribeChatTyping(onTyping, onStatus) {
+    const clientKey = window.crypto && typeof window.crypto.randomUUID === "function"
+      ? window.crypto.randomUUID() : "typing-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    const channel = supabaseClient.channel("sl-relax-chat-typing-v1", { config: { broadcast: { self: false } } });
+    channel.__slRelaxTypingClientKey = clientKey;
+    channel.on("broadcast", { event: "typing" }, event => {
+      const payload = event && event.payload;
+      if (!payload || payload.client_key === clientKey || typeof onTyping !== "function") return;
+      onTyping(payload);
+    }).subscribe(status => { if (typeof onStatus === "function") onStatus(status); });
+    return channel;
+  }
+  async function sendChatTyping(channel, isTyping) {
+    if (!channel || !channel.__slRelaxTypingClientKey) return;
+    try {
+      await channel.send({ type: "broadcast", event: "typing", payload: {
+        client_key: channel.__slRelaxTypingClientKey,
+        is_typing: !!isTyping,
+        sent_at: Date.now()
+      } });
+    } catch (_) { /* typing indicator is optional; never interrupt chat */ }
+  }
   async function removeChatChannel(channel) {
     if (channel) await supabaseClient.removeChannel(channel);
   }
@@ -737,7 +759,7 @@
     // Intentionally no personal identifiers are included in presence metadata.
   }
 
-window.bookingService = { startVisitorPresence, getVisitorPresenceCounts, refreshVisitorPresence, getPackagePricingConfig, savePackagePricingConfig, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, getChatMessages, sendChatMessage, subscribeChatMessages, subscribeChatPresence, removeChatChannel, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, getBookingIdsForCustomer, acceptBooking, rejectBooking, completeBooking, deleteTestBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, getAdminPushPublicKey, getGitHubMonitoringStatus, requestGitHubMonitoringCheck, getGitHubMonitoringQueueStatus, saveAdminPushSubscription, deleteAdminPushSubscription, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+window.bookingService = { startVisitorPresence, getVisitorPresenceCounts, refreshVisitorPresence, getPackagePricingConfig, savePackagePricingConfig, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, getChatMessages, sendChatMessage, subscribeChatMessages, subscribeChatPresence, subscribeChatTyping, sendChatTyping, removeChatChannel, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, getBookingIdsForCustomer, acceptBooking, rejectBooking, completeBooking, deleteTestBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, getAdminPushPublicKey, getGitHubMonitoringStatus, requestGitHubMonitoringCheck, getGitHubMonitoringQueueStatus, saveAdminPushSubscription, deleteAdminPushSubscription, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
