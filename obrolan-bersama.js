@@ -29,6 +29,11 @@
     .slch-msg.mine{align-self:flex-end;background:linear-gradient(135deg,#245be8,#6549c7);color:#fff;border-color:#7c83f5;border-radius:11px 4px 11px 11px;box-shadow:0 2px 7px #4038a52b}
     .slch-name{font-weight:800;font-size:10px;color:#b8c9ff;margin-bottom:0}.slch-name.slch-admin{display:inline-flex;align-items:center;gap:5px;color:#a56b00;background:linear-gradient(135deg,#fff6d8,#ffe9a8);border:1px solid #e5bf54;border-radius:999px;padding:2px 6px;letter-spacing:.2px}.slch-name.slch-admin:before{content:'◆';font-size:10px;color:#c18b12}.slch-body{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;font-size:13px;line-height:1.2;letter-spacing:.02px}
     .slch-mention{color:#a5b4fc;font-weight:900;text-shadow:0 0 10px #818cf833}.slch-msg.mine .slch-mention{color:#f0d9ff;text-shadow:0 0 8px #c084fc55}
+    .slch-quoted{display:block;width:100%;margin:0 0 4px;padding:5px 7px;border:0;border-left:3px solid #a5b4fc;border-radius:5px;background:#ffffff12;color:inherit;text-align:left;cursor:pointer;min-width:0}
+    .slch-quoted-name{display:block;font-size:10px;font-weight:800;color:#c4b5fd;margin-bottom:2px}
+    .slch-quoted-text{display:block;font-size:11px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#e2e8f0}
+    .slch-msg.mine .slch-quoted{border-left-color:#f0d9ff;background:#ffffff18}
+    .slch-msg.mine .slch-quoted-name{color:#f0d9ff}
     .slch-time{font-size:9px;color:#b4c0dc;text-align:right;margin-top:0}
     .slch-reply{align-self:flex-start;margin-top:2px;border:1px solid #5369a0;border-radius:999px;padding:2px 7px;background:#1a2744;color:#c7d2fe;font:700 10px system-ui;cursor:pointer}.slch-reply:active{background:#344b88}
     .slch-reply-preview{display:none;align-items:center;gap:8px;margin-bottom:8px;padding:7px 8px;border:1px solid #465c91;border-left:3px solid #8b7bff;border-radius:9px;background:#182744;min-width:0}
@@ -74,7 +79,7 @@
   const seen = new Set();
   let messageChannel = null, presenceChannel = null, typingChannel = null, authSubscription = null;
   let connected = false, presenceConnected = false, typingConnected = false, opening = false, currentSession = null, profile = null;
-  let replyPrefix = "", replyTarget = null, typingStopTimer = null, localTypingActive = false;
+  let replyTarget = null, typingStopTimer = null, localTypingActive = false;
   const remoteTypingPeers = new Set(), remoteTypingTimers = new Map();
   function clearRemoteTyping() { remoteTypingTimers.forEach(timer => window.clearTimeout(timer)); remoteTypingTimers.clear(); remoteTypingPeers.clear(); typingIndicator.classList.remove("is-active"); }
   function broadcastTyping(isTyping) { if (typingConnected && typingChannel) void window.bookingService.sendChatTyping(typingChannel, isTyping); }
@@ -109,8 +114,6 @@
     }
   }
   function cancelReply() {
-    if (replyPrefix && input.value.startsWith(replyPrefix)) input.value = input.value.slice(replyPrefix.length);
-    replyPrefix = "";
     replyTarget = null;
     updateReplyPreview();
     input.style.height = "auto";
@@ -134,9 +137,32 @@
     seen.add(String(row.id));
     const box = document.createElement("article");
     box.className = "slch-msg";
+    box.dataset.messageId = String(row.id);
     const title = document.createElement("div");
     title.className = row.is_admin === true ? "slch-name slch-admin" : "slch-name";
     title.textContent = name;
+    if (row.reply_to_id != null && row.reply_to_message) {
+      const quote = document.createElement("button");
+      quote.type = "button";
+      quote.className = "slch-quoted";
+      quote.setAttribute("aria-label", "Pesan yang dibalas dari " + safeText(row.reply_to_name));
+      const quoteName = document.createElement("span");
+      quoteName.className = "slch-quoted-name";
+      quoteName.textContent = safeText(row.reply_to_name) || "Pesan";
+      const quoteText = document.createElement("span");
+      quoteText.className = "slch-quoted-text";
+      quoteText.textContent = safeText(row.reply_to_message).replace(/\s+/g, " ").trim();
+      quote.title = safeText(row.reply_to_message);
+      quote.append(quoteName, quoteText);
+      quote.addEventListener("click", () => {
+        const original = feed.querySelector('[data-message-id="' + String(row.reply_to_id).replace(/[^0-9]/g, "") + '"]');
+        if (original) {
+          original.scrollIntoView({ behavior: "smooth", block: "center" });
+          original.animate([{ outline: "2px solid #c4b5fd" }, { outline: "2px solid transparent" }], { duration: 1100 });
+        }
+      });
+      box.appendChild(quote);
+    }
     const body = document.createElement("div");
     body.className = "slch-body";
     const mention = message.match(/^(@[^\s]+)([\s\S]*)$/);
@@ -166,11 +192,7 @@
         return;
       }
       error.textContent = "";
-      let draft = input.value;
-      if (replyPrefix && draft.startsWith(replyPrefix)) draft = draft.slice(replyPrefix.length);
-      replyPrefix = "@" + name.replace(/^@+/, "").trim() + " ";
-      replyTarget = { name, message };
-      input.value = replyPrefix + draft.trimStart();
+      replyTarget = { id: row.id, name, message };
       updateReplyPreview();
       input.focus();
       input.style.height = "auto";
@@ -335,10 +357,9 @@
     }
     send.disabled = true;
     try {
-      const row = await window.bookingService.sendChatMessage(text);
+      const row = await window.bookingService.sendChatMessage(text, replyTarget ? replyTarget.id : null);
       render(row);
       input.value = "";
-      replyPrefix = "";
       replyTarget = null;
       updateReplyPreview();
       input.style.height = "auto";
