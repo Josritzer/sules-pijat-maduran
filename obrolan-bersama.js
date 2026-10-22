@@ -16,7 +16,7 @@
     .slch-status{padding:7px 14px;background:#151f38;border-bottom:1px solid #293653;display:flex;justify-content:space-between;align-items:center;color:#aab8d4;font-size:11px}
     #slch-connection{display:flex;align-items:center;gap:6px}#slch-connection:before{content:"";width:7px;height:7px;border-radius:50%;background:#9ca3af}
     #slch-connection.is-online:before{background:#22c55e}
-     #slch-feed{flex:1;min-height:0;overflow-y:auto;padding:8px 10px 10px;background:linear-gradient(180deg,#10182d,#131d35);display:flex;flex-direction:column;gap:2px;position:relative}
+     #slch-feed{flex:1;min-height:0;overflow-y:auto;padding:8px 12px 10px;background:linear-gradient(180deg,#10182d,#131d35);display:flex;flex-direction:column;gap:2px;position:relative}
     .slch-note{font-size:10px;color:#c1cde5;background:#202d4b;border:1px solid #2b3b61;padding:7px 8px;border-radius:9px}
     #slch-typing{display:none;align-items:center;gap:4px;height:20px;padding:0 14px 5px;background:#10182d}
     #slch-typing.is-active{display:flex}
@@ -25,7 +25,7 @@
     #slch-typing span:nth-child(3){animation-delay:.3s}
     @keyframes slch-dot-bounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-4px);opacity:1}}
     @media(prefers-reduced-motion:reduce){#slch-typing span{animation:none;opacity:1}}
-    .slch-msg{width:fit-content;max-width:88%;align-self:flex-start;background:linear-gradient(145deg,#202e50,#252b4a);color:#f5f7ff;border:1px solid #3b4f7c;border-radius:4px 11px 11px 11px;padding:2px 9px;overflow-wrap:anywhere;box-shadow:0 2px 7px #050b1818}
+    .slch-msg{width:fit-content;max-width:88%;align-self:flex-start;margin-top:5px;background:linear-gradient(145deg,#202e50,#252b4a);color:#f5f7ff;border:1px solid #3b4f7c;border-radius:4px 11px 11px 11px;padding:3px 11px;overflow-wrap:anywhere;box-shadow:0 2px 7px #050b1818}.slch-msg.same-sender{margin-top:1px}.slch-msg.same-sender .slch-name{display:none}.slch-msg.same-sender:not(.mine){border-bottom-left-radius:4px}.slch-msg.mine.same-sender{border-bottom-right-radius:4px}
     .slch-msg.mine{align-self:flex-end;background:linear-gradient(135deg,#245be8,#6549c7);color:#fff;border-color:#7c83f5;border-radius:11px 4px 11px 11px;box-shadow:0 2px 7px #4038a52b}
     .slch-name{font-weight:800;font-size:10px;color:#b8c9ff;margin-bottom:0}.slch-name.slch-admin{display:inline-flex;align-items:center;gap:4px;color:#c9a96e;background:transparent;border:0;border-radius:0;padding:0;letter-spacing:.1px}.slch-name.slch-admin:before{content:'◆';font-size:7px;color:#c9a96e}.slch-body{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;font-size:13px;line-height:1.2;letter-spacing:.02px}
     .slch-mention{color:#a5b4fc;font-weight:900;text-shadow:0 0 10px #818cf833}.slch-msg.mine .slch-mention{color:#f0d9ff;text-shadow:0 0 8px #c084fc55}
@@ -138,6 +138,7 @@
     const box = document.createElement("article");
     box.className = "slch-msg";
     box.dataset.messageId = String(row.id);
+    box.dataset.senderKey = safeText(row.sender_id || row.user_id || name) + (row.is_admin === true ? "|admin" : "|user");
     const title = document.createElement("div");
     title.className = row.is_admin === true ? "slch-name slch-admin" : "slch-name";
     title.textContent = name;
@@ -205,6 +206,10 @@
       input.setSelectionRange(input.value.length, input.value.length);
     });
     box.appendChild(reply);
+    const previous = feed.lastElementChild;
+    if (previous && previous.classList.contains("slch-msg") && previous.dataset.senderKey === box.dataset.senderKey) {
+      box.classList.add("same-sender");
+    }
     feed.appendChild(box);
     trimFeed();
     feed.scrollTop = feed.scrollHeight;
