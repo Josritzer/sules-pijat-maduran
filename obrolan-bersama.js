@@ -93,7 +93,7 @@
   const typingIndicator = $("slch-typing");
   const replyPreview = $("slch-reply-preview"), replyPreviewName = $("slch-reply-preview-name"), replyPreviewText = $("slch-reply-preview-text");
   const seen = new Set();
-  let messageChannel = null, presenceChannel = null, typingChannel = null, authSubscription = null;
+  let messageChannel = null, presenceChannel = null, typingChannel = null, reactionChannel = null, authSubscription = null;
   let connected = false, presenceConnected = false, typingConnected = false, opening = false, currentSession = null, profile = null;
   let replyTarget = null, typingStopTimer = null, localTypingActive = false, contextTarget = null, pressTimer = null;
   const reactionCache = new Map();
@@ -314,6 +314,11 @@
         }
         updateStatus();
       });
+      if (typeof window.bookingService.subscribeChatReactions === "function") {
+        reactionChannel = window.bookingService.subscribeChatReactions(messageId => {
+          if (messageId != null) void refreshReactions(messageId);
+        }, () => {});
+      }
       typingChannel = window.bookingService.subscribeChatTyping(payload => {
         const peerKey = String(payload.client_key || "");
         if (!peerKey) return;
@@ -344,7 +349,7 @@
     }
   }
   async function disconnect() {
-    const oldMessages = messageChannel, oldPresence = presenceChannel, oldTyping = typingChannel;
+    const oldMessages = messageChannel, oldPresence = presenceChannel, oldTyping = typingChannel, oldReactions = reactionChannel;
     stopLocalTyping();
     clearRemoteTyping();
     messageChannel = null;
@@ -358,7 +363,7 @@
     updateComposer();
     try { await window.bookingService.removeChatChannel(oldMessages); } catch (_) {}
     try { await window.bookingService.removeChatChannel(oldPresence); } catch (_) {}
-    try { await window.bookingService.removeChatChannel(oldTyping); } catch (_) {}
+    try { await window.bookingService.removeChatChannel(oldTyping); } catch (_) {}\n    try { await window.bookingService.removeChatChannel(oldReactions); } catch (_) {}
   }
   function open() {
     panel.classList.add("open");
