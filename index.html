@@ -223,23 +223,25 @@
   async function getChatMessages(limit = 50) {
     const safeLimit = Math.max(1, Math.min(50, Number(limit) || 50));
     const { data, error } = await supabaseClient.from("chat_messages")
-      .select("id,sender_name,message,is_hidden,is_admin,created_at")
+      .select("id,sender_name,message,is_hidden,is_admin,created_at,reply_to_id,reply_to_name,reply_to_message")
       .eq("is_hidden", false)
       .order("created_at", { ascending: false })
       .limit(safeLimit);
     if (error) throw error;
     return (data || []).reverse();
   }
-  async function sendChatMessage(message) {
+  async function sendChatMessage(message, replyToId = null) {
     const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
     if (sessionError) throw sessionError;
     const user = sessionData && sessionData.session && sessionData.session.user;
     if (!user || !user.id) throw new Error("Masuk ke akun SL RELAX untuk mengirim pesan.");
     const text = String(message || "").trim();
     if (!text || text.length > 240) throw new Error("Pesan harus berisi 1–240 karakter.");
+    const replyId = replyToId == null ? null : Number(replyToId);
+    if (replyId !== null && (!Number.isSafeInteger(replyId) || replyId < 1)) throw new Error("Pesan yang dibalas tidak valid.");
     const { data, error } = await supabaseClient.from("chat_messages")
-      .insert({ message: text })
-      .select("id,sender_name,message,is_hidden,is_admin,created_at")
+      .insert({ message: text, reply_to_id: replyId })
+      .select("id,sender_name,message,is_hidden,is_admin,created_at,reply_to_id,reply_to_name,reply_to_message")
       .single();
     if (error) throw error;
     return data;
