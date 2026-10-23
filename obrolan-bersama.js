@@ -36,6 +36,18 @@
     .slch-msg.mine .slch-quoted-name{color:#f0d9ff}
     .slch-time{font-size:9px;color:#b4c0dc;text-align:right;margin-top:0}
     .slch-reply{align-self:flex-start;margin-top:2px;border:1px solid #5369a0;border-radius:999px;padding:2px 7px;background:#1a2744;color:#c7d2fe;font:700 10px system-ui;cursor:pointer}.slch-reply:active{background:#344b88}
+    .slch-reactions{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+    .slch-reaction{border:1px solid #52658d;border-radius:999px;background:#182744;color:#fff;padding:2px 7px;font:12px system-ui;cursor:pointer}
+    .slch-reaction.is-mine{background:#364a88;border-color:#a5b4fc}
+    #slch-context-menu{position:fixed;z-index:10000;display:none;min-width:190px;padding:8px;border:1px solid #53658e;border-radius:14px;background:#17233d;box-shadow:0 12px 35px #0008;color:#fff}
+    #slch-context-menu.is-open{display:block}
+    .slch-context-emojis{display:flex;justify-content:space-between;gap:4px;padding-bottom:7px;margin-bottom:6px;border-bottom:1px solid #3b4f70}
+    #slch-context-menu button{border:0;background:transparent;color:inherit;border-radius:8px;cursor:pointer}
+    .slch-context-emojis button{font-size:22px;padding:4px}
+    .slch-context-emojis button:active,.slch-context-action:active{background:#354b75}
+    .slch-context-action{display:flex;align-items:center;gap:9px;width:100%;padding:9px 8px;text-align:left;font:13px system-ui}
+    .slch-msg{touch-action:pan-y}
+
     .slch-reply-preview{display:none;align-items:center;gap:8px;margin-bottom:8px;padding:7px 8px;border:1px solid #465c91;border-left:3px solid #8b7bff;border-radius:9px;background:#182744;min-width:0}
     .slch-reply-preview.is-active{display:flex}
     .slch-reply-preview-content{display:flex;align-items:center;gap:8px;min-width:0;flex:1;overflow:hidden}
@@ -69,7 +81,11 @@
   panel.setAttribute("aria-label", "Obrolan Bersama SL RELAX");
   panel.innerHTML = '<header class="slch-head"><div class="slch-icon">💬</div><div><div class="slch-title">Obrolan Bersama</div><div class="slch-sub">Ruang publik SL RELAX</div></div><button id="slch-close" aria-label="Tutup obrolan" type="button">×</button></header><div class="slch-status"><span id="slch-connection">Menghubungkan…</span><span id="slch-online">0 di ruang</span></div><div id="slch-feed" aria-live="polite"><div class="slch-note">Memuat percakapan…</div></div><div id="slch-typing" aria-label="Pengguna sedang mengetik" aria-live="polite"><span></span><span></span><span></span></div><form class="slch-entry" id="slch-form"><div id="slch-reply-preview" class="slch-reply-preview" role="status" aria-live="polite"><div class="slch-reply-preview-content"><div id="slch-reply-preview-name" class="slch-reply-preview-name"></div><div id="slch-reply-preview-text" class="slch-reply-preview-text"></div></div><button id="slch-reply-cancel" class="slch-reply-cancel" type="button" aria-label="Batalkan balasan">×</button></div><div class="slch-row"><textarea id="slch-input" rows="1" maxlength="240" placeholder="Login untuk ikut mengobrol…" aria-label="Tulis pesan" disabled></textarea><button id="slch-send" type="submit" disabled>Kirim</button></div><div id="slch-error" class="slch-error" role="status"></div><div id="slch-foot" class="slch-foot">Pengunjung tanpa login dapat membaca. Masuk ke akun SL RELAX untuk mengirim pesan.</div></form>';
   
-  document.body.append(button, panel);
+  const contextMenu = document.createElement("div");
+  contextMenu.id = "slch-context-menu";
+  contextMenu.setAttribute("role", "menu");
+  contextMenu.innerHTML = '<div class="slch-context-emojis" aria-label="Reaksi pesan"><button type="button" data-emoji="❤️" aria-label="Love">❤️</button><button type="button" data-emoji="😂" aria-label="Ketawa">😂</button><button type="button" data-emoji="👍" aria-label="Like">👍</button><button type="button" data-emoji="👎" aria-label="Dislike">👎</button></div><button type="button" class="slch-context-action" data-action="reply">↩ <span>Balas</span></button><button type="button" class="slch-context-action" data-action="copy">▢ <span>Salin teks</span></button>';
+  document.body.append(button, panel, contextMenu);
 
   const $ = id => panel.querySelector("#" + id);
   const feed = $("slch-feed"), conn = $("slch-connection"), online = $("slch-online");
@@ -77,9 +93,11 @@
   const typingIndicator = $("slch-typing");
   const replyPreview = $("slch-reply-preview"), replyPreviewName = $("slch-reply-preview-name"), replyPreviewText = $("slch-reply-preview-text");
   const seen = new Set();
-  let messageChannel = null, presenceChannel = null, typingChannel = null, authSubscription = null;
+  let messageChannel = null, presenceChannel = null, typingChannel = null, reactionChannel = null, authSubscription = null;
   let connected = false, presenceConnected = false, typingConnected = false, opening = false, currentSession = null, profile = null;
-  let replyTarget = null, typingStopTimer = null, localTypingActive = false;
+  let replyTarget = null, typingStopTimer = null, localTypingActive = false, contextTarget = null, pressTimer = null;
+  const reactionCache = new Map();
+  const reactionChoices = ["❤️", "😂", "👍", "👎"];
   const remoteTypingPeers = new Set(), remoteTypingTimers = new Map();
   function clearRemoteTyping() { remoteTypingTimers.forEach(timer => window.clearTimeout(timer)); remoteTypingTimers.clear(); remoteTypingPeers.clear(); typingIndicator.classList.remove("is-active"); }
   function broadcastTyping(isTyping) { if (typingConnected && typingChannel) void window.bookingService.sendChatTyping(typingChannel, isTyping); }
@@ -185,32 +203,41 @@
     const date = new Date(row.created_at);
     time.textContent = Number.isNaN(date.getTime()) ? "" : date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
     box.append(title, body, time);
-    const reply = document.createElement("button");
-    reply.type = "button";
-    reply.className = "slch-reply";
-    reply.textContent = "Balas";
-    reply.setAttribute("aria-label", "Balas pesan " + name);
-    reply.addEventListener("click", () => {
-      if (input.disabled) {
-        error.textContent = !currentSession || !currentSession.user || !currentSession.user.id
-          ? "Masuk ke akun SL RELAX terlebih dahulu untuk membalas pesan."
-          : "Lengkapi nama profil di menu Akun sebelum membalas pesan.";
-        return;
-      }
-      error.textContent = "";
-      replyTarget = { id: row.id, name, message };
-      updateReplyPreview();
-      input.focus();
-      input.style.height = "auto";
-      input.style.height = Math.min(input.scrollHeight, 86) + "px";
-      input.setSelectionRange(input.value.length, input.value.length);
+    const reactions = document.createElement("div");
+    reactions.className = "slch-reactions";
+    reactions.setAttribute("aria-label", "Reaksi pesan");
+    reactions.dataset.reactionsFor = String(row.id);
+    box.appendChild(reactions);
+    renderReactionBadges(row.id, reactions);
+    box.addEventListener("contextmenu", event => {
+      event.preventDefault();
+      showContextMenu(row, name, message, event.clientX, event.clientY);
     });
-    box.appendChild(reply);
+    let startX = 0, startY = 0;
+    box.addEventListener("pointerdown", event => {
+      if (event.pointerType === "mouse" || event.target.closest("button")) return;
+      startX = event.clientX; startY = event.clientY;
+      if (pressTimer) window.clearTimeout(pressTimer);
+      pressTimer = window.setTimeout(() => {
+        showContextMenu(row, name, message, startX, startY);
+        pressTimer = null;
+      }, 520);
+    });
+    box.addEventListener("pointermove", event => {
+      if (pressTimer && (Math.abs(event.clientX - startX) > 12 || Math.abs(event.clientY - startY) > 12)) {
+        window.clearTimeout(pressTimer); pressTimer = null;
+      }
+    });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(type => box.addEventListener(type, () => {
+      if (pressTimer) window.clearTimeout(pressTimer);
+      pressTimer = null;
+    }));
     const previous = feed.lastElementChild;
     if (previous && previous.classList.contains("slch-msg") && previous.dataset.senderKey === box.dataset.senderKey) {
       box.classList.add("same-sender");
     }
     feed.appendChild(box);
+    void refreshReactions(row.id);
     trimFeed();
     feed.scrollTop = feed.scrollHeight;
   }
@@ -287,6 +314,11 @@
         }
         updateStatus();
       });
+      if (typeof window.bookingService.subscribeChatReactions === "function") {
+        reactionChannel = window.bookingService.subscribeChatReactions(messageId => {
+          if (messageId != null) void refreshReactions(messageId);
+        }, () => {});
+      }
       typingChannel = window.bookingService.subscribeChatTyping(payload => {
         const peerKey = String(payload.client_key || "");
         if (!peerKey) return;
@@ -317,7 +349,7 @@
     }
   }
   async function disconnect() {
-    const oldMessages = messageChannel, oldPresence = presenceChannel, oldTyping = typingChannel;
+    const oldMessages = messageChannel, oldPresence = presenceChannel, oldTyping = typingChannel, oldReactions = reactionChannel;
     stopLocalTyping();
     clearRemoteTyping();
     messageChannel = null;
@@ -332,6 +364,7 @@
     try { await window.bookingService.removeChatChannel(oldMessages); } catch (_) {}
     try { await window.bookingService.removeChatChannel(oldPresence); } catch (_) {}
     try { await window.bookingService.removeChatChannel(oldTyping); } catch (_) {}
+    try { await window.bookingService.removeChatChannel(oldReactions); } catch (_) {}
   }
   function open() {
     panel.classList.add("open");
@@ -349,6 +382,92 @@
   }
 
   button.addEventListener("click", () => panel.classList.contains("open") ? close() : open());
+  function showContextMenu(row, name, message, x, y) {
+    contextTarget = { row, name, message };
+    contextMenu.classList.add("is-open");
+    const width = 205, height = 118;
+    contextMenu.style.left = Math.max(8, Math.min(x, window.innerWidth - width - 8)) + "px";
+    contextMenu.style.top = Math.max(8, Math.min(y, window.innerHeight - height - 8)) + "px";
+  }
+  function hideContextMenu() { contextMenu.classList.remove("is-open"); contextTarget = null; }
+  function renderReactionBadges(messageId, container) {
+    const rows = reactionCache.get(String(messageId)) || [];
+    container.replaceChildren();
+    const counts = new Map();
+    rows.forEach(item => {
+      if (!reactionChoices.includes(item.emoji)) return;
+      const entry = counts.get(item.emoji) || { count: 0, mine: false };
+      entry.count++;
+      if (currentSession && currentSession.user && item.user_id === currentSession.user.id) entry.mine = true;
+      counts.set(item.emoji, entry);
+    });
+    counts.forEach((entry, emoji) => {
+      const badge = document.createElement("button");
+      badge.type = "button";
+      badge.className = "slch-reaction" + (entry.mine ? " is-mine" : "");
+      badge.textContent = emoji + " " + entry.count;
+      badge.setAttribute("aria-label", emoji + ", " + entry.count + " reaksi");
+      badge.addEventListener("click", () => toggleReaction(messageId, emoji));
+      container.appendChild(badge);
+    });
+  }
+  async function refreshReactions(messageId) {
+    if (!window.bookingService || typeof window.bookingService.getChatReactions !== "function") return;
+    try {
+      const rows = await window.bookingService.getChatReactions([messageId]);
+      reactionCache.set(String(messageId), rows || []);
+      const container = Array.from(feed.querySelectorAll(".slch-reactions")).find(node => node.dataset.reactionsFor === String(messageId));
+      if (container) renderReactionBadges(messageId, container);
+    } catch (_) {}
+  }
+  async function toggleReaction(messageId, emoji) {
+    if (!currentSession || !currentSession.user || !currentSession.user.id) {
+      error.textContent = "Masuk ke akun SL RELAX untuk memberi reaksi.";
+      return;
+    }
+    try {
+      await window.bookingService.toggleChatReaction(messageId, emoji);
+      await refreshReactions(messageId);
+      error.textContent = "";
+    } catch (_) { error.textContent = "Reaksi belum tersimpan. Coba lagi."; }
+  }
+  contextMenu.addEventListener("click", async event => {
+    const control = event.target.closest("button");
+    if (!control || !contextTarget) return;
+    const target = contextTarget;
+    const emoji = control.dataset.emoji, action = control.dataset.action;
+    hideContextMenu();
+    if (emoji) { await toggleReaction(target.row.id, emoji); return; }
+    if (action === "reply") {
+      if (input.disabled) {
+        error.textContent = !currentSession || !currentSession.user || !currentSession.user.id
+          ? "Masuk ke akun SL RELAX terlebih dahulu untuk membalas pesan."
+          : "Lengkapi nama profil di menu Akun sebelum membalas pesan.";
+        return;
+      }
+      replyTarget = { id: target.row.id, name: target.name, message: target.message };
+      updateReplyPreview();
+      input.focus();
+      input.style.height = "auto";
+      input.style.height = Math.min(input.scrollHeight, 86) + "px";
+      input.setSelectionRange(input.value.length, input.value.length);
+    } else if (action === "copy") {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(target.message);
+        else {
+          const temp = document.createElement("textarea");
+          temp.value = target.message; temp.style.position = "fixed"; temp.style.opacity = "0";
+          document.body.appendChild(temp); temp.select();
+          if (!document.execCommand("copy")) throw new Error("copy failed");
+          temp.remove();
+        }
+        error.textContent = "Teks pesan disalin.";
+      } catch (_) { error.textContent = "Teks tidak dapat disalin pada perangkat ini."; }
+    }
+  });
+  document.addEventListener("click", event => { if (!contextMenu.contains(event.target)) hideContextMenu(); });
+  window.addEventListener("resize", hideContextMenu);
+  feed.addEventListener("scroll", hideContextMenu, { passive: true });
   $("slch-close").addEventListener("click", close);
   $("slch-reply-cancel").addEventListener("click", cancelReply);
   $("slch-form").addEventListener("submit", async event => {
@@ -393,6 +512,7 @@
   if (window.bookingService && typeof window.bookingService.subscribeCustomerAuthChanges === "function") {
     authSubscription = window.bookingService.subscribeCustomerAuthChanges((_event, session) => {
       void refreshAccount(session);
+      reactionCache.forEach((_value, id) => { void refreshReactions(id); });
     });
   }
   window.addEventListener("pagehide", () => {

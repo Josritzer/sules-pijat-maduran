@@ -230,6 +230,42 @@
     if (error) throw error;
     return (data || []).reverse();
   }
+  async function getChatReactions(messageIds = []) {
+    const ids = [...new Set((messageIds || []).map(Number).filter(id => Number.isSafeInteger(id) && id > 0))];
+    if (!ids.length) return [];
+    const { data, error } = await supabaseClient.from("chat_message_reactions")
+      .select("message_id,user_id,emoji").in("message_id", ids);
+    if (error) throw error;
+    return data || [];
+  }
+  function subscribeChatReactions(onChange, onStatus) {
+    return supabaseClient.channel("sl-relax-chat-reactions-v1")
+      .on("postgres_changes", { event: "*", schema: "public", table: "chat_message_reactions" }, payload => {
+        const messageId = payload && ((payload.new && payload.new.message_id) || (payload.old && payload.old.message_id));
+        if (messageId != null && typeof onChange === "function") onChange(messageId);
+      })
+      .subscribe(status => { if (typeof onStatus === "function") onStatus(status); });
+  }
+  async function toggleChatReaction(messageId, emoji) {
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+    const user = sessionData && sessionData.session && sessionData.session.user;
+    if (!user || !user.id) throw new Error("Masuk untuk memberi reaksi.");
+    const id = Number(messageId), allowed = ["❤️", "😂", "👍", "👎"];
+    if (!Number.isSafeInteger(id) || id < 1 || !allowed.includes(emoji)) throw new Error("Reaksi tidak valid.");
+    const { data: existing, error: readError } = await supabaseClient.from("chat_message_reactions")
+      .select("emoji").eq("message_id", id).eq("user_id", user.id).maybeSingle();
+    if (readError) throw readError;
+    if (existing && existing.emoji === emoji) {
+      const { error } = await supabaseClient.from("chat_message_reactions").delete().eq("message_id", id).eq("user_id", user.id);
+      if (error) throw error;
+      return { removed: true };
+    }
+    const { error } = await supabaseClient.from("chat_message_reactions")
+      .upsert({ message_id: id, user_id: user.id, emoji }, { onConflict: "message_id,user_id" });
+    if (error) throw error;
+    return { removed: false };
+  }
   async function sendChatMessage(message, replyToId = null) {
     const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
     if (sessionError) throw sessionError;
@@ -761,7 +797,7 @@
     // Intentionally no personal identifiers are included in presence metadata.
   }
 
-window.bookingService = { startVisitorPresence, getVisitorPresenceCounts, refreshVisitorPresence, getPackagePricingConfig, savePackagePricingConfig, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, getChatMessages, sendChatMessage, subscribeChatMessages, subscribeChatPresence, subscribeChatTyping, sendChatTyping, removeChatChannel, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, getBookingIdsForCustomer, acceptBooking, rejectBooking, completeBooking, deleteTestBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, getAdminPushPublicKey, getGitHubMonitoringStatus, requestGitHubMonitoringCheck, getGitHubMonitoringQueueStatus, saveAdminPushSubscription, deleteAdminPushSubscription, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
+window.bookingService = { startVisitorPresence, getVisitorPresenceCounts, refreshVisitorPresence, getPackagePricingConfig, savePackagePricingConfig, createBooking, getCustomerBookingById, getCustomerBookings, getCustomerBookingSummary, getCustomerProfile, saveCustomerProfile, getChatMessages, getChatReactions, toggleChatReaction, subscribeChatReactions, sendChatMessage, subscribeChatMessages, subscribeChatPresence, subscribeChatTyping, sendChatTyping, removeChatChannel, hideCustomerBooking, getSlotTerisi, getSesiStatus, setSesiAdmin, getSesiRingkasan, customerOrderPageSize: CUSTOMER_ORDER_PAGE_SIZE, getBookings, getDashboardSummary, getBookingsPeriod, getBookingIdsForCustomer, acceptBooking, rejectBooking, completeBooking, deleteTestBooking, adminLogin, adminLogout, getAdminSession, customerSendOtp, customerVerifyOtp, customerLogout, deleteCustomerAccount, getCustomerSession, subscribeCustomerAuthChanges, removeCustomerAuthSubscription, requestGoogleRoadDistance, requestResolveMapsLink, subscribeAdminBookingChanges, subscribeCustomerBookingUpdates, subscribeCustomerOrders, removeRealtimeChannel, getAdminPushPublicKey, getGitHubMonitoringStatus, requestGitHubMonitoringCheck, getGitHubMonitoringQueueStatus, saveAdminPushSubscription, deleteAdminPushSubscription, notifyAdminBookingCreated, notifyCustomerBookingStatusChanged };
 })();
 </script>
 <style>
